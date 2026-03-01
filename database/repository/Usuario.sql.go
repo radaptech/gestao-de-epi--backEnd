@@ -12,7 +12,7 @@ import (
 )
 
 const buscarPorIdUsuario = `-- name: BuscarPorIdUsuario :one
-SELECT id, nome, email, ativo
+SELECT id, nome, email, ativo, role
 FROM usuarios
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
@@ -30,6 +30,7 @@ type BuscarPorIdUsuarioRow struct {
 	Nome  string
 	Email string
 	Ativo pgtype.Bool
+	Role  pgtype.Text
 }
 
 func (q *Queries) BuscarPorIdUsuario(ctx context.Context, arg BuscarPorIdUsuarioParams) (BuscarPorIdUsuarioRow, error) {
@@ -40,12 +41,13 @@ func (q *Queries) BuscarPorIdUsuario(ctx context.Context, arg BuscarPorIdUsuario
 		&i.Nome,
 		&i.Email,
 		&i.Ativo,
+		&i.Role,
 	)
 	return i, err
 }
 
 const buscarTodosUsuarios = `-- name: BuscarTodosUsuarios :many
-SELECT id, nome, email, ativo
+SELECT id, nome, email, ativo, role
 FROM usuarios
 WHERE tenant_id = $1 -- SEGURANÇA: Lista apenas usuários desta empresa
   AND ativo = TRUE
@@ -56,6 +58,7 @@ type BuscarTodosUsuariosRow struct {
 	Nome  string
 	Email string
 	Ativo pgtype.Bool
+	Role  pgtype.Text
 }
 
 func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]BuscarTodosUsuariosRow, error) {
@@ -72,6 +75,7 @@ func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]Bu
 			&i.Nome,
 			&i.Email,
 			&i.Ativo,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}
@@ -84,7 +88,7 @@ func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]Bu
 }
 
 const buscarUsuarioPorEmail = `-- name: BuscarUsuarioPorEmail :one
-SELECT id, nome, email, senha_hash, tenant_id
+SELECT id, nome, email, senha_hash, tenant_id, role
 FROM usuarios
 WHERE email = $1 
   AND tenant_id = $2 
@@ -103,6 +107,7 @@ type BuscarUsuarioPorEmailRow struct {
 	Email     string
 	SenhaHash string
 	TenantID  int32
+	Role      pgtype.Text
 }
 
 // Atenção: Se o email puder se repetir entre empresas, o tenant_id é OBRIGATÓRIO aqui.
@@ -115,13 +120,14 @@ func (q *Queries) BuscarUsuarioPorEmail(ctx context.Context, arg BuscarUsuarioPo
 		&i.Email,
 		&i.SenhaHash,
 		&i.TenantID,
+		&i.Role,
 	)
 	return i, err
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO usuarios (tenant_id, nome, email, senha_hash) 
-VALUES ($1, $2, $3, $4)
+INSERT INTO usuarios (tenant_id, nome, email, senha_hash, role) 
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateUserParams struct {
@@ -129,6 +135,7 @@ type CreateUserParams struct {
 	Nome      string
 	Email     string
 	SenhaHash string
+	Role      pgtype.Text
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -137,6 +144,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Nome,
 		arg.Email,
 		arg.SenhaHash,
+		arg.Role,
 	)
 	return err
 }

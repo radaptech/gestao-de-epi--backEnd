@@ -178,4 +178,5 @@ type Usuario struct {
 	Email     string
 	SenhaHash string
 	Ativo     pgtype.Bool
+	Role      pgtype.Text
 }

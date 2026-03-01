@@ -4,6 +4,7 @@ type Usuario struct {
 	Nome  string `json:"nome" binding:"required,min=3,max=50"`
 	Email string `json:"email" binding:"required,email"`
 	Senha string `json:"senha" binding:"required,max=10"`
+	Role  string `json:"cargo" binding:"required"`
 }
 
 // LoginResponse é o que o Front vai receber
@@ -23,10 +24,10 @@ type RecuperaUser struct {
 	Id    int    `json:"id"`
 	Nome  string `json:"nome"`
 	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 type RecuperaUserEntrada struct {
-	Id    int    `json:"id"`
-	Nome  string `json:"nome"`
-	
+	Id   int    `json:"id"`
+	Nome string `json:"nome"`
 }
