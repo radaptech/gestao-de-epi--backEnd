@@ -60,6 +60,25 @@ func AutenticacaoJWT() gin.HandlerFunc {
 
 				ctx.Set("userId", uint(userId)) //anotando o id do usuario no contexto
 			}
+
+			if role, ok:= claims["role"].(string); ok {
+
+				ctx.Set("user_role", role)
+			}
+
+			if TenantId, ok:= claims["tenantId"].(float64); ok{
+
+				ctx.Set("user_TenantId", int32(TenantId))
+			}
+		}else {
+			
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+
+				"error": "falha ao extrair os dados do token",
+			})
+
+			ctx.Abort()
+			return 
 		}
 
 		ctx.Next()

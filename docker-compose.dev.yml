@@ -53,7 +53,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DATABASE}
       - JWT_SECRET=${JWT_SECRET}
-      - GIN_MODE=release # Otimiza o Gin para produção
+     # Otimiza o Gin para produção
 
   # O Nginx (Seu Proxy Reverso e Escudo contra bots)
   nginx:
