@@ -79,11 +79,11 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		})
 	})
 	r.GET("/api", func(c *gin.Context) {
-    c.JSON(http.StatusOK, gin.H{
-        "status":  "online",
-        "message": "API operando normalmente. Acesse a documentação do Swagger para ver as rotas.",
-    })
-})
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "online",
+			"message": "API operando normalmente. Acesse a documentação do Swagger para ver as rotas.",
+		})
+	})
 	api := r.Group("/api")
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
 	// Precisa do tenant Id para passar
@@ -99,62 +99,87 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	api.Use(middleware.AutenticacaoJWT(), middleware.LoggerComUsuario())
 	{
 
+		//colaborador e adm tem acesso a essas rotas
 		api.GET("/me", c.Usuario.VerPerfil())
 		//departamentos
-		api.POST("/cadastro-departamento", c.Departamento.RegistraDepartamento())
 		api.GET("/departamentos", c.Departamento.ListarDepartamentos())
 		api.GET("/departamentos/:id", c.Departamento.ListarDepartamentoId())
-		api.DELETE("/departamento/:id", c.Departamento.DeletarDepartamento())
-		api.PUT("/departamento/:id", c.Departamento.AtualizarDepartamento())
 
 		//funcao
-		api.POST("cadastro-funcao", c.Funcao.RegistraFuncao())
 		api.GET("/funcoes", c.Funcao.ListarFuncoes())
 		api.GET("/funcao/:id", c.Funcao.ListarFuncaoId())
-		api.DELETE("/funcao/:id", c.Funcao.DeletarFuncao())
-		api.PUT("/funcao/:id", c.Funcao.AtualizarFuncao())
 
 		//funcionario
-		api.POST("/cadastro-funcionario", c.Funcionario.Adicionar())
 		api.GET("/funcionarios", c.Funcionario.ListarFuncionarios())
 		api.GET("/funcionario/:matricula", c.Funcionario.ListarFuncionarioPorMatricula())
-		api.DELETE("/funcionario/:id", c.Funcionario.DeletarFuncionaioId())
-		api.PATCH("/funcionario/:id", c.Funcionario.AtualizaFuncionario())
 
 		//tamanhos disponiveis para vincular a um epi
-		api.POST("/cadastro-tamanho", c.Tamanho.Adicionar())
 		api.GET("/tamanhos", c.Tamanho.ListarTodosTamanhos())
 		api.GET("/tamanho/:id", c.Tamanho.ListarTamanhoPorId())
-		api.DELETE("/tamanho/:id", c.Tamanho.DeletarTamanho())
 
 		//proteções dedicada a cada epi
-		api.POST("/cadastro-protecao", c.Protecao.AdicionarProtecao())
 		api.GET("/protecoes", c.Protecao.ListarProtecoes())
 		api.GET("/protecao/:id", c.Protecao.ListarProtecaoPorId())
-		api.DELETE("/protecao/:id", c.Protecao.DeletarProtecao())
 
 		//Epi´s
-		api.POST("/cadastro-epi", c.Epi.AdicionarEpi())
 		api.GET("/epis", c.Epi.ListarEpis())
 		api.GET("/epi/:id", c.Epi.ListarEpiPorId())
-		api.DELETE("/epi/:id", c.Epi.DeletarEpi())
-		api.PATCH("/epi/:id", c.Epi.AtualizaEpi())
 
 		//entradas
-		api.POST("/cadastrar-entrada", c.Entrada.AdicionarEntrada())
 		api.GET("/entradas", c.Entrada.ListarEntradas())
-		api.DELETE("/entrada/:id", c.Entrada.CancelarEntrada())
 
 		//fornecedores
-		api.POST("/cadastro-fornecedores", c.Fornecedor.Adicionar())
+		
 		api.GET("/fornecedores", c.Fornecedor.ListarFornecedores())
-		api.DELETE("/fornecedor/:id", c.Fornecedor.CancelarFornecedor())
-		api.PATCH("/fornecedor/:id", c.Fornecedor.AtualizaFornecedor())
 
 		//entregas
-		api.POST("/cadastro-entregas", c.Entrega.Adicionar())
 		api.GET("/entregas", c.Entrega.ListarEntregas())
-		api.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())
+		api.POST("/cadastro-entregas", c.Entrega.Adicionar())
+		 
+		//rotas que apenas o "admin" tem acesso
+		rotasAdm := api.Group("/gerencial")
+		rotasAdm.Use(middleware.VerificaRole("admin"))
+		{
+
+			//departamentos
+			rotasAdm.DELETE("/departamento/:id", c.Departamento.DeletarDepartamento())
+			rotasAdm.PUT("/departamento/:id", c.Departamento.AtualizarDepartamento())
+			rotasAdm.POST("/cadastro-departamento", c.Departamento.RegistraDepartamento())
+
+			//funçoes
+			rotasAdm.DELETE("/funcao/:id", c.Funcao.DeletarFuncao())
+			rotasAdm.PUT("/funcao/:id", c.Funcao.AtualizarFuncao())
+
+			//funcionarios
+			rotasAdm.DELETE("/funcionario/:id", c.Funcionario.DeletarFuncionaioId())
+			rotasAdm.PATCH("/funcionario/:id", c.Funcionario.AtualizaFuncionario())
+			rotasAdm.POST("/cadastro-funcionario", c.Funcionario.Adicionar())
+
+			//tamanhos
+			rotasAdm.POST("/cadastro-tamanho", c.Tamanho.Adicionar())
+			rotasAdm.DELETE("/tamanho/:id", c.Tamanho.DeletarTamanho())
+
+			//proteções epis
+			rotasAdm.POST("/cadastro-protecao", c.Protecao.AdicionarProtecao())
+			rotasAdm.DELETE("/protecao/:id", c.Protecao.DeletarProtecao())
+
+			//epis
+			rotasAdm.DELETE("/epi/:id", c.Epi.DeletarEpi())
+			rotasAdm.PATCH("/epi/:id", c.Epi.AtualizaEpi())
+			rotasAdm.POST("/cadastro-epi", c.Epi.AdicionarEpi())
+
+			//entrada
+			rotasAdm.POST("/cadastrar-entrada", c.Entrada.AdicionarEntrada())
+			rotasAdm.DELETE("/entrada/:id", c.Entrada.CancelarEntrada())
+
+			//fornecedor
+			rotasAdm.POST("/cadastro-fornecedores", c.Fornecedor.Adicionar())
+			rotasAdm.DELETE("/fornecedor/:id", c.Fornecedor.CancelarFornecedor())
+			rotasAdm.PATCH("/fornecedor/:id", c.Fornecedor.AtualizaFornecedor())
+
+			//entregas			
+			rotasAdm.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())
+		}
 	}
 
 }
