@@ -71,7 +71,8 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 			if errors.Is(err, helper.ErrDadoDuplicado) {
 				c.JSON(http.StatusConflict, gin.H{
 
-					"error": err.Error(),
+					"error": "departamento ja existe no sistema",
+					"detalhes": err.Error(),
 				})
 				return
 			}
