@@ -49,6 +49,7 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 			Nome:  input.Nome,
 			Email: input.Email,
 			Senha: input.Senha,
+			Role:  input.Role,
 		}
 
 		tenantID, ok := middleware.GetTenantID(ctx)
@@ -128,6 +129,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 				"id":    user.ID,
 				"nome":  user.Nome,
 				"email": user.Email,
+				"role":  user.Role.String,
 			},
 		})
 	}
@@ -163,6 +165,7 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 			"id":    usuario.Id,
 			"nome":  usuario.Nome,
 			"email": usuario.Email,
+			"role":  usuario.Role,
 		})
 	}
 }
