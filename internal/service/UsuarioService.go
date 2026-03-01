@@ -10,6 +10,7 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type UsuarioRepository interface {
@@ -33,6 +34,7 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario, ten
 	model.Email = strings.TrimSpace(model.Email)
 	model.Nome = strings.TrimSpace(model.Nome)
 	model.Senha = strings.TrimSpace(model.Senha)
+	model.Role = strings.TrimSpace(model.Role)
 
 	novasenha, err := auth.HashPassword(model.Senha)
 	if err != nil {
@@ -44,6 +46,7 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario, ten
 		Email:     model.Email,
 		SenhaHash: string(novasenha),
 		TenantID:  tenantId,
+		Role: pgtype.Text{String: model.Role, Valid: model.Role != ""},
 	}
 
 	err = u.repo.Cadastrar(ctx, arg)
@@ -83,8 +86,9 @@ func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, te
 		return "", repository.BuscarUsuarioPorEmailRow{}, errors.New("email ou senha inválidos")
 	}
 
+	
 	//gerando o token
-	token, err := auth.GerarJWT(usuario.ID)
+	token, err := auth.GerarJWT(usuario.ID, usuario.Role.String, tenantId)
 	if err != nil {
 		return "", repository.BuscarUsuarioPorEmailRow{}, errors.New("erro ao gerar token de acesso")
 	}
@@ -112,5 +116,7 @@ func (u *UsuarioService) BuscarPorId(ctx context.Context, id uint, tenantId int3
 		Id:    int(usuario.ID),
 		Nome:  usuario.Nome,
 		Email: usuario.Email,
+		Role: usuario.Role.String,
+
 	}, nil
 }
