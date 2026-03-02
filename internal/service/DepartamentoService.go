@@ -3,20 +3,20 @@ package service
 import (
 	"context"
 	"errors"
+	"math"
 
 	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 //go:generate mockery --name=DepartamentoRepository --output=../../mocks --outpkg=mocks --with-expecter
 type DepartamentoRepository interface {
 	Adicionar(ctx context.Context, departamento repository.CriaDepartamentoParams) error
-	ListarDepartamento(ctx context.Context, arg repository.BuscarDepartamentoParams) (repository.BuscarDepartamentoRow, error)
-	ListarDepartamentos(ctx context.Context, tenantId int32)([]repository.BuscarTodosDepartamentosRow, error)
+	ListarDepartamentos(ctx context.Context, args repository.BuscarTodosDepartamentosParams) ([]repository.BuscarTodosDepartamentosRow, error)
 	CancelarDepartamento(ctx context.Context, arg repository.DeletarDepartamentoParams) (int64, error)
 	AtualizarDepartamento(ctx context.Context, arg repository.UpdateDepartamentoParams) (int64, error)
 }
@@ -56,60 +56,74 @@ func (d *DepartamentoService) SalvarDepartamento(ctx context.Context, tenantId i
 	return nil
 }
 
-func (d *DepartamentoService) ListarDepartamento(ctx context.Context, id int32, TenantId int32) (model.DepartamentoDto, error) {
-
-	if id <= 0 {
-
-		return model.DepartamentoDto{}, helper.ErrId
-	}
-
-	dep, err := d.repo.ListarDepartamento(ctx, repository.BuscarDepartamentoParams{
-		ID: id,
-		TenantID: TenantId,
-	})
-	if err != nil {
-
-		if err == pgx.ErrNoRows {
-
-			return model.DepartamentoDto{}, helper.ErrNaoEncontrado
-		}
-		return model.DepartamentoDto{}, err
-	}
-
-	return model.DepartamentoDto{
-
-		ID:           int(dep.ID),
-		Departamento: dep.Nome,
-	}, nil
-
+type FiltroDepartamento struct {
+	Id_departamento int32  `form:"idDeparatmeto"`
+	Nome            string `form:"nome"`
+	Pagina          int32  `form:"pagina"`
+	Cancelado       bool   `form:"cancelado"`
+	Quantidade      int32  `form:"quantidade"`
 }
 
-func (d *DepartamentoService) ListarTodosDepartamentos(ctx context.Context, tenantId int32) ([]model.DepartamentoDto, error) {
+type DepartamentoPaginado struct {
+	Departamento []model.DepartamentoDto `json:"departamentos"`
+	Total        int64                   `json:"total"`
+	Pagina       int32                   `json:"pagina"`
+	PaginaFinal  int32                   `json:"paginaFinal"`
+}
 
-	deps, err := d.repo.ListarDepartamentos(ctx, tenantId)
+func (d *DepartamentoService) ListarTodosDepartamentos(ctx context.Context, f FiltroDepartamento, tenantId int32) (DepartamentoPaginado, error) {
+
+	limit := f.Quantidade
+	if limit <= 0 {
+		limit = 1
+	}
+	paginaAtual := f.Pagina
+	if paginaAtual <= 0 {
+		paginaAtual = 1
+	}
+
+	offset := max((paginaAtual-1)*limit, 0)
+
+	filtro := repository.BuscarTodosDepartamentosParams{
+		Limit:      limit,
+		Offset:     offset,
+		TenantID:   tenantId,
+		Nome:       pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
+		ID:         pgtype.Int4{Int32: f.Id_departamento, Valid: f.Id_departamento > 0},
+		Cancelados: f.Cancelado,
+	}
+
+	departamentos, err := d.repo.ListarDepartamentos(ctx, filtro)
 	if err != nil {
-
-		return nil, err
+		return DepartamentoPaginado{}, err
 	}
 
-	if deps == nil {
+	dto := make([]model.DepartamentoDto, 0, len(departamentos))
+	for _, departamento := range departamentos {
 
-		return []model.DepartamentoDto{}, nil
-	}
-
-	dto := make([]model.DepartamentoDto, 0, len(deps))
-
-	for _, dep := range deps {
-
-		departamento := model.DepartamentoDto{
-			ID:           int(dep.ID),
-			Departamento: dep.Nome,
+		d := model.DepartamentoDto{
+			ID:           int(departamento.ID),
+			Departamento: departamento.Departamento,
 		}
 
-		dto = append(dto, departamento)
+		dto = append(dto, d)
 	}
 
-	return dto, nil
+	var total int64
+	if len(departamentos) > 0 {
+		total = departamentos[0].TotalGeral
+	}
+	//numero da ultima pagina
+	ultimaPagina := int32(math.Ceil(float64(total) / float64(limit)))
+
+	return DepartamentoPaginado{
+
+		Departamento: dto,
+		Total:        total,
+		Pagina:       paginaAtual,
+		PaginaFinal:  ultimaPagina,
+	}, nil
+
 }
 
 func (d *DepartamentoService) DeletarDepartamento(ctx context.Context, id int, tenantId int32) error {
@@ -120,7 +134,7 @@ func (d *DepartamentoService) DeletarDepartamento(ctx context.Context, id int, t
 	}
 
 	idDep, err := d.repo.CancelarDepartamento(ctx, repository.DeletarDepartamentoParams{
-		ID: int32(id),
+		ID:       int32(id),
 		TenantID: tenantId,
 	})
 	if err != nil {
@@ -144,8 +158,8 @@ func (d *DepartamentoService) AtualizarDepartamento(ctx context.Context, id int3
 	}
 
 	arg := repository.UpdateDepartamentoParams{
-		ID:   id,
-		Nome: novoNome,
+		ID:       id,
+		Nome:     novoNome,
 		TenantID: tenantId,
 	}
 

@@ -7,6 +7,8 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const buscarDepartamento = `-- name: BuscarDepartamento :one
@@ -36,19 +38,45 @@ func (q *Queries) BuscarDepartamento(ctx context.Context, arg BuscarDepartamento
 }
 
 const buscarTodosDepartamentos = `-- name: BuscarTodosDepartamentos :many
-SELECT id, nome 
+SELECT id, nome as departamento,
+COUNT(*) OVER() AS total_geral
 FROM departamento 
-WHERE tenant_id = $1 
-  AND ativo = TRUE
+WHERE tenant_id = $3 
+  AND ($4::text IS NULL OR nome ILIKE '%' || $4 || '%')
+  AND ($5::int IS NULL OR id = $5::int)
+  AND (
+
+    ($6::boolean IS FALSE AND deletado_em IS NULL) OR
+    ($6::boolean IS TRUE AND deletado_em IS NOT NULL)
+  )
+ORDER BY nome ASC
+LIMIT $1 OFFSET $2
 `
 
-type BuscarTodosDepartamentosRow struct {
-	ID   int32
-	Nome string
+type BuscarTodosDepartamentosParams struct {
+	Limit      int32
+	Offset     int32
+	TenantID   int32
+	Nome       pgtype.Text
+	ID         pgtype.Int4
+	Cancelados bool
 }
 
-func (q *Queries) BuscarTodosDepartamentos(ctx context.Context, tenantID int32) ([]BuscarTodosDepartamentosRow, error) {
-	rows, err := q.db.Query(ctx, buscarTodosDepartamentos, tenantID)
+type BuscarTodosDepartamentosRow struct {
+	ID           int32
+	Departamento string
+	TotalGeral   int64
+}
+
+func (q *Queries) BuscarTodosDepartamentos(ctx context.Context, arg BuscarTodosDepartamentosParams) ([]BuscarTodosDepartamentosRow, error) {
+	rows, err := q.db.Query(ctx, buscarTodosDepartamentos,
+		arg.Limit,
+		arg.Offset,
+		arg.TenantID,
+		arg.Nome,
+		arg.ID,
+		arg.Cancelados,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +84,7 @@ func (q *Queries) BuscarTodosDepartamentos(ctx context.Context, tenantID int32) 
 	var items []BuscarTodosDepartamentosRow
 	for rows.Next() {
 		var i BuscarTodosDepartamentosRow
-		if err := rows.Scan(&i.ID, &i.Nome); err != nil {
+		if err := rows.Scan(&i.ID, &i.Departamento, &i.TotalGeral); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

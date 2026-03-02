@@ -103,7 +103,6 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/me", c.Usuario.VerPerfil())
 		//departamentos
 		api.GET("/departamentos", c.Departamento.ListarDepartamentos())
-		api.GET("/departamentos/:id", c.Departamento.ListarDepartamentoId())
 
 		//funcao
 		api.GET("/funcoes", c.Funcao.ListarFuncoes())

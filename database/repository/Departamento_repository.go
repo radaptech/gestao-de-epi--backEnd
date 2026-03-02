@@ -38,9 +38,9 @@ func (d *DepartamentoRepository) ListarDepartamento(ctx context.Context, arg Bus
 	return d.q.BuscarDepartamento(ctx, arg)
 }
 
-func (d *DepartamentoRepository) ListarDepartamentos(ctx context.Context, tenantId int32)([]BuscarTodosDepartamentosRow, error){
+func (d *DepartamentoRepository) ListarDepartamentos(ctx context.Context, args BuscarTodosDepartamentosParams)([]BuscarTodosDepartamentosRow, error){
 
-	return  d.q.BuscarTodosDepartamentos(ctx, tenantId)
+	return  d.q.BuscarTodosDepartamentos(ctx, args)
 }
 
 func (d *DepartamentoRepository) CancelarDepartamento(ctx context.Context, arg DeletarDepartamentoParams) (int64, error){
