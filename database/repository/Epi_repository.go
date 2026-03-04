@@ -40,12 +40,10 @@ func (e *EpiRepository) ListarEpi(ctx context.Context, arg BuscarEpiParams) (Bus
 	return epi, nil
 }
 
-func (e *EpiRepository) ListarEpis(ctx context.Context, pagina, ItemPorPagina,tenatId int32) ([]BuscarTodosEpisPaginadoRow, error){
+func (e *EpiRepository) ListarEpis(ctx context.Context, args BuscarTodosEpisPaginadoParams) ([]BuscarTodosEpisPaginadoRow, error){
 
-	if pagina < 1 {pagina = 1}
 
-	offset := (pagina -1 ) * ItemPorPagina
-	epis, err:= e.q.BuscarTodosEpisPaginado(ctx, BuscarTodosEpisPaginadoParams{Limit: ItemPorPagina, Offset: offset, TenantID: tenatId})
+	epis, err:= e.q.BuscarTodosEpisPaginado(ctx, args)
 	if err != nil {
 
 		return []BuscarTodosEpisPaginadoRow{},helper.TraduzErroPostgres(err)

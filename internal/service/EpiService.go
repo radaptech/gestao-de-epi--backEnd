@@ -20,7 +20,7 @@ import (
 type EpiRepository interface {
 	Adicionar(ctx context.Context, qtx *repository.Queries, epi repository.AddEpiParams) (int32, error)
 	ListarEpi(ctx context.Context, arg repository.BuscarEpiParams) (repository.BuscarEpiRow, error)
-	ListarEpis(ctx context.Context, pagina, ItemPorPagina, tenatId int32) ([]repository.BuscarTodosEpisPaginadoRow, error)
+	ListarEpis(ctx context.Context, args repository.BuscarTodosEpisPaginadoParams) ([]repository.BuscarTodosEpisPaginadoRow, error)
 	CancelarEpi(ctx context.Context, qtx *repository.Queries, arg repository.DeletarEpiParams) (int64, error)
 	AtualizaEpi(ctx context.Context, epi repository.UpdateEpiCampoParams) (int64, error)
 }
@@ -95,6 +95,15 @@ func (e *EpiService) Salvar(ctx context.Context, model model.EpiInserir, tenantI
 	return nil
 }
 
+type EpiFiltro struct {
+	Nome       string `form:"nome"`
+	Ca         string `form:"ca"`
+	IdEpi      int32  `form:"idEpi"`
+	Fabricante string `form:"fabricante"`
+	Cancelados bool   `form:"cancelados"`
+	FiltroPaginacao
+}
+
 type EpiPaginado struct {
 	Epis        []model.EpiDto
 	Total       int64
@@ -102,9 +111,23 @@ type EpiPaginado struct {
 	PaginaFinal int32
 }
 
-func (e *EpiService) ListarEpis(ctx context.Context, pagina, limite, tenantId int32) (EpiPaginado, error) {
+func (e *EpiService) ListarEpis(ctx context.Context, f EpiFiltro, tenantId int32) (EpiPaginado, error) {
 
-	epis, err := e.repo.ListarEpis(ctx, pagina, limite, tenantId)
+
+	p:= Paginacao(f.FiltroPaginacao)
+
+	filtro:= repository.BuscarTodosEpisPaginadoParams{
+
+		Limit: p.Limit,
+		Offset: p.Offset,
+		TenantID: tenantId,
+		Nome: pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
+		Ca: pgtype.Text{String: f.Ca, Valid: f.Ca != ""},
+		ID: pgtype.Int4{Int32: f.IdEpi, Valid: f.IdEpi > 0},
+		Cancelados: f.Cancelados,
+		Fabricante: pgtype.Text{String: f.Fabricante, Valid:f.Fabricante != ""},
+	}
+	epis, err := e.repo.ListarEpis(ctx, filtro)
 	if err != nil {
 		return EpiPaginado{}, err
 	}
@@ -113,7 +136,7 @@ func (e *EpiService) ListarEpis(ctx context.Context, pagina, limite, tenantId in
 		return EpiPaginado{
 			Epis:        []model.EpiDto{}, // Slice vazio
 			Total:       0,
-			Pagina:      pagina,
+			Pagina:      0,
 			PaginaFinal: 0,
 		}, nil
 	}
@@ -122,7 +145,7 @@ func (e *EpiService) ListarEpis(ctx context.Context, pagina, limite, tenantId in
 	todosTamanhos, err := e.queries.BuscarTodosTamanhosAgrupados(ctx, tenantId)
 	if err != nil {
 
-		return EpiPaginado{Epis: []model.EpiDto{{}}, Pagina: pagina}, err
+		return EpiPaginado{Epis: []model.EpiDto{{}}, Pagina: 0}, err
 	}
 
 	tamanhosMap := make(map[int32][]model.TamanhoDto)
@@ -167,11 +190,11 @@ func (e *EpiService) ListarEpis(ctx context.Context, pagina, limite, tenantId in
 	}
 
 	//numero da ultima pagina
-	ultimaPagina := int32(math.Ceil(float64(total) / float64(limite)))
+	ultimaPagina := int32(math.Ceil(float64(total) / float64(p.Limit)))
 	return EpiPaginado{
 		Epis:        dto,
 		Total:       total,
-		Pagina:      pagina,
+		Pagina:      p.PaginaAtual,
 		PaginaFinal: ultimaPagina,
 	}, nil
 }

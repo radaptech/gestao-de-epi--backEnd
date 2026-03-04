@@ -154,15 +154,27 @@ SELECT
 FROM epi e
 INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
 WHERE e.tenant_id = $3 -- SEGURANÇA: Filtro de Tenant
-  AND e.ativo = TRUE
+  AND ($4::text IS NULL OR e.nome ILIKE '%' || $4 || '%')
+  AND ($5::text IS NULL OR e.CA ILIKE '%' || $5 || '%')
+  AND ($6::int IS NULL OR e.id = $6::int)
+  AND (
+    ($7::boolean IS FALSE AND e.deletado_em IS NULL) OR
+    ($7::boolean IS TRUE AND e.deletado_em IS NOT NULL)
+  )
+  AND ($8::text IS NULL OR e.fabricante ILIKE '%' || $8 || '%')
 ORDER BY e.id
 LIMIT $1 OFFSET $2
 `
 
 type BuscarTodosEpisPaginadoParams struct {
-	Limit    int32
-	Offset   int32
-	TenantID int32
+	Limit      int32
+	Offset     int32
+	TenantID   int32
+	Nome       pgtype.Text
+	Ca         pgtype.Text
+	ID         pgtype.Int4
+	Cancelados bool
+	Fabricante pgtype.Text
 }
 
 type BuscarTodosEpisPaginadoRow struct {
@@ -179,7 +191,16 @@ type BuscarTodosEpisPaginadoRow struct {
 }
 
 func (q *Queries) BuscarTodosEpisPaginado(ctx context.Context, arg BuscarTodosEpisPaginadoParams) ([]BuscarTodosEpisPaginadoRow, error) {
-	rows, err := q.db.Query(ctx, buscarTodosEpisPaginado, arg.Limit, arg.Offset, arg.TenantID)
+	rows, err := q.db.Query(ctx, buscarTodosEpisPaginado,
+		arg.Limit,
+		arg.Offset,
+		arg.TenantID,
+		arg.Nome,
+		arg.Ca,
+		arg.ID,
+		arg.Cancelados,
+		arg.Fabricante,
+	)
 	if err != nil {
 		return nil, err
 	}

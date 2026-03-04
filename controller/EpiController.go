@@ -15,7 +15,7 @@ import (
 
 type EpiService interface {
 	Salvar(ctx context.Context, model model.EpiInserir, tenantID int32) error
-	ListarEpis(ctx context.Context, pagina, limite, tenantId int32) (service.EpiPaginado, error)
+	ListarEpis(ctx context.Context, f service.EpiFiltro, tenantId int32) (service.EpiPaginado, error)
 	ListarEpi(ctx context.Context, id int, tenantid int32) (model.EpiDto, error)
 	CancelarEpi(ctx context.Context, id int, tenantid int32) (int64, error)
 	AtualizaEpi(ctx context.Context, model model.UpdateEpiInput, id, tenantId int32) error
@@ -80,7 +80,7 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 
 				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 
-					"error":  "data não pode ser menor que a atual",
+					"error":    "data não pode ser menor que a atual",
 					"detalhes": err.Error(),
 				})
 				return
@@ -120,9 +120,9 @@ func (e *EpiController) ListarEpis() gin.HandlerFunc {
 			return
 		}
 
-		var params model.PaginacaoParams
+		var filtro service.EpiFiltro
 
-		if err := ctx.ShouldBindQuery(&params); err != nil {
+		if err := ctx.ShouldBindQuery(&filtro); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error":    "parametros de paginacao invalidos",
 				"detalhes": err.Error(),
@@ -130,7 +130,14 @@ func (e *EpiController) ListarEpis() gin.HandlerFunc {
 			return
 		}
 
-		epis, err := e.service.ListarEpis(ctx, params.Pagina, params.Limite, tenantId)
+		if filtro.Pagina <= 0 {
+			filtro.Pagina = 1
+		}
+		if filtro.Quantidade <= 0 {
+			filtro.Quantidade = 10 // Padrão de 10 itens se não informar
+		}
+
+		epis, err := e.service.ListarEpis(ctx, filtro, tenantId)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

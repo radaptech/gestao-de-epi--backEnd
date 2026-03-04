@@ -35,7 +35,14 @@ SELECT
 FROM epi e
 INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
 WHERE e.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Filtro de Tenant
-  AND e.ativo = TRUE
+  AND (sqlc.narg('nome')::text IS NULL OR e.nome ILIKE '%' || sqlc.narg('nome') || '%')
+  AND (sqlc.narg('ca')::text IS NULL OR e.CA ILIKE '%' || sqlc.narg('ca') || '%')
+  AND (sqlc.narg('id')::int IS NULL OR e.id = sqlc.narg('id')::int)
+  AND (
+    (sqlc.arg('cancelados')::boolean IS FALSE AND e.deletado_em IS NULL) OR
+    (sqlc.arg('cancelados')::boolean IS TRUE AND e.deletado_em IS NOT NULL)
+  )
+  AND (sqlc.narg('fabricante')::text IS NULL OR e.fabricante ILIKE '%' || sqlc.narg('fabricante') || '%')
 ORDER BY e.id
 LIMIT $1 OFFSET $2;
 
