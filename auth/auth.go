@@ -1,30 +1,31 @@
 package auth
 
 import (
-	"golang.org/x/crypto/bcrypt"
+
+	"github.com/alexedwards/argon2id"
 	
 )
 
-//funcao criada para codificar a senha de login do usuario
 
 func HashPassword(senha string) ([]byte, error) {
+	
 
-	hashPass, err:=bcrypt.GenerateFromPassword([]byte(senha), bcrypt.DefaultCost)
+	hashSenha, err:= argon2id.CreateHash(senha,argon2id.DefaultParams)
 	if err != nil {
 		return  nil, err
-	} 
+	}
 
-	return  hashPass, nil
+	return []byte(hashSenha), nil
 
 }
 
-//funcao que ira servir para comparar a senha que o usuario digitar, com a que esta salva no banco de dados
-func HashCompare(hash []byte, senha []byte)(bool, error){
+// funcao que ira servir para comparar a senha que o usuario digitar, com a que esta salva no banco de dados
+func HashCompare(hash []byte, senha string) (bool, error) {
 
-	err:= bcrypt.CompareHashAndPassword(hash, senha)
+	_, err := argon2id.ComparePasswordAndHash(senha, string(hash))
 	if err != nil {
-		return false , err
+		return false, err
 	}
 
-	return  true, nil
+	return true, nil
 }
