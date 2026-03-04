@@ -26,12 +26,21 @@ SELECT
     fn.IdDepartamento, 
     d.nome as departamento_nome,
     fn.IdFuncao, 
-    f.nome as funcao_nome
+    f.nome as funcao_nome,
+    COUNT(*) OVER() AS total_geral
 FROM funcionario fn
 INNER JOIN departamento d ON fn.IdDepartamento = d.id
 INNER JOIN funcao f ON fn.IdFuncao = f.id
-WHERE fn.tenant_id = $1 -- SEGURANÇA: Só lista funcionários da empresa atual
-  AND fn.ativo = TRUE;
+WHERE fn.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Só busca funcionário da empresa atual
+  AND (sqlc.narg('id')::int IS NULL OR fn.id = sqlc.narg('id')::int)
+  AND (sqlc.narg('matricula')::text IS NULL OR fn.matricula ILIKE '%'|| sqlc.narg('matricula') || '%')
+  AND (sqlc.narg('nome')::text IS NULL OR fn.nome ILIKE '%' || sqlc.narg('nome') || '%')
+  AND (
+    (sqlc.arg('cancelados')::boolean IS FALSE AND fn.deletado_em IS NULL) OR
+    (sqlc.arg('cancelados')::boolean IS TRUE AND fn.deletado_em IS NOT NULL)
+  )
+ORDER BY fn.nome ASC
+LIMIT $1 OFFSET $2;
 
 -- name: DeletarFuncionario :execrows
 UPDATE funcionario

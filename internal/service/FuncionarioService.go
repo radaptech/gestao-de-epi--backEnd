@@ -4,19 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type FuncionarioRepository interface {
 	Adicionar(ctx context.Context, args repository.AddFuncionarioParams) error
 	ListarFuncionario(ctx context.Context, arg repository.BuscaFuncionarioParams) (repository.BuscaFuncionarioRow, error)
-	ListarFuncionarios(ctx context.Context, tenantId int32) ([]repository.BuscarTodosFuncionariosRow, error)
+	ListarFuncionarios(ctx context.Context, args repository.BuscarTodosFuncionariosParams) ([]repository.BuscarTodosFuncionariosRow, error)
 	CancelarFuncionario(ctx context.Context, arg repository.DeletarFuncionarioParams) (int64, error)
 	AtualizarFuncionarioNome(ctx context.Context, arg repository.UpdateFuncionarioNomeParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioDepartamento(ctx context.Context, arg repository.UpdateFuncionarioDepartamentoParams, qtx *repository.Queries) (int64, error)
@@ -102,19 +104,46 @@ func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula st
 
 }
 
-func (f *FuncionarioService) ListaTodosFuncionarios(ctx context.Context, tenantId int32) ([]model.Funcionario_Dto, error) {
+type FiltroFuncionario struct {
+	ID_funcionario int32  `form:"idFuncionario"`
+	Matricula      string `form:"matricula"`
+	Nome           string `form:"nome"`
+	Cancelados     bool   `form:"cancelados"`
+	FiltroPaginacao
+}
 
-	funcionarios, err := f.repo.ListarFuncionarios(ctx, tenantId)
-	if err != nil {
+type FuncionarioPaginado struct {
+	Funcionarios []model.Funcionario_Dto `json:"funcionario"`
+	Total        int64                   `json:"total"`
+	Pagina       int32                   `json:"pagina"`
+	PaginaFinal  int32                   `json:"paginaFinal"`
+}
 
-		return []model.Funcionario_Dto{}, err
+func (funcio *FuncionarioService) ListaTodosFuncionarios(ctx context.Context, f FiltroFuncionario, tenantId int32) (FuncionarioPaginado, error) {
+
+	p := Paginacao(f.FiltroPaginacao)
+
+	filtro := repository.BuscarTodosFuncionariosParams{
+		Limit:      p.Limit,
+		Offset:     p.Offset,
+		TenantID:   tenantId,
+		ID:         pgtype.Int4{Int32: f.ID_funcionario, Valid: f.ID_funcionario > 0},
+		Matricula:  pgtype.Text{String: f.Matricula, Valid: f.Matricula != ""},
+		Nome:       pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
+		Cancelados: f.Cancelados,
 	}
 
-	funcionariosDto := make([]model.Funcionario_Dto, 0, len(funcionarios))
+	funcionarios, err := funcio.repo.ListarFuncionarios(ctx, filtro)
+	if err != nil {
+
+		return FuncionarioPaginado{}, err
+	}
+
+	dto := make([]model.Funcionario_Dto, 0, len(funcionarios))
 
 	for _, funcionario := range funcionarios {
 
-		funcDto := model.Funcionario_Dto{
+		funcs := model.Funcionario_Dto{
 			ID:        int(funcionario.ID),
 			Nome:      funcionario.Nome,
 			Matricula: funcionario.Matricula,
@@ -128,17 +157,24 @@ func (f *FuncionarioService) ListaTodosFuncionarios(ctx context.Context, tenantI
 			},
 		}
 
-		funcionariosDto = append(funcionariosDto, funcDto)
-
+		dto = append(dto, funcs)
 	}
 
-	if funcionariosDto == nil {
-
-		return []model.Funcionario_Dto{}, nil
+	var total int64
+	if len(funcionarios) > 0 {
+		total = funcionarios[0].TotalGeral
 	}
 
-	return funcionariosDto, nil
+	//numero da ultima pagina
+	ultimaPagina := int32(math.Ceil(float64(total) / float64(p.Limit)))
 
+	return FuncionarioPaginado{
+
+		Funcionarios: dto,
+		Total:        total,
+		Pagina:       p.PaginaAtual,
+		PaginaFinal:  ultimaPagina,
+	}, nil
 }
 
 func (f *FuncionarioService) DeletarFuncionario(ctx context.Context, id int, tenantId int32) error {

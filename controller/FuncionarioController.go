@@ -8,6 +8,7 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
+	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,7 @@ import (
 type FuncionarioService interface {
 	SalvarFuncionario(ctx context.Context, model model.FuncionarioINserir, tenantId int32) error
 	ListarFuncionario(ctx context.Context, matricula string, tenantId int32) (model.Funcionario_Dto, error)
-	ListaTodosFuncionarios(ctx context.Context, tenantId int32) ([]model.Funcionario_Dto, error)
+	ListaTodosFuncionarios(ctx context.Context, f service.FiltroFuncionario, tenantId int32) (service.FuncionarioPaginado, error)
 	DeletarFuncionario(ctx context.Context, id int, tenantId int32) error
 	AtualizarFuncionarioCompleto(ctx context.Context, id int, req model.UpdateFuncionarioRequest, tenantId int) error
 }
@@ -76,7 +77,7 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			if errors.Is(err, helper.ErrDadoDuplicado) {
 				ctx.JSON(http.StatusConflict, gin.H{
 
-					"error":err.Error(),
+					"error": err.Error(),
 				})
 				return
 			}
@@ -118,13 +119,31 @@ func (f *FuncionarioController) ListarFuncionarios() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
+		var filtro service.FiltroFuncionario
 		tenantID, ok := middleware.GetTenantID(ctx)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
 
-		funcs, err := f.Service.ListaTodosFuncionarios(ctx, tenantID)
+		if err := ctx.ShouldBindQuery(&filtro); err != nil {
+
+			ctx.JSON(http.StatusBadRequest, gin.H{
+
+				"error":    "parametros de busca invalidos",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		if filtro.Pagina <= 0 {
+			filtro.Pagina = 1
+		}
+		if filtro.Quantidade <= 0 {
+			filtro.Quantidade = 10 // Padrão de 10 itens se não informar
+		}
+
+		funcs, err := f.Service.ListaTodosFuncionarios(ctx, filtro, tenantID)
 		if err != nil {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{

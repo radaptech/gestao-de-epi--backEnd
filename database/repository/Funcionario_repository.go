@@ -40,9 +40,9 @@ func(f *FuncionarioRepository) ListarFuncionario(ctx context.Context, arg BuscaF
 	return f.q.BuscaFuncionario(ctx, arg)
 }
 
-func (f *FuncionarioRepository) ListarFuncionarios(ctx context.Context, tenantId int32)([]BuscarTodosFuncionariosRow, error) {
+func (f *FuncionarioRepository) ListarFuncionarios(ctx context.Context, args BuscarTodosFuncionariosParams)([]BuscarTodosFuncionariosRow, error) {
 
-	funcs, err:= f.q.BuscarTodosFuncionarios(ctx, tenantId)
+	funcs, err:= f.q.BuscarTodosFuncionarios(ctx, args)
 	if err != nil {
 
 		return []BuscarTodosFuncionariosRow{}, helper.TraduzErroPostgres(err)

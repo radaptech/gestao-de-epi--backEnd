@@ -7,6 +7,8 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addFuncionario = `-- name: AddFuncionario :exec
@@ -135,13 +137,32 @@ SELECT
     fn.IdDepartamento, 
     d.nome as departamento_nome,
     fn.IdFuncao, 
-    f.nome as funcao_nome
+    f.nome as funcao_nome,
+    COUNT(*) OVER() AS total_geral
 FROM funcionario fn
 INNER JOIN departamento d ON fn.IdDepartamento = d.id
 INNER JOIN funcao f ON fn.IdFuncao = f.id
-WHERE fn.tenant_id = $1 -- SEGURANÇA: Só lista funcionários da empresa atual
-  AND fn.ativo = TRUE
+WHERE fn.tenant_id = $3 -- SEGURANÇA: Só busca funcionário da empresa atual
+  AND ($4::int IS NULL OR fn.id = $4::int)
+  AND ($5::text IS NULL OR fn.matricula = $5::text)
+  AND ($6::text IS NULL OR fn.nome ILIKE '%' || $6 || '%')
+  AND (
+    ($7::boolean IS FALSE AND fn.deletado_em IS NULL) OR
+    ($7::boolean IS TRUE AND fn.deletado_em IS NOT NULL)
+  )
+ORDER BY fn.nome ASC
+LIMIT $1 OFFSET $2
 `
+
+type BuscarTodosFuncionariosParams struct {
+	Limit      int32
+	Offset     int32
+	TenantID   int32
+	ID         pgtype.Int4
+	Matricula  pgtype.Text
+	Nome       pgtype.Text
+	Cancelados bool
+}
 
 type BuscarTodosFuncionariosRow struct {
 	ID               int32
@@ -151,10 +172,19 @@ type BuscarTodosFuncionariosRow struct {
 	DepartamentoNome string
 	Idfuncao         int32
 	FuncaoNome       string
+	TotalGeral       int64
 }
 
-func (q *Queries) BuscarTodosFuncionarios(ctx context.Context, tenantID int32) ([]BuscarTodosFuncionariosRow, error) {
-	rows, err := q.db.Query(ctx, buscarTodosFuncionarios, tenantID)
+func (q *Queries) BuscarTodosFuncionarios(ctx context.Context, arg BuscarTodosFuncionariosParams) ([]BuscarTodosFuncionariosRow, error) {
+	rows, err := q.db.Query(ctx, buscarTodosFuncionarios,
+		arg.Limit,
+		arg.Offset,
+		arg.TenantID,
+		arg.ID,
+		arg.Matricula,
+		arg.Nome,
+		arg.Cancelados,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +200,7 @@ func (q *Queries) BuscarTodosFuncionarios(ctx context.Context, tenantID int32) (
 			&i.DepartamentoNome,
 			&i.Idfuncao,
 			&i.FuncaoNome,
+			&i.TotalGeral,
 		); err != nil {
 			return nil, err
 		}
