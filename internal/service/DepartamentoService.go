@@ -57,11 +57,11 @@ func (d *DepartamentoService) SalvarDepartamento(ctx context.Context, tenantId i
 }
 
 type FiltroDepartamento struct {
-	Id_departamento int32  `form:"idDeparatmeto"`
+	Id_departamento int32  `form:"idDepartamento"`
 	Nome            string `form:"nome"`
-	Pagina          int32  `form:"pagina"`
 	Cancelado       bool   `form:"cancelado"`
-	Quantidade      int32  `form:"quantidade"`
+	FiltroPaginacao
+	
 }
 
 type DepartamentoPaginado struct {
@@ -73,20 +73,12 @@ type DepartamentoPaginado struct {
 
 func (d *DepartamentoService) ListarTodosDepartamentos(ctx context.Context, f FiltroDepartamento, tenantId int32) (DepartamentoPaginado, error) {
 
-	limit := f.Quantidade
-	if limit <= 0 {
-		limit = 1
-	}
-	paginaAtual := f.Pagina
-	if paginaAtual <= 0 {
-		paginaAtual = 1
-	}
 
-	offset := max((paginaAtual-1)*limit, 0)
+	p:= Paginacao(f.FiltroPaginacao)
 
 	filtro := repository.BuscarTodosDepartamentosParams{
-		Limit:      limit,
-		Offset:     offset,
+		Limit:      p.Limit,
+		Offset:     p.Offset,
 		TenantID:   tenantId,
 		Nome:       pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
 		ID:         pgtype.Int4{Int32: f.Id_departamento, Valid: f.Id_departamento > 0},
@@ -114,13 +106,13 @@ func (d *DepartamentoService) ListarTodosDepartamentos(ctx context.Context, f Fi
 		total = departamentos[0].TotalGeral
 	}
 	//numero da ultima pagina
-	ultimaPagina := int32(math.Ceil(float64(total) / float64(limit)))
+	ultimaPagina := int32(math.Ceil(float64(total) / float64(p.Limit)))
 
 	return DepartamentoPaginado{
 
 		Departamento: dto,
 		Total:        total,
-		Pagina:       paginaAtual,
+		Pagina:       p.PaginaAtual,
 		PaginaFinal:  ultimaPagina,
 	}, nil
 
