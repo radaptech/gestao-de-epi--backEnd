@@ -105,8 +105,8 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/departamentos", c.Departamento.ListarDepartamentos())
 
 		//funcao
+		
 		api.GET("/funcoes", c.Funcao.ListarFuncoes())
-		api.GET("/funcao/:id", c.Funcao.ListarFuncaoId())
 
 		//funcionario
 		api.GET("/funcionarios", c.Funcionario.ListarFuncionarios())
@@ -148,6 +148,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			//funçoes
 			rotasAdm.DELETE("/funcao/:id", c.Funcao.DeletarFuncao())
 			rotasAdm.PUT("/funcao/:id", c.Funcao.AtualizarFuncao())
+			rotasAdm.POST("/cadastro-funcao", c.Funcao.RegistraFuncao())
 
 			//funcionarios
 			rotasAdm.DELETE("/funcionario/:id", c.Funcionario.DeletarFuncionaioId())
