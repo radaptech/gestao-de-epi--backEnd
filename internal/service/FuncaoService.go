@@ -2,20 +2,21 @@ package service
 
 import (
 	"context"
-	"errors"
+	
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/jackc/pgx/v5"
+	
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type FuncaoRepository interface {
 	Adicionar(ctx context.Context, args repository.AddFuncaoParams) error
-	ListarFuncao(ctx context.Context, agr repository.BuscarFuncaoParams) (repository.BuscarFuncaoRow, error)
-	ListarFuncoes(ctx context.Context, tenantId int32) ([]repository.BuscarTodasFuncoesRow, error)
+	ListarFuncoes(ctx context.Context, args repository.BuscarTodasFuncoesParams) ([]repository.BuscarTodasFuncoesRow, error)
 	CancelarFuncao(ctx context.Context, arg repository.DeletarFuncaoParams) (int64, error)
 	AtualizarFuncao(ctx context.Context, arg repository.UpdateFuncaoParams) (int64, error)
 }
@@ -45,62 +46,72 @@ func (f *FuncaoService) SalvarFuncao(ctx context.Context, model model.Funcao, te
 	return nil
 }
 
-func (f *FuncaoService) ListarFuncao(ctx context.Context, id int, tenantid int32) (model.FuncaoDto, error) {
 
-	if id <= 0 {
 
-		return model.FuncaoDto{}, helper.ErrId
-	}
-
-	funcao, err := f.repo.ListarFuncao(ctx, repository.BuscarFuncaoParams{
-		ID:       int32(id),
-		TenantID: tenantid,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-
-			return model.FuncaoDto{}, helper.ErrNaoEncontrado
-		}
-		
-		return model.FuncaoDto{}, err
-	}
-
-	return model.FuncaoDto{
-		ID:     int(funcao.ID),
-		Funcao: funcao.Nome,
-		Departamento: model.DepartamentoDto{
-			ID:           int(funcao.Iddepartamento),
-			Departamento: funcao.DepartamentoNome,
-		},
-	}, nil
-
+type FiltroFuncao struct {
+	Id_funcao        int32  `form:"idFuncao"`
+	Nome             string `form:"nome"`
+	NomeDepartamento string `form:"nome_departamento"`
+	Cancelado        bool   `form:"cancelado"`
+	FiltroPaginacao
 }
 
-func (f *FuncaoService) ListasTodasFuncao(ctx context.Context, tenantId int32) ([]model.FuncaoDto, error) {
+type FuncaoPaginado struct {
+	Funcao      []model.FuncaoDto `json:"funcoes"`
+	Total       int64             `json:"total"`
+	Pagina      int32             `json:"pagina"`
+	PaginaFinal int32             `json:"paginaFinal"`
+}
 
-	funcs, err := f.repo.ListarFuncoes(ctx, tenantId)
-	if err != nil {
+func (fu *FuncaoService) ListasTodasFuncao(ctx context.Context, f FiltroFuncao, tenantId int32) (FuncaoPaginado, error) {
 
-		return []model.FuncaoDto{}, fmt.Errorf("erro ao listar todas funcoes, %w", err)
+	p := Paginacao(f.FiltroPaginacao)
+
+	filtro := repository.BuscarTodasFuncoesParams{
+		Limit:            p.Limit,
+		Offset:           p.Offset,
+		TenantID:         tenantId,
+		Nome:             pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
+		ID:               pgtype.Int4{Int32: f.Id_funcao, Valid: f.Id_funcao > 0},
+		Cancelados:       f.Cancelado,
+		NomeDepartamento: pgtype.Text{String: f.NomeDepartamento, Valid: f.NomeDepartamento != ""},
 	}
 
-	dto := make([]model.FuncaoDto, 0, len(funcs))
-	for _, funcao := range funcs {
+	funcoes, err := fu.repo.ListarFuncoes(ctx, filtro)
+	if err != nil {
+		return FuncaoPaginado{}, err
+	}
 
-		Func := model.FuncaoDto{
-			ID:     int(funcao.ID),
-			Funcao: funcao.Nome,
+	dto := make([]model.FuncaoDto, 0, len(funcoes))
+
+	for _, funcs := range funcoes {
+
+		f := model.FuncaoDto{
+			ID:     int(funcs.ID),
+			Funcao: funcs.Nome,
 			Departamento: model.DepartamentoDto{
-				ID:           int(funcao.Iddepartamento),
-				Departamento: funcao.DepartamentoNome,
+				ID:           int(funcs.Iddepartamento),
+				Departamento: funcs.DepartamentoNome,
 			},
 		}
 
-		dto = append(dto, Func)
-
+		dto = append(dto, f)
 	}
 
-	return dto, nil
+	var total int64
+	if len(funcoes) > 0 {
+		total = funcoes[0].TotalGeral
+	}
+
+	ultimaPagina := int32(math.Ceil(float64(total) / float64(p.Limit)))
+
+	return FuncaoPaginado{
+		Funcao: dto,
+		Total: total,
+		Pagina: p.PaginaAtual,
+		PaginaFinal: ultimaPagina,
+	}, nil
+
 }
 
 func (f *FuncaoService) DeletarFuncao(ctx context.Context, id int, tenantId int32) error {

@@ -7,6 +7,8 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addFuncao = `-- name: AddFuncao :exec
@@ -67,22 +69,50 @@ SELECT
     f.id, 
     f.nome, 
     f.IdDepartamento, 
-    d.nome as departamento_nome
+    d.nome as departamento_nome,
+    COUNT(*) OVER() AS total_geral
 FROM funcao f
 INNER JOIN departamento d ON f.IdDepartamento = d.id
-WHERE f.tenant_id = $1 -- SEGURANÇA: Lista apenas funções da empresa logada
-  AND f.ativo = TRUE
+WHERE f.tenant_id = $3 -- SEGURANÇA
+  AND ($4::text IS NULL OR f.nome ILIKE '%' || $4 || '%')
+  AND ($5::int IS NULL OR f.id = $5::int)
+  AND (
+    ($6::boolean IS FALSE AND f.deletado_em IS NULL) OR
+    ($6::boolean IS TRUE AND f.deletado_em IS NOT NULL)
+  )
+  AND ($7::text IS NULL OR d.nome ILIKE '%' || $7 || '%')
+ORDER BY f.nome ASC
+LIMIT $1 OFFSET $2
 `
+
+type BuscarTodasFuncoesParams struct {
+	Limit            int32
+	Offset           int32
+	TenantID         int32
+	Nome             pgtype.Text
+	ID               pgtype.Int4
+	Cancelados       bool
+	NomeDepartamento pgtype.Text
+}
 
 type BuscarTodasFuncoesRow struct {
 	ID               int32
 	Nome             string
 	Iddepartamento   int32
 	DepartamentoNome string
+	TotalGeral       int64
 }
 
-func (q *Queries) BuscarTodasFuncoes(ctx context.Context, tenantID int32) ([]BuscarTodasFuncoesRow, error) {
-	rows, err := q.db.Query(ctx, buscarTodasFuncoes, tenantID)
+func (q *Queries) BuscarTodasFuncoes(ctx context.Context, arg BuscarTodasFuncoesParams) ([]BuscarTodasFuncoesRow, error) {
+	rows, err := q.db.Query(ctx, buscarTodasFuncoes,
+		arg.Limit,
+		arg.Offset,
+		arg.TenantID,
+		arg.Nome,
+		arg.ID,
+		arg.Cancelados,
+		arg.NomeDepartamento,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +125,7 @@ func (q *Queries) BuscarTodasFuncoes(ctx context.Context, tenantID int32) ([]Bus
 			&i.Nome,
 			&i.Iddepartamento,
 			&i.DepartamentoNome,
+			&i.TotalGeral,
 		); err != nil {
 			return nil, err
 		}
@@ -126,27 +157,6 @@ func (q *Queries) DeletarFuncao(ctx context.Context, arg DeletarFuncaoParams) (i
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const possuiFuncionariosVinculados = `-- name: PossuiFuncionariosVinculados :one
-SELECT EXISTS (
-    SELECT 1 FROM funcionario 
-    WHERE IdFuncao = $1 
-      AND tenant_id = $2 -- SEGURANÇA
-      AND ativo = TRUE
-)
-`
-
-type PossuiFuncionariosVinculadosParams struct {
-	Idfuncao int32
-	TenantID int32
-}
-
-func (q *Queries) PossuiFuncionariosVinculados(ctx context.Context, arg PossuiFuncionariosVinculadosParams) (bool, error) {
-	row := q.db.QueryRow(ctx, possuiFuncionariosVinculados, arg.Idfuncao, arg.TenantID)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
 }
 
 const updateFuncao = `-- name: UpdateFuncao :execrows

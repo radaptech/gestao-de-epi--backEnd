@@ -34,14 +34,10 @@ func (f *FuncaoRepository) Adicionar(ctx context.Context, args AddFuncaoParams) 
 	return nil	
 }
 
-func(f *FuncaoRepository) ListarFuncao(ctx context.Context, agr BuscarFuncaoParams) (BuscarFuncaoRow, error){
 
-	return f.q.BuscarFuncao(ctx, agr)
-}
+func (f *FuncaoRepository) ListarFuncoes(ctx context.Context, args BuscarTodasFuncoesParams)([]BuscarTodasFuncoesRow, error) {
 
-func (f *FuncaoRepository) ListarFuncoes(ctx context.Context, tenantId int32)([]BuscarTodasFuncoesRow, error) {
-
-	funcoes, err:= f.q.BuscarTodasFuncoes(ctx, tenantId)
+	funcoes, err:= f.q.BuscarTodasFuncoes(ctx, args)
 	if err != nil {
 
 		return []BuscarTodasFuncoesRow{}, helper.TraduzErroPostgres(err)
