@@ -65,6 +65,12 @@ func (f *FornecedorController) Adicionar() gin.HandlerFunc {
 				})
 				return
 			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"detalhes": err.Error(),
+			})
+			return 
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{
