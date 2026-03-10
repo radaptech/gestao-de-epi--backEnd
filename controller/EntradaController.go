@@ -96,6 +96,15 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 				return
 
 			}
+
+			if errors.Is(err, helper.ErrDadoDuplicado) {
+				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+
+					"error":"NF repetida, NF ja cadastrada no banco de dados, por favor verifique.",
+					"detalhes": err.Error(),
+				})
+				return 
+			}
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{
