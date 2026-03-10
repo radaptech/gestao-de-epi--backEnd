@@ -25,6 +25,7 @@ type Container struct {
 	Entrada      controller.EntradaController
 	Fornecedor   controller.FornecedorController
 	Entrega      controller.EntregaController
+	Estoque      controller.EstoqueController
 }
 
 func NewContainer(db *pgxpool.Pool) *Container {
@@ -39,6 +40,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEntrada := repository.NewEntradaRepository(db)
 	repoFornecedor := repository.NewFornecedorRepository(db)
 	repoEntrega := repository.NewEntregaRepository(db)
+	repoEstoque := repository.NewEstoqueRepository(db)
 
 	serviceUsuario := service.NewUsuarioService(repoUsuario)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
@@ -50,6 +52,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	epiService := service.NewEpiService(repoEpi, db)
 	entradaService := service.NewEntradaService(repoEntrada)
 	entregaService := service.NewEntregaService(repoEntrega, db)
+	estoqueService := service.NewEstoqueService(repoEstoque)
 
 	return &Container{
 		Usuario:      *controller.NewLoginController(serviceUsuario),
@@ -62,6 +65,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 		Entrada:      *controller.NewEntradaController(entradaService),
 		Fornecedor:   *controller.NewFornecedorController(FornecedorService),
 		Entrega:      *controller.NewEntregaController(entregaService),
+		Estoque:      *controller.NewEstoqueController(estoqueService),
 	}
 }
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
@@ -100,12 +104,17 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	{
 
 		//colaborador e adm tem acesso a essas rotas
+
 		api.GET("/me", c.Usuario.VerPerfil())
 		//departamentos
 		api.GET("/departamentos", c.Departamento.ListarDepartamentos())
 
+		//quantidade de todos os epis cadastrados
+		api.GET("/quantidade-epi", c.Estoque.MostrarQuantidades())
+
+		//valor totas dos epis
+		api.GET("/saldo-epi", c.Estoque.MostrarSaldo())
 		//funcao
-		
 		api.GET("/funcoes", c.Funcao.ListarFuncoes())
 
 		//funcionario
@@ -128,13 +137,12 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/entradas", c.Entrada.ListarEntradas())
 
 		//fornecedores
-		
 		api.GET("/fornecedores", c.Fornecedor.ListarFornecedores())
 
 		//entregas
 		api.GET("/entregas", c.Entrega.ListarEntregas())
 		api.POST("/cadastro-entregas", c.Entrega.Adicionar())
-		 
+
 		//rotas que apenas o "admin" tem acesso
 		rotasAdm := api.Group("/gerencial")
 		rotasAdm.Use(middleware.VerificaRole("admin"))
@@ -177,7 +185,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			rotasAdm.DELETE("/fornecedor/:id", c.Fornecedor.CancelarFornecedor())
 			rotasAdm.PATCH("/fornecedor/:id", c.Fornecedor.AtualizaFornecedor())
 
-			//entregas			
+			//entregas
 			rotasAdm.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())
 		}
 	}

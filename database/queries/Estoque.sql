@@ -47,3 +47,33 @@ WHERE id = (
     LIMIT 1
 )
 AND tenant_id = $1; -- SEGURANÇA NO UPDATE
+
+
+-- name: ListarEstoqueAtual :many
+SELECT 
+    e.IdEpi, 
+    p.nome AS nome_epi,
+    SUM(e.quantidadeAtual) AS quantidade_total,
+    COUNT(*) OVER() AS total_geral
+FROM entrada_epi e
+inner JOIN epi p ON e.IdEpi = p.id
+WHERE e.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Só busca estoque da empresa logada
+  AND e.ativo = TRUE
+GROUP BY e.IdEpi, p.nome
+LIMIT $1 OFFSET $2;
+
+
+-- name: ListarSaldoEstoque :many
+SELECT 
+    e.IdEpi, 
+    p.nome AS nome_epi,
+    SUM(e.quantidadeAtual)::int AS quantidade_atual,
+    SUM(e.valor_unitario * e.quantidadeAtual )::float AS saldo_atual,
+    COUNT(*) OVER() AS total_geral
+    from entrada_epi e
+inner JOIN epi p ON e.IdEpi = p.id
+WHERE e.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Só busca estoque da empresa logada
+  AND e.ativo = TRUE
+  AND p.fabricante = sqlc.narg('fabricante') OR sqlc.narg('fabricante') IS NULL -- Filtro adicional para fabricante
+GROUP BY e.IdEpi, p.nome
+LIMIT $1 OFFSET $2;

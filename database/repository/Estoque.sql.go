@@ -67,6 +67,61 @@ func (q *Queries) DevolverItemAoEstoque(ctx context.Context, arg DevolverItemAoE
 	return err
 }
 
+const listarEstoqueAtual = `-- name: ListarEstoqueAtual :many
+
+
+SELECT 
+    e.IdEpi, 
+    p.nome AS nome_epi,
+    SUM(e.quantidadeAtual) AS quantidade_total,
+    COUNT(*) OVER() AS total_geral
+FROM entrada_epi e
+inner JOIN epi p ON e.IdEpi = p.id
+WHERE e.tenant_id = $3 -- SEGURANÇA: Só busca estoque da empresa logada
+  AND e.ativo = TRUE
+GROUP BY e.IdEpi, p.nome
+LIMIT $1 OFFSET $2
+`
+
+type ListarEstoqueAtualParams struct {
+	Limit    int32
+	Offset   int32
+	TenantID int32
+}
+
+type ListarEstoqueAtualRow struct {
+	Idepi           int32
+	NomeEpi         string
+	QuantidadeTotal int64
+	TotalGeral      int64
+}
+
+// SEGURANÇA NO UPDATE
+func (q *Queries) ListarEstoqueAtual(ctx context.Context, arg ListarEstoqueAtualParams) ([]ListarEstoqueAtualRow, error) {
+	rows, err := q.db.Query(ctx, listarEstoqueAtual, arg.Limit, arg.Offset, arg.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListarEstoqueAtualRow
+	for rows.Next() {
+		var i ListarEstoqueAtualRow
+		if err := rows.Scan(
+			&i.Idepi,
+			&i.NomeEpi,
+			&i.QuantidadeTotal,
+			&i.TotalGeral,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listarLotesParaConsumo = `-- name: ListarLotesParaConsumo :many
 SELECT id, quantidadeAtual, data_validade, valor_unitario 
 FROM entrada_epi 
@@ -108,6 +163,68 @@ func (q *Queries) ListarLotesParaConsumo(ctx context.Context, arg ListarLotesPar
 			&i.Quantidadeatual,
 			&i.DataValidade,
 			&i.ValorUnitario,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listarSaldoEstoque = `-- name: ListarSaldoEstoque :many
+SELECT 
+    e.IdEpi, 
+    p.nome AS nome_epi,
+    SUM(e.quantidadeAtual)::int AS quantidade_atual,
+    SUM(e.valor_unitario * e.quantidadeAtual )::float AS saldo_atual,
+    COUNT(*) OVER() AS total_geral
+    from entrada_epi e
+inner JOIN epi p ON e.IdEpi = p.id
+WHERE e.tenant_id = $3 -- SEGURANÇA: Só busca estoque da empresa logada
+  AND e.ativo = TRUE
+  AND p.fabricante = $4 OR $4 IS NULL -- Filtro adicional para fabricante
+GROUP BY e.IdEpi, p.nome
+LIMIT $1 OFFSET $2
+`
+
+type ListarSaldoEstoqueParams struct {
+	Limit      int32
+	Offset     int32
+	TenantID   int32
+	Fabricante pgtype.Text
+}
+
+type ListarSaldoEstoqueRow struct {
+	Idepi           int32
+	NomeEpi         string
+	QuantidadeAtual int32
+	SaldoAtual      float64
+	TotalGeral      int64
+}
+
+func (q *Queries) ListarSaldoEstoque(ctx context.Context, arg ListarSaldoEstoqueParams) ([]ListarSaldoEstoqueRow, error) {
+	rows, err := q.db.Query(ctx, listarSaldoEstoque,
+		arg.Limit,
+		arg.Offset,
+		arg.TenantID,
+		arg.Fabricante,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListarSaldoEstoqueRow
+	for rows.Next() {
+		var i ListarSaldoEstoqueRow
+		if err := rows.Scan(
+			&i.Idepi,
+			&i.NomeEpi,
+			&i.QuantidadeAtual,
+			&i.SaldoAtual,
+			&i.TotalGeral,
 		); err != nil {
 			return nil, err
 		}
