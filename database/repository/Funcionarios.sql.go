@@ -144,7 +144,7 @@ INNER JOIN departamento d ON fn.IdDepartamento = d.id
 INNER JOIN funcao f ON fn.IdFuncao = f.id
 WHERE fn.tenant_id = $3 -- SEGURANÇA: Só busca funcionário da empresa atual
   AND ($4::int IS NULL OR fn.id = $4::int)
-  AND ($5::text IS NULL OR fn.matricula = $5::text)
+  AND ($5::text IS NULL OR fn.matricula ILIKE '%'|| $5 || '%')
   AND ($6::text IS NULL OR fn.nome ILIKE '%' || $6 || '%')
   AND (
     ($7::boolean IS FALSE AND fn.deletado_em IS NULL) OR
