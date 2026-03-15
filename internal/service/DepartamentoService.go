@@ -15,7 +15,7 @@ import (
 
 //go:generate mockery --name=DepartamentoRepository --output=../../mocks --outpkg=mocks --with-expecter
 type DepartamentoRepository interface {
-	Adicionar(ctx context.Context, departamento repository.CriaDepartamentoParams) error
+	Adicionar(ctx context.Context, departamento repository.CriaDepartamentoParams) (repository.Departamento, error)
 	ListarDepartamentos(ctx context.Context, args repository.BuscarTodosDepartamentosParams) ([]repository.BuscarTodosDepartamentosRow, error)
 	CancelarDepartamento(ctx context.Context, arg repository.DeletarDepartamentoParams) (int64, error)
 	AtualizarDepartamento(ctx context.Context, arg repository.UpdateDepartamentoParams) (int64, error)
@@ -29,31 +29,31 @@ func NewDepartamentoService(r DepartamentoRepository) *DepartamentoService {
 	return &DepartamentoService{repo: r}
 }
 
-func (d *DepartamentoService) SalvarDepartamento(ctx context.Context, tenantId int32, model model.Departamento) error {
+func (d *DepartamentoService) SalvarDepartamento(ctx context.Context, tenantId int32, m model.Departamento) (model.DepartamentoDto, error) {
 
-	model.Departamento = strings.TrimSpace(model.Departamento)
+	m.Departamento = strings.TrimSpace(m.Departamento)
 
-	if len(model.Departamento) < 2 {
+	if len(m.Departamento) < 2 {
 
-		return helper.ErrNomeCurto
+		return model.DepartamentoDto{}, helper.ErrNomeCurto
 
 	}
 
-	err := d.repo.Adicionar(ctx, repository.CriaDepartamentoParams{
+	dep, err := d.repo.Adicionar(ctx, repository.CriaDepartamentoParams{
 		TenantID: tenantId,
-		Nome:     model.Departamento,
+		Nome:     m.Departamento,
 	})
 	if err != nil {
 
 		if errors.Is(err, helper.ErrDadoDuplicado) {
 
-			return err
+			return model.DepartamentoDto{}, err
 		}
 
-		return err
+		return model.DepartamentoDto{}, err
 	}
 
-	return nil
+	return model.DepartamentoDto{ID: int(dep.ID), Departamento: dep.Nome}, nil
 }
 
 type FiltroDepartamento struct {
@@ -61,7 +61,6 @@ type FiltroDepartamento struct {
 	Nome            string `form:"nome"`
 	Cancelado       bool   `form:"cancelado"`
 	FiltroPaginacao
-	
 }
 
 type DepartamentoPaginado struct {
@@ -73,8 +72,7 @@ type DepartamentoPaginado struct {
 
 func (d *DepartamentoService) ListarTodosDepartamentos(ctx context.Context, f FiltroDepartamento, tenantId int32) (DepartamentoPaginado, error) {
 
-
-	p:= Paginacao(f.FiltroPaginacao)
+	p := Paginacao(f.FiltroPaginacao)
 
 	filtro := repository.BuscarTodosDepartamentosParams{
 		Limit:      p.Limit,

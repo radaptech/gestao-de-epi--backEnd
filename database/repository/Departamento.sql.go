@@ -95,9 +95,10 @@ func (q *Queries) BuscarTodosDepartamentos(ctx context.Context, arg BuscarTodosD
 	return items, nil
 }
 
-const criaDepartamento = `-- name: CriaDepartamento :exec
+const criaDepartamento = `-- name: CriaDepartamento :one
 INSERT INTO departamento (tenant_id, nome) 
 VALUES ($1, $2)
+RETURNING id, tenant_id, nome, ativo, deletado_em
 `
 
 type CriaDepartamentoParams struct {
@@ -105,9 +106,17 @@ type CriaDepartamentoParams struct {
 	Nome     string
 }
 
-func (q *Queries) CriaDepartamento(ctx context.Context, arg CriaDepartamentoParams) error {
-	_, err := q.db.Exec(ctx, criaDepartamento, arg.TenantID, arg.Nome)
-	return err
+func (q *Queries) CriaDepartamento(ctx context.Context, arg CriaDepartamentoParams) (Departamento, error) {
+	row := q.db.QueryRow(ctx, criaDepartamento, arg.TenantID, arg.Nome)
+	var i Departamento
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Nome,
+		&i.Ativo,
+		&i.DeletadoEm,
+	)
+	return i, err
 }
 
 const deletarDepartamento = `-- name: DeletarDepartamento :execrows

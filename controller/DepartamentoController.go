@@ -14,7 +14,7 @@ import (
 )
 
 type DepartamentoService interface {
-	SalvarDepartamento(ctx context.Context, tenantId int32, model model.Departamento) error
+	SalvarDepartamento(ctx context.Context, tenantId int32, m model.Departamento) (model.DepartamentoDto, error)
 	ListarTodosDepartamentos(ctx context.Context, f service.FiltroDepartamento, tenantId int32) (service.DepartamentoPaginado, error)
 	DeletarDepartamento(ctx context.Context, id int, tenantId int32) error
 	AtualizarDepartamento(ctx context.Context, id int32, novoNome string, tenantId int32) error
@@ -65,7 +65,7 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 			return
 		}
 
-		err := d.service.SalvarDepartamento(c, tenantID, novoDep)
+		depStts,err:= d.service.SalvarDepartamento(c, tenantID, novoDep)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -86,6 +86,7 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 		c.JSON(http.StatusCreated, gin.H{
 
 			"mensagem": "departamento cadastrado",
+			"departamento": depStts,
 		})
 	}
 }

@@ -22,15 +22,15 @@ func NewDepartamentoRepository(pool *pgxpool.Pool) *DepartamentoRepository {
 	}
 }
 
-func (d *DepartamentoRepository) Adicionar(ctx context.Context, departamento CriaDepartamentoParams) error{
+func (d *DepartamentoRepository) Adicionar(ctx context.Context, departamento CriaDepartamentoParams) (Departamento, error){
 	
-	err :=d.q.CriaDepartamento(ctx, departamento)
+	dep,err :=d.q.CriaDepartamento(ctx, departamento)
 	if err != nil {
 
-		return helper.TraduzErroPostgres(err)
+		return Departamento{},helper.TraduzErroPostgres(err)
 	}
 
-	return nil
+	return dep,err
 }
 
 func (d *DepartamentoRepository) ListarDepartamento(ctx context.Context, arg BuscarDepartamentoParams) (BuscarDepartamentoRow, error){

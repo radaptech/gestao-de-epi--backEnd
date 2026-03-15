@@ -1,6 +1,7 @@
--- name: CriaDepartamento :exec
+-- name: CriaDepartamento :one
 INSERT INTO departamento (tenant_id, nome) 
-VALUES ($1, $2);
+VALUES ($1, $2)
+RETURNING *;
 
 -- name: BuscarDepartamento :one
 SELECT id, nome 
