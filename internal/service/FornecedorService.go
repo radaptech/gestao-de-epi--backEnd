@@ -134,7 +134,7 @@ func (f *FornecedorService) CancelarFornecedor(ctx context.Context, id, tenantId
 
 	arg := repository.DeletarFornecedorParams{
 		ID:       id,
-		TenantID: id,
+		TenantID: tenantId,
 	}
 
 	linhasAfetadas, err := f.repo.CancelarFornecedor(ctx, arg)
