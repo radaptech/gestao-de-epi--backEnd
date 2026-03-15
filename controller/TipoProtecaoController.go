@@ -13,7 +13,7 @@ import (
 )
 
 type TipoProtecaoService interface {
-	SalvarProtecao(ctx context.Context, model model.TipoProtecao, tenantId int32) error
+	SalvarProtecao(ctx context.Context, m model.TipoProtecao, tenantId int32) (model.TipoProtecaoDto, error)
 	ListarProtecao(ctx context.Context, id int, tenatId int32) (model.TipoProtecaoDto, error)
 	ListarProtecoes(ctx context.Context, tenantId int32) ([]model.TipoProtecaoDto, error)
 	DeletarProtecao(ctx context.Context, id int, tenantId int32) error
@@ -59,7 +59,7 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 			return
 		}
 
-		err := t.service.SalvarProtecao(ctx, protec, tenantId)
+		tp,err := t.service.SalvarProtecao(ctx, protec, tenantId)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -81,6 +81,7 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 
 			"mensagem": "proteção cadastrada",
+			"protecao":tp,
 		})
 	}
 }
