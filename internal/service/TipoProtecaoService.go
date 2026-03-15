@@ -16,7 +16,7 @@ import (
 
 type ProtecaoRepository interface {
 
-	Adicionar(ctx context.Context, nome repository.AddProtecaoParams) error
+	Adicionar(ctx context.Context, nome repository.AddProtecaoParams) (repository.TipoProtecao, error)
 	ListarProtecao(ctx context.Context, arg repository.BuscarProtecaoParams) (repository.BuscarProtecaoRow, error)
 	ListarProtecoes(ctx context.Context, tenantId int32) ([]repository.BuscarTodasProtecoesRow, error)
 	CancelarProtecao(ctx context.Context, arg repository.DeletarProtecaoParams) (int64, error)
@@ -32,19 +32,19 @@ func NewProtecaoService(p ProtecaoRepository) *ProtecaoService {
 	return &ProtecaoService{repo: p}
 }
 
-func (p *ProtecaoService) SalvarProtecao(ctx context.Context, model model.TipoProtecao, tenantId int32) error {
+func (p *ProtecaoService) SalvarProtecao(ctx context.Context, m model.TipoProtecao, tenantId int32) (model.TipoProtecaoDto, error) {
 
-	model.Nome = strings.TrimSpace(model.Nome)
+	m.Nome = strings.TrimSpace(m.Nome)
 
-	err:= p.repo.Adicionar(ctx, repository.AddProtecaoParams{
-		Nome: model.Nome,
+	tp,err:= p.repo.Adicionar(ctx, repository.AddProtecaoParams{
+		Nome: m.Nome,
 		TenantID: tenantId,
 	})
 	if err != nil {
-		return  err
+		return  model.TipoProtecaoDto{},err
 	}
 
-	return nil
+	return model.TipoProtecaoDto{ID: int64(tp.ID),Nome: tp.Nome}, nil
 }
 
 func (p *ProtecaoService) ListarProtecao(ctx context.Context, id int, tenatId int32) (model.TipoProtecaoDto, error){

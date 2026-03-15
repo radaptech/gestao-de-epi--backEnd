@@ -9,9 +9,10 @@ import (
 	"context"
 )
 
-const addProtecao = `-- name: AddProtecao :exec
+const addProtecao = `-- name: AddProtecao :one
 INSERT INTO tipo_protecao (tenant_id, nome) 
 VALUES ($1, $2)
+RETURNING id, tenant_id, nome, ativo, deletado_em
 `
 
 type AddProtecaoParams struct {
@@ -19,9 +20,17 @@ type AddProtecaoParams struct {
 	Nome     string
 }
 
-func (q *Queries) AddProtecao(ctx context.Context, arg AddProtecaoParams) error {
-	_, err := q.db.Exec(ctx, addProtecao, arg.TenantID, arg.Nome)
-	return err
+func (q *Queries) AddProtecao(ctx context.Context, arg AddProtecaoParams) (TipoProtecao, error) {
+	row := q.db.QueryRow(ctx, addProtecao, arg.TenantID, arg.Nome)
+	var i TipoProtecao
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Nome,
+		&i.Ativo,
+		&i.DeletadoEm,
+	)
+	return i, err
 }
 
 const buscarProtecao = `-- name: BuscarProtecao :one

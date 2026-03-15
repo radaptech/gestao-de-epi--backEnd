@@ -23,14 +23,14 @@ func NewProtecaoRepository(pool *pgxpool.Pool) *ProtecaoRepository {
 	}
 }
 
-func (p *ProtecaoRepository) Adicionar(ctx context.Context, nome AddProtecaoParams) error {
+func (p *ProtecaoRepository) Adicionar(ctx context.Context, nome AddProtecaoParams) (TipoProtecao, error) {
 
-	err := p.q.AddProtecao(ctx, nome)
+	tp,err := p.q.AddProtecao(ctx, nome)
 	if err != nil {
-		return  helper.TraduzErroPostgres(err)
+		return  TipoProtecao{},helper.TraduzErroPostgres(err)
 	}
 
-	return  nil
+	return  tp, nil
 }
 
 func (p *ProtecaoRepository) ListarProtecao(ctx context.Context, arg BuscarProtecaoParams) (BuscarProtecaoRow, error){

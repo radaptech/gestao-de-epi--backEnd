@@ -1,6 +1,7 @@
--- name: AddProtecao :exec
+-- name: AddProtecao :one
 INSERT INTO tipo_protecao (tenant_id, nome) 
-VALUES ($1, $2);
+VALUES ($1, $2)
+RETURNING *;
 
 -- name: BuscarProtecao :one
 SELECT id, nome 
