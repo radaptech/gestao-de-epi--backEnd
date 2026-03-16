@@ -173,6 +173,7 @@ func (e *EpiService) ListarEpis(ctx context.Context, f EpiFiltro, tenantId int32
 				ID:   int64(epi.Idtipoprotecao),
 				Nome: epi.TipoProtecaoNome,
 			},
+			AlertaMinimo: int(epi.AlertaMinimo),
 		}
 
 		if e.Tamanho == nil {
