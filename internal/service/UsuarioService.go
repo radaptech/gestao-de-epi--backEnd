@@ -88,7 +88,7 @@ func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, te
 
 	
 	//gerando o token
-	token, err := auth.GerarJWT(usuario.ID, usuario.Role.String, tenantId)
+	token, err := auth.GerarJWT(usuario.ID, usuario.Role.String, usuario.Nome ,tenantId)
 	if err != nil {
 		return "", repository.BuscarUsuarioPorEmailRow{}, errors.New("erro ao gerar token de acesso")
 	}
