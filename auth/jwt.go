@@ -9,7 +9,7 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-func GerarJWT(id int32, role string, tenatId int32) (string, error) {
+func GerarJWT(id int32, role,nome string, tenatId int32) (string, error) {
 
 
 	secret := os.Getenv("JWT_SECRET")
@@ -20,7 +20,8 @@ func GerarJWT(id int32, role string, tenatId int32) (string, error) {
 
 	claim:= jwt.MapClaims{
 
-		"sub": id, //id do usuario
+		"sub": id,
+		"nome": nome, //id do usuario
 		"role": role,
 		"tenantId": tenatId,
 		"exp": time.Now().Add(time.Hour * 24).Unix(), // 24 para o token expirar
