@@ -70,6 +70,11 @@ func AutenticacaoJWT() gin.HandlerFunc {
 
 				ctx.Set("user_TenantId", int32(TenantId))
 			}
+
+			if nome, ok:= claims["nome"].(string); ok {
+
+				ctx.Set("user_nome", nome)
+			}
 		}else {
 			
 			ctx.JSON(http.StatusUnauthorized, gin.H{
