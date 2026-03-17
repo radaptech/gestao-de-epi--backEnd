@@ -1,5 +1,5 @@
 # 1. Ajuste a versão para uma existente (1.23 ou 1.22)
-FROM golang:1.25-alpine
+FROM golang:1.26.1-alpine
 
 WORKDIR /app
 
