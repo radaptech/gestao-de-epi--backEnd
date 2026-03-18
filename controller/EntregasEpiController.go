@@ -3,21 +3,25 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	// Imports da V2 do Maroto
 )
 
 type EntregasService interface {
 	Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32) error
 	ListaEntregas(ctx context.Context, f service.FiltroEntregas, tenantId int32) (service.EntregaPaginada, error)
 	CancelarEntrega(ctx context.Context, tenantId, id, iduser int) error
+	GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error)
 }
 
 type EntregaController struct {
@@ -166,7 +170,7 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 
 			if errors.Is(err, helper.ErrNaoEncontrado) {
 
-			ctx.JSON(http.StatusNotFound, gin.H{
+				ctx.JSON(http.StatusNotFound, gin.H{
 
 					"error":    "entrega não encontrada",
 					"detalhes": err.Error(),
@@ -182,5 +186,62 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 		}
 
 		ctx.Status(http.StatusNoContent)
+	}
+}
+
+func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		matricula := ctx.Param("matricula")
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "erro interno de tenant",
+			})
+			return
+		}
+
+		responsavel:= ctx.GetString("user_nome") //pegando o responsavel logado no sistema
+
+		auditoria := helper.Auditoria{
+			DadosServidor: time.Now().Format("02/01/2006 às 15:04:05"),
+			Ip:            ctx.ClientIP(),
+		}
+
+		fmt.Printf("DEBUG: Matricula do Param: '%s' | Tenant do Middleware: %d\n", matricula, tenantId)
+		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula, tenantId)
+		if err != nil {
+
+			if errors.Is(err, helper.ErrNaoEncontrado) {
+				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+					"error":    "dados nao encontrados",
+					"detalhes": err.Error(),
+				})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    err.Error(),
+				"detalhes": "dados não obtidos para gerar o pdf",
+			})
+			return
+		}
+
+		documento, err := helper.CreatePdf(entregaDadosPdf, auditoria, responsavel)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    err.Error(),
+				"detalhes": "erro na geração do pdf",
+			})
+			return
+
+		}
+
+		// Baixa o arquivo direto no navegador
+		ctx.Header("Content-Disposition", "attachment; filename=Ficha_EPI_"+matricula+".pdf")
+		ctx.Data(http.StatusOK, "application/pdf", documento.GetBytes()) // Extrai os bytes limpos!
 	}
 }

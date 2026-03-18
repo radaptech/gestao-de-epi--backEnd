@@ -187,6 +187,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 			//entregas
 			rotasAdm.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())
+			rotasAdm.GET("/:matricula/ficha-pdf", c.Entrega.GerarFichaEpiPDF())
 		}
 	}
 

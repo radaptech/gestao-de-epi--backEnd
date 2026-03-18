@@ -122,3 +122,16 @@ func (e *EntregaRepository) ListarEpisEntreguesCancelados(ctx context.Context, q
 
 	return cancelados, nil
 }
+
+func (e *EntregaRepository) ListasEntregasPorMatricula(ctx context.Context, args ListarHistoricoEntregasPorMatriculaParams) ([]ListarHistoricoEntregasPorMatriculaRow, error) {
+
+	
+	entrega, err := e.q.ListarHistoricoEntregasPorMatricula(ctx, args)
+	if err != nil {
+
+		return []ListarHistoricoEntregasPorMatriculaRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	
+	return entrega, nil
+}

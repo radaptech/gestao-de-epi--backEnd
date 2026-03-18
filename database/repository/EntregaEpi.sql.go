@@ -364,6 +364,88 @@ func (q *Queries) ListarEntregas(ctx context.Context, arg ListarEntregasParams) 
 	return items, nil
 }
 
+const listarHistoricoEntregasPorMatricula = `-- name: ListarHistoricoEntregasPorMatricula :many
+SELECT 
+    emp.razao_social as razao_social,
+    f.id as func_id, f.nome as func_nome, f.matricula,
+    d.id as dep_id, d.nome as dep_nome,
+    ff.id as funcao_id, ff.nome as funcao_nome,
+    ee.data_entrega,i.quantidade,e.CA,e.nome AS epi_nome, e.descricao,
+    i.IdTamanho,t.tamanho,ee.assinatura
+FROM entrega_epi ee
+INNER JOIN empresas emp ON ee.tenant_id = emp.id
+INNER JOIN funcionario f ON ee.IdFuncionario = f.id
+INNER JOIN departamento d ON f.IdDepartamento = d.id
+INNER JOIN funcao ff ON f.IdFuncao = ff.id
+INNER JOIN epis_entregues i ON i.IdEntrega = ee.id
+INNER JOIN epi e ON e.id = i.IdEpi
+INNER JOIN tamanho t ON t.id = i.IdTamanho
+where f.matricula = $1
+and ee.tenant_id = $2
+ORDER BY ee.data_entrega DESC,ee.id DESC
+`
+
+type ListarHistoricoEntregasPorMatriculaParams struct {
+	Matricula string
+	TenantID  int32
+}
+
+type ListarHistoricoEntregasPorMatriculaRow struct {
+	RazaoSocial string
+	FuncID      int32
+	FuncNome    string
+	Matricula   string
+	DepID       int32
+	DepNome     string
+	FuncaoID    int32
+	FuncaoNome  string
+	DataEntrega pgtype.Date
+	Quantidade  int32
+	Ca          string
+	EpiNome     string
+	Descricao   string
+	Idtamanho   int32
+	Tamanho     string
+	Assinatura  string
+}
+
+func (q *Queries) ListarHistoricoEntregasPorMatricula(ctx context.Context, arg ListarHistoricoEntregasPorMatriculaParams) ([]ListarHistoricoEntregasPorMatriculaRow, error) {
+	rows, err := q.db.Query(ctx, listarHistoricoEntregasPorMatricula, arg.Matricula, arg.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListarHistoricoEntregasPorMatriculaRow
+	for rows.Next() {
+		var i ListarHistoricoEntregasPorMatriculaRow
+		if err := rows.Scan(
+			&i.RazaoSocial,
+			&i.FuncID,
+			&i.FuncNome,
+			&i.Matricula,
+			&i.DepID,
+			&i.DepNome,
+			&i.FuncaoID,
+			&i.FuncaoNome,
+			&i.DataEntrega,
+			&i.Quantidade,
+			&i.Ca,
+			&i.EpiNome,
+			&i.Descricao,
+			&i.Idtamanho,
+			&i.Tamanho,
+			&i.Assinatura,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listarItensEntregueCancelados = `-- name: ListarItensEntregueCancelados :many
 SELECT quantidade, IdEntrada
 FROM epis_entregues

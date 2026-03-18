@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	
 )
 
 type EntregaRepository interface {
@@ -24,6 +25,7 @@ type EntregaRepository interface {
 	ReporEstoqueEntrada(ctx context.Context, qtx *repository.Queries, args repository.ReporEstoqueLoteParams) (int64, error)
 	ListarEntregasDisponiveis(ctx context.Context, qtx *repository.Queries, args repository.ListarLotesParaConsumoParams) ([]repository.ListarLotesParaConsumoRow, error)
 	ListarEpisEntreguesCancelados(ctx context.Context, qtx *repository.Queries, arg repository.ListarItensEntregueCanceladosParams) ([]repository.ListarItensEntregueCanceladosRow, error)
+	ListasEntregasPorMatricula(ctx context.Context, args repository.ListarHistoricoEntregasPorMatriculaParams)([]repository.ListarHistoricoEntregasPorMatriculaRow, error)
 }
 
 type EntregaService struct {
@@ -339,7 +341,7 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 	identrega, err := e.repo.Cancelar(ctx, qtx, arg)
 	if err != nil {
 
-		return err 
+		return err
 	}
 
 	if identrega == 0 {
@@ -353,7 +355,7 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 	})
 	if err != nil {
 
-		return fmt.Errorf("erro em cancelar entrega de item, %w ", err) 
+		return fmt.Errorf("erro em cancelar entrega de item, %w ", err)
 	}
 
 	cancelados, err := e.repo.ListarEpisEntreguesCancelados(ctx, qtx, repository.ListarItensEntregueCanceladosParams{
@@ -362,7 +364,7 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 	})
 	if err != nil {
 
-		return fmt.Errorf("erro em epis entregues cancelados, %w ", err) 
+		return fmt.Errorf("erro em epis entregues cancelados, %w ", err)
 	}
 
 	for _, cancelado := range cancelados {
@@ -375,7 +377,7 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 		linhasAfetadas, err := e.repo.ReporEstoqueEntrada(ctx, qtx, args)
 		if err != nil {
 
-			return fmt.Errorf("erro em repor estoque, %w ", err) 
+			return fmt.Errorf("erro em repor estoque, %w ", err)
 		}
 
 		if linhasAfetadas == 0 {
@@ -387,3 +389,53 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 
 	return nil
 }
+
+func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error) {
+
+
+	entrega, err:= e.repo.ListasEntregasPorMatricula(ctx, repository.ListarHistoricoEntregasPorMatriculaParams{
+		Matricula: matricula,
+		TenantID: tenantId,
+	})
+	if err != nil {
+
+		return helper.DadosPdf{}, err
+	}
+
+	if len(entrega) == 0 {
+
+		return helper.DadosPdf{}, helper.ErrNaoEncontrado
+
+	}
+
+	epis:= make([]helper.DadosEpiPdf, 0)
+
+	for _, ent := range entrega {
+
+		entregaPdf:= helper.DadosEpiPdf{
+			Data: *configs.NewDataBrPtr(ent.DataEntrega.Time),
+			NomeEpi: ent.EpiNome,
+			Ca: ent.Ca,
+			Descricao: ent.Descricao,
+			Tamanho: ent.Tamanho,
+			Quantidade: ent.Quantidade,
+		}
+
+		epis = append(epis, entregaPdf)
+	}
+
+	pdfEntrega:= helper.DadosPdf{
+
+		NomeEmpresa: entrega[0].RazaoSocial,
+		NomeFuncionario: entrega[0].FuncNome,
+		Matricula: entrega[0].Matricula,
+		Setor: entrega[0].DepNome,
+		Cargo: entrega[0].FuncaoNome,
+		Assinatura: entrega[0].Assinatura,
+		Epi: epis,
+	}
+
+
+	return pdfEntrega, nil
+}
+
