@@ -5,31 +5,10 @@ rodar testes
 go test -v -tags=integration ./...
 
 rodar docker
- sudo docker-compose --env-file ../configs/.env up -d
+ sudo docker compose -f docker-compose.dev.yml  --env-file .env up -d --build
 
 
-
-   # -----------------------------------------------------------------
-  # API (Sua Aplicação Go)
-  # -----------------------------------------------------------------
-  api:
-    container_name: api_epi
-    restart: always
-    build:
-      context: ..            # <--- O PULO DO GATO: Define a raiz do projeto como contexto
-      dockerfile: docker/dockerfile # Aponta onde está o arquivo de build
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-    env_file:
-      - ../configs/.env
-    environment:
-      # Sobrescreve o DB_HOST para usar o nome do container
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DATABASE}
-      - JWT_SECRET=${JWT_SECRET}
-      - GIN_MODE=release # Otimiza o Gin para produção
+Dica para o seu código Go:
+Como você está usando o Go 1.26, aproveite para salvar no banco de dados não só a imagem da assinatura, 
+mas também o IP e o User-Agent (navegador/dispositivo) de quem assinou.
+ Isso se chama Trilha de Auditoria e dá 10x mais valor ao seu software se houver uma perícia judicial.
