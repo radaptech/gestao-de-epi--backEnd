@@ -196,7 +196,7 @@ type ListarDevolucoesRow struct {
 	ID                     int32
 	Idfuncionario          int32
 	FuncNome               string
-	Matricula              string
+	Matricula              int32
 	Iddepartamento         int32
 	DepNome                string
 	Idfuncao               int32

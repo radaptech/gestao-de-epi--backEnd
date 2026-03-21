@@ -291,7 +291,7 @@ type ListarEntregasRow struct {
 	IDUsuarioEntrega pgtype.Int4
 	FuncID           int32
 	FuncNome         string
-	Matricula        string
+	Matricula        int32
 	DepID            int32
 	DepNome          string
 	FuncaoID         int32
@@ -386,7 +386,7 @@ ORDER BY ee.data_entrega DESC,ee.id DESC
 `
 
 type ListarHistoricoEntregasPorMatriculaParams struct {
-	Matricula string
+	Matricula int32
 	TenantID  int32
 }
 
@@ -394,7 +394,7 @@ type ListarHistoricoEntregasPorMatriculaRow struct {
 	RazaoSocial string
 	FuncID      int32
 	FuncNome    string
-	Matricula   string
+	Matricula   int32
 	DepID       int32
 	DepNome     string
 	FuncaoID    int32

@@ -131,7 +131,7 @@ type Funcionario struct {
 	ID             int32
 	TenantID       int32
 	Nome           string
-	Matricula      string
+	Matricula      int32
 	Idfuncao       int32
 	Iddepartamento int32
 	Ativo          bool

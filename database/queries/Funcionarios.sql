@@ -1,6 +1,6 @@
 -- name: AddFuncionario :exec
-INSERT INTO funcionario (tenant_id, nome, matricula, IdDepartamento, IdFuncao) 
-VALUES ($1, $2, $3, $4, $5);
+INSERT INTO funcionario (tenant_id, nome, IdDepartamento, IdFuncao) 
+VALUES ($1, $2, $3, $4);
 
 -- name: BuscaFuncionario :one
 SELECT 
@@ -19,10 +19,15 @@ WHERE fn.matricula = $1
   AND fn.ativo = TRUE;
 
 -- name: BuscarTodosFuncionarios :many
+-- name: BuscarTodosFuncionarios :many
 SELECT 
     fn.id, 
     fn.nome, 
-    fn.matricula, 
+    -- Formatação para exibição
+    CASE 
+        WHEN fn.matricula < 10000 THEN LPAD(fn.matricula::text, 4, '0') 
+        ELSE fn.matricula::text 
+    END AS matricula,
     fn.IdDepartamento, 
     d.nome as departamento_nome,
     fn.IdFuncao, 
@@ -31,9 +36,18 @@ SELECT
 FROM funcionario fn
 INNER JOIN departamento d ON fn.IdDepartamento = d.id
 INNER JOIN funcao f ON fn.IdFuncao = f.id
-WHERE fn.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Só busca funcionário da empresa atual
+WHERE fn.tenant_id = sqlc.arg('tenant_id') 
   AND (sqlc.narg('id')::int IS NULL OR fn.id = sqlc.narg('id')::int)
-  AND (sqlc.narg('matricula')::text IS NULL OR fn.matricula ILIKE '%'|| sqlc.narg('matricula') || '%')
+  -- Formatação aplicada também na hora da busca para o ILIKE bater certinho
+  AND (
+      sqlc.narg('matricula')::text IS NULL OR 
+      (
+          CASE 
+              WHEN fn.matricula < 10000 THEN LPAD(fn.matricula::text, 4, '0') 
+              ELSE fn.matricula::text 
+          END
+      ) ILIKE '%' || sqlc.narg('matricula') || '%'
+  )
   AND (sqlc.narg('nome')::text IS NULL OR fn.nome ILIKE '%' || sqlc.narg('nome') || '%')
   AND (
     (sqlc.arg('cancelados')::boolean IS FALSE AND fn.deletado_em IS NULL) OR

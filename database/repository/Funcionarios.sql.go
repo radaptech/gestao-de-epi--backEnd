@@ -12,14 +12,13 @@ import (
 )
 
 const addFuncionario = `-- name: AddFuncionario :exec
-INSERT INTO funcionario (tenant_id, nome, matricula, IdDepartamento, IdFuncao) 
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO funcionario (tenant_id, nome, IdDepartamento, IdFuncao) 
+VALUES ($1, $2, $3, $4)
 `
 
 type AddFuncionarioParams struct {
 	TenantID       int32
 	Nome           string
-	Matricula      string
 	Iddepartamento int32
 	Idfuncao       int32
 }
@@ -28,7 +27,6 @@ func (q *Queries) AddFuncionario(ctx context.Context, arg AddFuncionarioParams) 
 	_, err := q.db.Exec(ctx, addFuncionario,
 		arg.TenantID,
 		arg.Nome,
-		arg.Matricula,
 		arg.Iddepartamento,
 		arg.Idfuncao,
 	)
@@ -53,14 +51,14 @@ WHERE fn.matricula = $1
 `
 
 type BuscaFuncionarioParams struct {
-	Matricula string
+	Matricula int32
 	TenantID  int32
 }
 
 type BuscaFuncionarioRow struct {
 	ID               int32
 	Nome             string
-	Matricula        string
+	Matricula        int32
 	Iddepartamento   int32
 	DepartamentoNome string
 	Idfuncao         int32
@@ -107,7 +105,7 @@ type BuscaFuncionarioPorIdParams struct {
 type BuscaFuncionarioPorIdRow struct {
 	ID               int32
 	Nome             string
-	Matricula        string
+	Matricula        int32
 	Iddepartamento   int32
 	DepartamentoNome string
 	Idfuncao         int32
@@ -133,7 +131,11 @@ const buscarTodosFuncionarios = `-- name: BuscarTodosFuncionarios :many
 SELECT 
     fn.id, 
     fn.nome, 
-    fn.matricula, 
+    -- Formatação para exibição
+    CASE 
+        WHEN fn.matricula < 10000 THEN LPAD(fn.matricula::text, 4, '0') 
+        ELSE fn.matricula::text 
+    END AS matricula,
     fn.IdDepartamento, 
     d.nome as departamento_nome,
     fn.IdFuncao, 
@@ -142,9 +144,18 @@ SELECT
 FROM funcionario fn
 INNER JOIN departamento d ON fn.IdDepartamento = d.id
 INNER JOIN funcao f ON fn.IdFuncao = f.id
-WHERE fn.tenant_id = $3 -- SEGURANÇA: Só busca funcionário da empresa atual
+WHERE fn.tenant_id = $3 
   AND ($4::int IS NULL OR fn.id = $4::int)
-  AND ($5::text IS NULL OR fn.matricula ILIKE '%'|| $5 || '%')
+  -- Formatação aplicada também na hora da busca para o ILIKE bater certinho
+  AND (
+      $5::text IS NULL OR 
+      (
+          CASE 
+              WHEN fn.matricula < 10000 THEN LPAD(fn.matricula::text, 4, '0') 
+              ELSE fn.matricula::text 
+          END
+      ) ILIKE '%' || $5 || '%'
+  )
   AND ($6::text IS NULL OR fn.nome ILIKE '%' || $6 || '%')
   AND (
     ($7::boolean IS FALSE AND fn.deletado_em IS NULL) OR
