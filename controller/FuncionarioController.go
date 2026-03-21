@@ -59,9 +59,9 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
+
 		novoFunc := model.FuncionarioINserir{
 			Nome:            input.Nome,
-			Matricula:       input.Matricula,
 			ID_departamento: input.ID_departamento,
 			ID_funcao:       input.ID_funcao,
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -196,12 +197,13 @@ func (d *DevolucaoService) ListarDevolucoes(ctx context.Context, f FiltroDevoluc
 
 	for _, dev := range devolucoes {
 
+		Matricula:= strconv.Itoa(int(dev.Matricula))
 		d := model.DevolucaoDto{
 			Id: int(dev.ID),
 			IdFuncionario: model.Funcionario_Dto{
 				ID:        int(dev.Idfuncionario),
 				Nome:      dev.FuncNome,
-				Matricula: dev.Matricula,
+				Matricula: Matricula,
 				Funcao: model.FuncaoDto{
 					ID:     int(dev.Idfuncao),
 					Funcao: dev.FuncNome,

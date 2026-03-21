@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -12,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	
 )
 
 type EntregaRepository interface {
@@ -25,7 +25,7 @@ type EntregaRepository interface {
 	ReporEstoqueEntrada(ctx context.Context, qtx *repository.Queries, args repository.ReporEstoqueLoteParams) (int64, error)
 	ListarEntregasDisponiveis(ctx context.Context, qtx *repository.Queries, args repository.ListarLotesParaConsumoParams) ([]repository.ListarLotesParaConsumoRow, error)
 	ListarEpisEntreguesCancelados(ctx context.Context, qtx *repository.Queries, arg repository.ListarItensEntregueCanceladosParams) ([]repository.ListarItensEntregueCanceladosRow, error)
-	ListasEntregasPorMatricula(ctx context.Context, args repository.ListarHistoricoEntregasPorMatriculaParams)([]repository.ListarHistoricoEntregasPorMatriculaRow, error)
+	ListasEntregasPorMatricula(ctx context.Context, args repository.ListarHistoricoEntregasPorMatriculaParams) ([]repository.ListarHistoricoEntregasPorMatriculaRow, error)
 }
 
 type EntregaService struct {
@@ -263,12 +263,13 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 
 	for _, entrega := range entregas {
 
+		Matricula := strconv.Itoa(int(entrega.Matricula))
 		e := model.EntregaDto{
 			Id: int64(entrega.EntregaID),
 			Funcionario: model.Funcionario_Dto{
 				ID:        int(entrega.FuncID),
 				Nome:      entrega.FuncNome,
-				Matricula: entrega.Matricula,
+				Matricula: Matricula,
 				Funcao: model.FuncaoDto{
 					ID:     int(entrega.FuncaoID),
 					Funcao: entrega.FuncaoNome,
@@ -392,10 +393,13 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 
 func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error) {
 
-
-	entrega, err:= e.repo.ListasEntregasPorMatricula(ctx, repository.ListarHistoricoEntregasPorMatriculaParams{
-		Matricula: matricula,
-		TenantID: tenantId,
+	Matricula, err := strconv.Atoi(matricula)
+	if err != nil {
+		return helper.DadosPdf{}, err
+	}
+	entrega, err := e.repo.ListasEntregasPorMatricula(ctx, repository.ListarHistoricoEntregasPorMatriculaParams{
+		Matricula: int32(Matricula),
+		TenantID:  tenantId,
 	})
 	if err != nil {
 
@@ -408,34 +412,33 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 
 	}
 
-	epis:= make([]helper.DadosEpiPdf, 0)
+	epis := make([]helper.DadosEpiPdf, 0)
 
 	for _, ent := range entrega {
 
-		entregaPdf:= helper.DadosEpiPdf{
-			Data: *configs.NewDataBrPtr(ent.DataEntrega.Time),
-			NomeEpi: ent.EpiNome,
-			Ca: ent.Ca,
-			Descricao: ent.Descricao,
-			Tamanho: ent.Tamanho,
+		entregaPdf := helper.DadosEpiPdf{
+			Data:       *configs.NewDataBrPtr(ent.DataEntrega.Time),
+			NomeEpi:    ent.EpiNome,
+			Ca:         ent.Ca,
+			Descricao:  ent.Descricao,
+			Tamanho:    ent.Tamanho,
 			Quantidade: ent.Quantidade,
 		}
 
 		epis = append(epis, entregaPdf)
 	}
 
-	pdfEntrega:= helper.DadosPdf{
+	MatriculaString := strconv.Itoa(int(entrega[0].Matricula))
+	pdfEntrega := helper.DadosPdf{
 
-		NomeEmpresa: entrega[0].RazaoSocial,
+		NomeEmpresa:     entrega[0].RazaoSocial,
 		NomeFuncionario: entrega[0].FuncNome,
-		Matricula: entrega[0].Matricula,
-		Setor: entrega[0].DepNome,
-		Cargo: entrega[0].FuncaoNome,
-		Assinatura: entrega[0].Assinatura,
-		Epi: epis,
+		Matricula:       MatriculaString,
+		Setor:           entrega[0].DepNome,
+		Cargo:           entrega[0].FuncaoNome,
+		Assinatura:      entrega[0].Assinatura,
+		Epi:             epis,
 	}
-
 
 	return pdfEntrega, nil
 }
-

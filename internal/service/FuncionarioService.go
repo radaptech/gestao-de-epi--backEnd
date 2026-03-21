@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -41,7 +42,6 @@ func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.
 
 	args := repository.AddFuncionarioParams{
 		Nome:           model.Nome,
-		Matricula:      model.Matricula,
 		Iddepartamento: int32(model.ID_departamento),
 		Idfuncao:       int32(model.ID_funcao),
 		TenantID:       tenantId,
@@ -73,8 +73,14 @@ func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula st
 
 		return model.Funcionario_Dto{}, helper.ErrId
 	}
+
+	Matricula, err:= strconv.Atoi(matricula)
+	if err != nil {
+		return model.Funcionario_Dto{}, err
+	}
+	
 	funcionario, err := f.repo.ListarFuncionario(ctx, repository.BuscaFuncionarioParams{
-		Matricula: matricula,
+		Matricula: int32(Matricula),
 		TenantID:  tenantId,
 	})
 	if err != nil {
@@ -86,10 +92,12 @@ func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula st
 		return model.Funcionario_Dto{}, err
 	}
 
+	funcMatricula:= strconv.Itoa(int(funcionario.Matricula))
+
 	funcDto := model.Funcionario_Dto{
 		ID:        int(funcionario.ID),
 		Nome:      funcionario.Nome,
-		Matricula: funcionario.Matricula,
+		Matricula: funcMatricula,
 		Funcao: model.FuncaoDto{
 			ID:     int(funcionario.Idfuncao),
 			Funcao: funcionario.FuncaoNome,
