@@ -131,19 +131,17 @@ func CreateFuncao(t *testing.T, db *pgxpool.Pool, idDep, tenantID int64) int64 {
 func CreateFuncionario(t *testing.T, db *pgxpool.Pool, IdDepartamento, IdFuncao, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO funcionario (tenant_id, nome, matricula, IdFuncao, IdDepartamento, ativo) 
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO funcionario (tenant_id, nome, IdFuncao, IdDepartamento, ativo) 
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id;
 	`
-	r := randomInt()
+	
 	nome := randomString("Funcionario")
-	// Matrícula única por Tenant
-	matricula := fmt.Sprintf("%d", r.Intn(99999999)) 
+	
 
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		nome,
-		matricula,
 		IdFuncao,
 		IdDepartamento,
 		true,
