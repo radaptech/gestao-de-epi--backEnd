@@ -132,6 +132,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		//Epi´s
 		api.GET("/epis", c.Epi.ListarEpis())
 		api.GET("/epi/:id", c.Epi.ListarEpiPorId())
+		api.GET("/epis-dashbord", c.Epi.ListarEpiDashborController())
 
 		//entradas
 		api.GET("/entradas", c.Entrada.ListarEntradas())

@@ -60,6 +60,40 @@ func (q *Queries) AddEpiTamanho(ctx context.Context, arg AddEpiTamanhoParams) er
 	return err
 }
 
+const buscaEpiDashbord = `-- name: BuscaEpiDashbord :many
+SELECT id, nome, alerta_minimo
+FROM epi
+WHERE tenant_id = $1 -- SEGURANÇA
+  AND ativo = TRUE
+ORDER BY nome
+`
+
+type BuscaEpiDashbordRow struct {
+	ID           int32
+	Nome         string
+	AlertaMinimo int32
+}
+
+func (q *Queries) BuscaEpiDashbord(ctx context.Context, tenantID int32) ([]BuscaEpiDashbordRow, error) {
+	rows, err := q.db.Query(ctx, buscaEpiDashbord, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscaEpiDashbordRow
+	for rows.Next() {
+		var i BuscaEpiDashbordRow
+		if err := rows.Scan(&i.ID, &i.Nome, &i.AlertaMinimo); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const buscarEpi = `-- name: BuscarEpi :one
 SELECT 
     e.id, e.nome, e.fabricante, e.CA, e.descricao,

@@ -23,6 +23,7 @@ type EpiRepository interface {
 	ListarEpis(ctx context.Context, args repository.BuscarTodosEpisPaginadoParams) ([]repository.BuscarTodosEpisPaginadoRow, error)
 	CancelarEpi(ctx context.Context, qtx *repository.Queries, arg repository.DeletarEpiParams) (int64, error)
 	AtualizaEpi(ctx context.Context, epi repository.UpdateEpiCampoParams) (int64, error)
+	BuscaEpiDashbord(ctx context.Context, tenant int32) ([]repository.BuscaEpiDashbordRow, error)
 }
 
 type EpiService struct {
@@ -391,4 +392,32 @@ func (e *EpiService) AtualizaEpi(ctx context.Context, model model.UpdateEpiInput
 	}
 
 	return tx.Commit(ctx)
+}
+
+
+func (e *EpiService) ListarEpiDashbord(ctx context.Context, tenantId int32) ([]model.EpiDashBord, error){
+
+
+	epis, err:= e.repo.BuscaEpiDashbord(ctx, tenantId)
+	if err != nil {
+
+		return  []model.EpiDashBord{}, err
+	}
+
+
+	dto:= make([]model.EpiDashBord, 0, len(epis))
+
+	for _, e := range epis {
+
+		ee:= model.EpiDashBord{
+			Id: int(e.ID),
+			Nome: e.Nome,
+			AlertaMinimo: int(e.AlertaMinimo),
+		}
+
+		dto = append(dto, ee)
+	}
+
+
+	return dto,err
 }

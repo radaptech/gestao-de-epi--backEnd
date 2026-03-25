@@ -25,6 +25,13 @@ type EpiDto struct {
 	AlertaMinimo   int            `json:"alerta_minimo"`
 }
 
+type EpiDashBord struct {
+
+	Id int `json:"id"`
+	Nome string `json:"nome"`
+	AlertaMinimo  int `json:"alerta_minimo"`
+}
+
 type UpdateEpiInput struct {
 	Nome       *string         `json:"nome"`
 	Fabricante *string         `json:"fabricante"`

@@ -78,3 +78,11 @@ SET
 WHERE id = sqlc.arg('id') 
   AND tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Obrigatório para update
   AND ativo = TRUE;
+
+
+-- name: BuscaEpiDashbord :many
+SELECT id, nome, alerta_minimo
+FROM epi
+WHERE tenant_id = $1 -- SEGURANÇA
+  AND ativo = TRUE
+ORDER BY nome;

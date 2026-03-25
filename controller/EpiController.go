@@ -19,6 +19,7 @@ type EpiService interface {
 	ListarEpi(ctx context.Context, id int, tenantid int32) (model.EpiDto, error)
 	CancelarEpi(ctx context.Context, id int, tenantid int32) (int64, error)
 	AtualizaEpi(ctx context.Context, model model.UpdateEpiInput, id, tenantId int32) error
+	ListarEpiDashbord(ctx context.Context, tenantId int32) ([]model.EpiDashBord, error)
 }
 
 type EpiController struct {
@@ -320,5 +321,30 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"sucesso": "epi atualizado com sucesso"})
+	}
+}
+
+func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+
+
+		epis, err:= e.service.ListarEpiDashbord(ctx, tenantId)
+				if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, epis)
+
 	}
 }

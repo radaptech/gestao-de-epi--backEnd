@@ -74,3 +74,13 @@ func (e *EpiRepository) AtualizaEpi(ctx context.Context , epi  UpdateEpiCampoPar
 
 	return linhasAfetadas, nil
 } 
+
+func (e *EpiRepository) BuscaEpiDashbord(ctx context.Context, tenant int32) ([]BuscaEpiDashbordRow, error){
+
+	epis, err:= e.q.BuscaEpiDashbord(ctx, tenant)
+	if err != nil {
+		return []BuscaEpiDashbordRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return epis, err
+}
