@@ -8,7 +8,50 @@ rodar docker
  sudo docker compose -f docker-compose.dev.yml  --env-file .env up -d --build
 
 
-Dica para o seu código Go:
-Como você está usando o Go 1.26, aproveite para salvar no banco de dados não só a imagem da assinatura, 
-mas também o IP e o User-Agent (navegador/dispositivo) de quem assinou.
- Isso se chama Trilha de Auditoria e dá 10x mais valor ao seu software se houver uma perícia judicial.
+entradas:
+[
+  {
+    "id": 1,
+    "idEpi": 1,
+    "idTamanho": 1,
+    "quantidadeAtual": 50,
+    "valor_unitario": 12.50,
+    "quantidade": 50, 
+    "data_entrada": "2024-05-01T10:00:00Z",
+    "lote": "LOTE-123"
+  }
+]
+
+entregas:
+
+[
+  {
+    "id": 1,
+    "idFuncionario": 1,
+    "data_entrega": "2024-05-20T14:30:00Z",
+    "assinatura": "url_da_imagem_ou_base64",
+    "token_validacao": "ABC-123"
+  }
+]
+
+
+itens_entregues
+[
+  {
+    "id": 1,
+    "idEntrega": 1,
+    "idEpi": 1,
+    "idTamanho": 1,
+    "quantidade": 2
+  }
+]
+
+
+devolucoes:
+
+[
+  {
+    "id": 1,
+    "data_devolucao": "2024-05-20T16:00:00Z"
+  }
+]
