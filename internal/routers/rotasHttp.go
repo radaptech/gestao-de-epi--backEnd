@@ -120,6 +120,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		//funcionario
 		api.GET("/funcionarios", c.Funcionario.ListarFuncionarios())
 		api.GET("/funcionario/:matricula", c.Funcionario.ListarFuncionarioPorMatricula())
+		api.GET("/funcionarios-dashbord", c.Funcionario.BuscaFuncionarioDashbord())
 
 		//tamanhos disponiveis para vincular a um epi
 		api.GET("/tamanhos", c.Tamanho.ListarTodosTamanhos())

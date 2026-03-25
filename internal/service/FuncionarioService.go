@@ -24,6 +24,7 @@ type FuncionarioRepository interface {
 	AtualizarFuncionarioNome(ctx context.Context, arg repository.UpdateFuncionarioNomeParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioDepartamento(ctx context.Context, arg repository.UpdateFuncionarioDepartamentoParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioFuncao(ctx context.Context, arg repository.UpdateFuncionarioFuncaoParams, qtx *repository.Queries) (int64, error)
+	BuscarFuncionarioDashbord(ctx context.Context, tenant int32)([]repository.BuscaFuncionarioDashbordRow, error)
 }
 
 type FuncionarioService struct {
@@ -324,4 +325,31 @@ func (f *FuncionarioService) AtualizarFuncionarioCompleto(ctx context.Context, i
 	}
 
 	return tx.Commit(ctx)
+}
+
+
+func (f *FuncionarioService) FuncionariosDashbord(ctx context.Context, tenantId int32)([]model.FuncionarioDashbord, error){
+
+	funcionarios, err:= f.repo.BuscarFuncionarioDashbord(ctx, tenantId)
+	if err != nil{
+
+		return []model.FuncionarioDashbord{}, err
+	}
+
+	dto:= make([]model.FuncionarioDashbord, 0, len(funcionarios))
+
+	for _, ff := range funcionarios {
+
+		matricula:= strconv.Itoa(int(ff.Matricula))
+		fun := model.FuncionarioDashbord{
+
+			Id: int(ff.ID),
+			Nome: ff.Nome,
+			Matricula: matricula,
+		}
+
+		dto = append(dto, fun)
+	}
+
+	return dto, nil
 }

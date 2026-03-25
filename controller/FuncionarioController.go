@@ -19,6 +19,7 @@ type FuncionarioService interface {
 	ListaTodosFuncionarios(ctx context.Context, f service.FiltroFuncionario, tenantId int32) (service.FuncionarioPaginado, error)
 	DeletarFuncionario(ctx context.Context, id int, tenantId int32) error
 	AtualizarFuncionarioCompleto(ctx context.Context, id int, req model.UpdateFuncionarioRequest, tenantId int) error
+	FuncionariosDashbord(ctx context.Context, tenantId int32) ([]model.FuncionarioDashbord, error)
 }
 
 type FuncionarioController struct {
@@ -58,7 +59,6 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			})
 			return
 		}
-
 
 		novoFunc := model.FuncionarioINserir{
 			Nome:            input.Nome,
@@ -343,5 +343,31 @@ func (f *FuncionarioController) AtualizaFuncionario() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, gin.H{"sucesso": "funcionario atualizado"})
 
+	}
+}
+
+func (f *FuncionarioController) BuscaFuncionarioDashbord() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantID, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+		funcionarios, err := f.Service.FuncionariosDashbord(ctx, tenantID)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao busca todos os funcionarios",
+				"detalhes": err.Error(),
+			})
+
+			return
+		}
+
+		ctx.JSON(http.StatusOK, funcionarios)
 	}
 }

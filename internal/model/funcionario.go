@@ -18,3 +18,10 @@ type UpdateFuncionarioRequest struct {
 	IdDepartamento *int    `json:"id_departamento"` // Ponteiro!
 	IdFuncao       *int    `json:"id_funcao"`       // Ponteiro!
 }
+
+type FuncionarioDashbord struct {
+
+	Id int `json:"id"`
+	Nome string`json:"nome"`
+	Matricula string`json:"matricula"`
+}

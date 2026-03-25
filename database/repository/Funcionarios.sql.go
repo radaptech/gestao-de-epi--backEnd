@@ -80,6 +80,40 @@ func (q *Queries) BuscaFuncionario(ctx context.Context, arg BuscaFuncionarioPara
 	return i, err
 }
 
+const buscaFuncionarioDashbord = `-- name: BuscaFuncionarioDashbord :many
+SELECT id, nome, matricula
+FROM funcionario
+WHERE tenant_id = $1 
+  AND ativo = TRUE 
+  order by nome asc
+`
+
+type BuscaFuncionarioDashbordRow struct {
+	ID        int32
+	Nome      string
+	Matricula int32
+}
+
+func (q *Queries) BuscaFuncionarioDashbord(ctx context.Context, tenantID int32) ([]BuscaFuncionarioDashbordRow, error) {
+	rows, err := q.db.Query(ctx, buscaFuncionarioDashbord, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscaFuncionarioDashbordRow
+	for rows.Next() {
+		var i BuscaFuncionarioDashbordRow
+		if err := rows.Scan(&i.ID, &i.Nome, &i.Matricula); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const buscaFuncionarioPorId = `-- name: BuscaFuncionarioPorId :one
 SELECT 
     fn.id, 

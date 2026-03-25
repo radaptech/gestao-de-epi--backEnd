@@ -100,3 +100,10 @@ INNER JOIN funcao f ON fn.IdFuncao = f.id
 WHERE fn.id = $1 
   AND fn.tenant_id = $2 -- SEGURANÇA
   AND fn.ativo = TRUE;
+
+-- name: BuscaFuncionarioDashbord :many
+SELECT id, nome, matricula
+FROM funcionario
+WHERE tenant_id = $1 
+  AND ativo = TRUE 
+  order by nome asc;

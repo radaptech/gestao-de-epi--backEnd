@@ -94,3 +94,13 @@ func (f *FuncionarioRepository) AtualizarFuncionarioFuncao(ctx context.Context, 
 
 	return linhasAfetadas, nil
 }
+
+func (f *FuncionarioRepository) BuscarFuncionarioDashbord(ctx context.Context, tenant int32)([]BuscaFuncionarioDashbordRow, error){
+
+	funcionarios, err:= f.q.BuscaFuncionarioDashbord(ctx, tenant)
+	if err != nil {
+		return []BuscaFuncionarioDashbordRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return funcionarios, nil
+}
