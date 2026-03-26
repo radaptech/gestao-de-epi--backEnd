@@ -19,6 +19,7 @@ type EntradaService interface {
 	Adicionar(ctx context.Context, model model.EntradaEpiInserir, tenantID int32) error
 	ListarEntradas(ctx context.Context, f service.FiltroEntradas, tenatId int32) (service.EntradaPaginada, error)
 	CancelarEntrada(ctx context.Context, id, idUser, tenantid int) (int64, error)
+	EntradaDashbordBusca(ctx context.Context, tenantId int32) ([]model.EntradaDashbord, error)
 }
 
 type EntradaController struct {
@@ -100,10 +101,10 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 			if errors.Is(err, helper.ErrDadoDuplicado) {
 				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 
-					"error":"NF repetida, NF ja cadastrada no banco de dados, por favor verifique.",
+					"error":    "NF repetida, NF ja cadastrada no banco de dados, por favor verifique.",
 					"detalhes": err.Error(),
 				})
-				return 
+				return
 			}
 		}
 
@@ -207,9 +208,35 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 
 				"error": err.Error(),
 			})
-			return 
+			return
 		}
 
 		ctx.Status(http.StatusNoContent)
+	}
+}
+
+func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+
+		entradas, err:= e.service.EntradaDashbordBusca(ctx, tenantId)
+		if err != nil {
+
+			 ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error": err.Error(),
+			 })
+			 return 
+		}
+
+
+		ctx.JSON(http.StatusOK, entradas)
 	}
 }

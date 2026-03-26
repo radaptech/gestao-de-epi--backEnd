@@ -93,3 +93,12 @@ WHERE
     AND (sqlc.narg('data_inicio')::date IS NULL OR ee.data_entrada >= sqlc.narg('data_inicio'))
     AND (sqlc.narg('data_fim')::date IS NULL OR ee.data_entrada <= sqlc.narg('data_fim'))
     AND (sqlc.narg('nota_fiscal')::text IS NULL OR ee.nota_fiscal_numero ILIKE '%' || sqlc.narg('nota_fiscal') || '%');
+
+
+-- name: EntradaDashbord :many
+SELECT
+    id,IdEpi, IdTamanho, quantidadeAtual, valor_unitario, quantidade,
+    data_entrada, lote
+FROM entrada_epi
+WHERE tenant_id = $1
+ORDER BY data_entrada DESC;

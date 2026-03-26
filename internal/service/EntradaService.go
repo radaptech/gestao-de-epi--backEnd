@@ -20,6 +20,7 @@ type EntradaRepository interface {
 	ListarEntradas(ctx context.Context, args repository.ListarEntradasParams) ([]repository.ListarEntradasRow, error)
 	CancelarEntrada(ctx context.Context, args repository.CancelarEntradaParams) (int64, error)
 	TotalEntradas(ctx context.Context, args repository.ContarEntradasFiltradasParams) (int64, error)
+	BuscaEntradaDashbord(ctx context.Context, tenant int32) ([]repository.EntradaDashbordRow, error)
 }
 
 type EntradaService struct {
@@ -260,4 +261,37 @@ func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenant
 	}
 
 	return linhasAfetadas, nil
+}
+
+
+func (e *EntradaService) EntradaDashbordBusca(ctx context.Context, tenantId int32)([]model.EntradaDashbord, error){
+
+
+	entradas, err:= e.repo.BuscaEntradaDashbord(ctx, tenantId)
+	if err != nil {
+
+		return  []model.EntradaDashbord{}, err
+	}
+
+
+	dto := make([]model.EntradaDashbord, 0, len(entradas))
+
+	for _, ee:= range entradas {
+
+		ee:= model.EntradaDashbord {
+
+			Id: int(ee.ID),
+			IdEpi: int(ee.Idepi),
+			IdTamanho: int(ee.Idtamanho),
+			QuantidadeAtual: int(ee.Quantidadeatual),
+			Quantidade: int(ee.Quantidade),
+			DataEntrada: *configs.NewDataBrPtr(ee.DataEntrada.Time),
+			Lote: ee.Lote,
+		}
+
+		dto = append(dto, ee)
+	}
+
+
+	return dto, err
 }

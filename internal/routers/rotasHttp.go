@@ -137,6 +137,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 		//entradas
 		api.GET("/entradas", c.Entrada.ListarEntradas())
+		api.GET("/entradas-dashbord", c.Entrada.BuscaEntradaDashbord())
 
 		//fornecedores
 		api.GET("/fornecedores", c.Fornecedor.ListarFornecedores())

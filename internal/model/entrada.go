@@ -35,3 +35,14 @@ type EntradaEpiDto struct {
 	UsuarioEntradaCancelamento RecuperaUserEntrada `json:"usuario_Cancelamento"`
 	ValorUnitario              decimal.Decimal     `json:"valor_unitario"`
 }
+
+type EntradaDashbord struct {
+	Id              int             `json:"id"`
+	IdEpi           int             `json:"idEpi"`
+	IdTamanho       int             `json:"idTamanho"`
+	QuantidadeAtual int             `json:"quantidadeAtual"`
+	valorUnitario   decimal.Decimal `json:"valor_unitario"`
+	Quantidade      int             `json:"quantidade"`
+	DataEntrada     configs.DataBr  `json:"data_entrada"`
+	Lote            string          `json:"lote"`
+}

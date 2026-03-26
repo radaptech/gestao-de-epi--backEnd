@@ -123,6 +123,55 @@ func (q *Queries) ContarEntradasFiltradas(ctx context.Context, arg ContarEntrada
 	return count, err
 }
 
+const entradaDashbord = `-- name: EntradaDashbord :many
+SELECT
+    id,IdEpi, IdTamanho, quantidadeAtual, valor_unitario, quantidade,
+    data_entrada, lote
+FROM entrada_epi
+WHERE tenant_id = $1
+ORDER BY data_entrada DESC
+`
+
+type EntradaDashbordRow struct {
+	ID              int32
+	Idepi           int32
+	Idtamanho       int32
+	Quantidadeatual int32
+	ValorUnitario   pgtype.Numeric
+	Quantidade      int32
+	DataEntrada     pgtype.Date
+	Lote            string
+}
+
+func (q *Queries) EntradaDashbord(ctx context.Context, tenantID int32) ([]EntradaDashbordRow, error) {
+	rows, err := q.db.Query(ctx, entradaDashbord, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EntradaDashbordRow
+	for rows.Next() {
+		var i EntradaDashbordRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Idepi,
+			&i.Idtamanho,
+			&i.Quantidadeatual,
+			&i.ValorUnitario,
+			&i.Quantidade,
+			&i.DataEntrada,
+			&i.Lote,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listarEntradas = `-- name: ListarEntradas :many
 SELECT 
     ee.id, 

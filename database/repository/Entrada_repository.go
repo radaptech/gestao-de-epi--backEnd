@@ -68,3 +68,14 @@ func (e *EntradaRepository) TotalEntradas(ctx context.Context, args ContarEntrad
 
 	return  total, nil
 }
+
+func (e *EntradaRepository) BuscaEntradaDashbord(ctx context.Context, tenant int32) ([]EntradaDashbordRow, error){
+
+	entradas, err:= e.q.EntradaDashbord(ctx, tenant)
+	if err != nil {
+
+		return []EntradaDashbordRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return entradas, nil
+}
