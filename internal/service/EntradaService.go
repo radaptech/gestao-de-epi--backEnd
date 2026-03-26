@@ -278,12 +278,17 @@ func (e *EntradaService) EntradaDashbordBusca(ctx context.Context, tenantId int3
 
 	for _, ee:= range entradas {
 
+		var valorDecimal decimal.Decimal
+		if fVal, err := ee.ValorUnitario.Float64Value(); err == nil {
+			valorDecimal = decimal.NewFromFloat(fVal.Float64)
+		}
 		ee:= model.EntradaDashbord {
 
 			Id: int(ee.ID),
 			IdEpi: int(ee.Idepi),
 			IdTamanho: int(ee.Idtamanho),
 			QuantidadeAtual: int(ee.Quantidadeatual),
+			ValorUnitario: valorDecimal,
 			Quantidade: int(ee.Quantidade),
 			DataEntrada: *configs.NewDataBrPtr(ee.DataEntrada.Time),
 			Lote: ee.Lote,
