@@ -41,7 +41,7 @@ type EntradaDashbord struct {
 	IdEpi           int             `json:"idEpi"`
 	IdTamanho       int             `json:"idTamanho"`
 	QuantidadeAtual int             `json:"quantidadeAtual"`
-	valorUnitario   decimal.Decimal `json:"valor_unitario"`
+	ValorUnitario   decimal.Decimal `json:"valor_unitario"`
 	Quantidade      int             `json:"quantidade"`
 	DataEntrada     configs.DataBr  `json:"data_entrada"`
 	Lote            string          `json:"lote"`
