@@ -10,7 +10,7 @@ type EstoqueTotalDto struct {
 
 type EstoqueSaldoTotalDto struct {
 	Id              int             `json:"id"`
-	Nome            string          `jsson:"nome"`
+	Nome            string          `json:"nome"`
 	QuantidadeAtual int             `json:"quantidade_atual"`
 	SaldoTotal      decimal.Decimal `json:"saldo_total"`
 }
