@@ -135,3 +135,27 @@ func (e *EntregaRepository) ListasEntregasPorMatricula(ctx context.Context, args
 	
 	return entrega, nil
 }
+
+func (e *EntregaRepository) BuscaEntregaDashbord(ctx context.Context, tenant int32) ([]EntregaDashbordRow, error){
+
+	entregas, err:= e.q.EntregaDashbord(ctx, tenant)
+	if err != nil {
+
+		return []EntregaDashbordRow{}, helper.TraduzErroPostgres(err)
+	}
+
+
+	return entregas, nil
+}
+
+func (e *EntregaRepository) BuscaEntregaItensDashbord(ctx context.Context, tenant int32) ([]EntregaItensDashbordRow, error){
+
+	itens, err:= e.q.EntregaItensDashbord(ctx, tenant)
+	if err != nil {
+
+		return []EntregaItensDashbordRow{}, helper.TraduzErroPostgres(err)
+	}
+
+
+	return itens, nil
+}

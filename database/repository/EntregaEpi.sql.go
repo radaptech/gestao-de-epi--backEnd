@@ -239,6 +239,91 @@ func (q *Queries) CancelarEntrega(ctx context.Context, arg CancelarEntregaParams
 	return id, err
 }
 
+const entregaDashbord = `-- name: EntregaDashbord :many
+SELECT
+    id, Idfuncionario,data_entrega,
+    assinatura,token_validacao
+FROM entrega_epi
+WHERE tenant_id = $1
+ORDER BY data_entrega DESC
+`
+
+type EntregaDashbordRow struct {
+	ID             int32
+	Idfuncionario  int32
+	DataEntrega    pgtype.Date
+	Assinatura     string
+	TokenValidacao pgtype.Text
+}
+
+func (q *Queries) EntregaDashbord(ctx context.Context, tenantID int32) ([]EntregaDashbordRow, error) {
+	rows, err := q.db.Query(ctx, entregaDashbord, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EntregaDashbordRow
+	for rows.Next() {
+		var i EntregaDashbordRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Idfuncionario,
+			&i.DataEntrega,
+			&i.Assinatura,
+			&i.TokenValidacao,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const entregaItensDashbord = `-- name: EntregaItensDashbord :many
+SELECT
+    id, IdEntrega, IdEpi, IdTamanho, quantidade
+FROM epis_entregues
+WHERE tenant_id = $1
+ORDER BY id DESC
+`
+
+type EntregaItensDashbordRow struct {
+	ID         int32
+	Identrega  int32
+	Idepi      int32
+	Idtamanho  int32
+	Quantidade int32
+}
+
+func (q *Queries) EntregaItensDashbord(ctx context.Context, tenantID int32) ([]EntregaItensDashbordRow, error) {
+	rows, err := q.db.Query(ctx, entregaItensDashbord, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EntregaItensDashbordRow
+	for rows.Next() {
+		var i EntregaItensDashbordRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Identrega,
+			&i.Idepi,
+			&i.Idtamanho,
+			&i.Quantidade,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listarEntregas = `-- name: ListarEntregas :many
 SELECT 
     ee.id as entrega_id, ee.data_entrega, ee.assinatura, ee.token_validacao, ee.id_usuario_entrega,   

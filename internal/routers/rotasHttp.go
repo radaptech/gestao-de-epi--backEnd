@@ -145,6 +145,8 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		//entregas
 		api.GET("/entregas", c.Entrega.ListarEntregas())
 		api.POST("/cadastro-entregas", c.Entrega.Adicionar())
+		api.GET("/entregas-dashbord", c.Entrega.BuscarEntregaDashbord())
+		api.GET("/entrega-itens-dashbord", c.Entrega.BuscarEntregaItenDashbord())
 
 		//rotas que apenas o "admin" tem acesso
 		rotasAdm := api.Group("/gerencial")

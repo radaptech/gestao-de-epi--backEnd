@@ -34,3 +34,19 @@ type EntregaDto struct {
 	Assinatura_Digital string            `json:"assinatura_digital"`
 	Itens              []ItemEntregueDto `json:"itens,omitempty"`
 }
+
+type EntregaDashbord struct {
+	Id             int            `json:"id"`
+	IdFuncionario  int            `json:"idFuncionario"`
+	Data_entrega   configs.DataBr `json:"data_entrega"`
+	Assinatura     string         `json:"assinatura"`
+	TokenValidacao string         `json:"token_validacao"`
+}
+
+type EntregaItensDashBord struct {
+	Id         int `json:"id"`
+	IdEntrega  int `json:"idEntrega"`
+	IdEpi      int `json:"idEpi"`
+	IdTamanho  int `json:"idTamanho"`
+	Quantidade int `json:"quantidade"`
+}

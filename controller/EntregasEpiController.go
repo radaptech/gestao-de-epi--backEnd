@@ -22,6 +22,8 @@ type EntregasService interface {
 	ListaEntregas(ctx context.Context, f service.FiltroEntregas, tenantId int32) (service.EntregaPaginada, error)
 	CancelarEntrega(ctx context.Context, tenantId, id, iduser int) error
 	GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error)
+	BuscaEntregaDash(ctx context.Context, tenantId int32) ([]model.EntregaDashbord, error)
+	BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error)
 }
 
 type EntregaController struct {
@@ -201,7 +203,7 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 			return
 		}
 
-		responsavel:= ctx.GetString("user_nome") //pegando o responsavel logado no sistema
+		responsavel := ctx.GetString("user_nome") //pegando o responsavel logado no sistema
 
 		auditoria := helper.Auditoria{
 			DadosServidor: time.Now().Format("02/01/2006 às 15:04:05"),
@@ -243,5 +245,61 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 		// Baixa o arquivo direto no navegador
 		ctx.Header("Content-Disposition", "attachment; filename=Ficha_EPI_"+matricula+".pdf")
 		ctx.Data(http.StatusOK, "application/pdf", documento.GetBytes()) // Extrai os bytes limpos!
+	}
+}
+
+func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "erro interno de tenant",
+			})
+			return
+		}
+
+
+		entregas, err:= e.Service.BuscaEntregaDash(ctx, tenantId)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":err.Error(),
+			})
+			return 
+		}
+
+		ctx.JSON(http.StatusOK, entregas)
+
+	}
+}
+
+func (e *EntregaController) BuscarEntregaItenDashbord() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "erro interno de tenant",
+			})
+			return
+		}
+
+
+		itens, err:= e.Service.BuscaItemDash(ctx, tenantId)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":err.Error(),
+			})
+			return 
+		}
+
+		ctx.JSON(http.StatusOK, itens)
+
 	}
 }

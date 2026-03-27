@@ -26,6 +26,8 @@ type EntregaRepository interface {
 	ListarEntregasDisponiveis(ctx context.Context, qtx *repository.Queries, args repository.ListarLotesParaConsumoParams) ([]repository.ListarLotesParaConsumoRow, error)
 	ListarEpisEntreguesCancelados(ctx context.Context, qtx *repository.Queries, arg repository.ListarItensEntregueCanceladosParams) ([]repository.ListarItensEntregueCanceladosRow, error)
 	ListasEntregasPorMatricula(ctx context.Context, args repository.ListarHistoricoEntregasPorMatriculaParams) ([]repository.ListarHistoricoEntregasPorMatriculaRow, error)
+	BuscaEntregaDashbord(ctx context.Context, tenant int32) ([]repository.EntregaDashbordRow, error)
+	BuscaEntregaItensDashbord(ctx context.Context, tenant int32) ([]repository.EntregaItensDashbordRow, error)
 }
 
 type EntregaService struct {
@@ -441,4 +443,64 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 	}
 
 	return pdfEntrega, nil
+}
+
+func (e *EntregaService) BuscaEntregaDash(ctx context.Context, tenantId int32)([]model.EntregaDashbord, error){
+
+	entregas, err:= e.repo.BuscaEntregaDashbord(ctx, tenantId)
+	if err != nil {
+
+		return []model.EntregaDashbord{}, err
+	}
+
+
+	dto := make([]model.EntregaDashbord, 0, len(entregas))
+
+	for _, ee := range entregas {
+
+		
+		e:= model.EntregaDashbord{
+			Id: int(ee.ID),
+			IdFuncionario: int(ee.Idfuncionario),
+			Data_entrega: *configs.NewDataBrPtr(ee.DataEntrega.Time),
+			Assinatura: ee.Assinatura,
+			TokenValidacao: ee.TokenValidacao.String,
+
+		}
+
+		dto = append(dto, e)
+	}
+
+
+	return dto, nil
+}
+
+func (e *EntregaService) BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error){
+
+
+	itens, err:= e.repo.BuscaEntregaItensDashbord(ctx, tenantID)
+	if err != nil {
+
+		return []model.EntregaItensDashBord{}, err
+	}
+
+	dto := make([]model.EntregaItensDashBord, 0, len(itens))
+
+	for _, item := range itens {
+
+		i:= model.EntregaItensDashBord{
+			Id: int(item.ID),
+			IdEntrega: int(item.Identrega),
+			IdEpi: int(item.Idepi),
+			IdTamanho: int(item.Idtamanho),
+			Quantidade: int(item.Quantidade),
+
+		}
+
+		dto = append(dto, i)
+		
+	}
+
+
+	return dto, nil
 }

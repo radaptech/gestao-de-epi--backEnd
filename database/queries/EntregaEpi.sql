@@ -115,3 +115,19 @@ INNER JOIN tamanho t ON t.id = i.IdTamanho
 where f.matricula = $1
 and ee.tenant_id = $2
 ORDER BY ee.data_entrega DESC,ee.id DESC;
+
+-- name: EntregaDashbord :many
+SELECT
+    id, Idfuncionario,data_entrega,
+    assinatura,token_validacao
+FROM entrega_epi
+WHERE tenant_id = $1
+ORDER BY data_entrega DESC;
+
+
+-- name: EntregaItensDashbord :many
+SELECT
+    id, IdEntrega, IdEpi, IdTamanho, quantidade
+FROM epis_entregues
+WHERE tenant_id = $1
+ORDER BY id DESC;
