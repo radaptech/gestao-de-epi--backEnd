@@ -1,8 +1,9 @@
 package helper
 
 import (
-	"encoding/base64"
 	"fmt"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -163,11 +164,29 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 	// 4. O Bloco da Assinatura Digital
 	// 1. Decodifica a string Base64 que veio do banco/struct
 	// 1. Tratamento do Base64
-	s := strings.TrimPrefix(Dadosfuncionarios.Assinatura, "data:image/png;base64,")
-	assinaturaBytes, err := base64.StdEncoding.DecodeString(s)
+
+	var assinaturaBytes []byte
+	assinaturaValida := false
+	//caso estiver uma urt com o prefixo "http"
+	if Dadosfuncionarios.Assinatura != "" && strings.HasPrefix(Dadosfuncionarios.Assinatura, "https"){
+
+		res, err:= http.Get(Dadosfuncionarios.Assinatura) //baixa a imagem no supabase
+		if err == nil  && res.StatusCode == http.StatusOK {
+
+			defer res.Body.Close()
+
+			//transforma em  bytes
+			donwload, errResp := io.ReadAll(res.Body)
+			if errResp == nil && len(donwload) > 0 {
+
+				assinaturaBytes = donwload
+				assinaturaValida = true
+			}
+		}
+	}
 
 	// 2. Linha da Assinatura (Dinâmica)
-	if err != nil || len(s) == 0 {
+	if !assinaturaValida{
 		// Caso não tenha assinatura: Desenha apenas a linha sólida para assinar à mão
 		m.AddRow(20,
 			col.New(4),
