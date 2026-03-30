@@ -37,7 +37,7 @@ LIMIT $1 OFFSET $2;
 -- name: DeletarFuncao :execrows
 UPDATE funcao
 SET ativo = FALSE,
-    deletado_em = NOW()
+    deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE;

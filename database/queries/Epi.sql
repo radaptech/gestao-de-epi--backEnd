@@ -55,14 +55,14 @@ WHERE te.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA
 
 -- name: DeletarEpi :execrows
 UPDATE epi 
-SET ativo = FALSE, deletado_em = NOW() 
+SET ativo = FALSE, deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE;
 
 -- name: DeletarTamanhosPorEpi :execrows
 UPDATE tamanhos_epis 
-SET ativo = FALSE, deletado_em = NOW() 
+SET ativo = FALSE, deletado_em = current_date
 WHERE IdEpi = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE;

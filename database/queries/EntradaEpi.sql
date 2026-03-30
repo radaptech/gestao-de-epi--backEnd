@@ -71,7 +71,7 @@ LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 -- name: CancelarEntrada :execrows
 UPDATE entrada_epi 
 SET 
-    cancelada_em = NOW(), 
+    cancelada_em = current_date, 
     ativo = FALSE,
     id_usuario_criacao_cancelamento = $2
 WHERE id = $1 
@@ -100,7 +100,7 @@ SELECT
     id,IdEpi, IdTamanho, quantidadeAtual, valor_unitario, quantidade,
     data_entrada, lote
 FROM entrada_epi
-WHERE tenant_id = $1
+WHERE tenant_id = $1 and ativo = TRUE
 ORDER BY data_entrada DESC;
 
 
@@ -115,5 +115,8 @@ FROM entrada_epi ee
 inner JOIN tamanho t on ee.IdTamanho = t.id
 inner JOIN epi e on ee.IdEpi = e.id
 inner join tipo_protecao tp on e.IdTipoProtecao = tp.id
-WHERE ee.tenant_id = $1;
+WHERE ee.tenant_id = $1
+  AND ee.ativo = TRUE
+  AND ee.quantidadeAtual > 0
+ORDER BY ee.data_entrada ASC;
 

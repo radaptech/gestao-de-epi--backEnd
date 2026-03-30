@@ -55,7 +55,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: CancelarDevolucao :one
 UPDATE devolucao
-SET cancelada_em = NOW(),
+SET cancelada_em = current_date,
     ativo = FALSE,
     id_usuario_devolucao_cancelamento = $2
 WHERE id = $1 

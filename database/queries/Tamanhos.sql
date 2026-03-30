@@ -28,7 +28,7 @@ ORDER BY tamanho ASC;
 -- name: DeletarTamanho :execrows
 UPDATE tamanho
 SET ativo = FALSE,
-    deletado_em = NOW()
+    deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE;
