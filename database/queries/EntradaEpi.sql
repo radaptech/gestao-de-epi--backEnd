@@ -116,3 +116,4 @@ inner JOIN tamanho t on ee.IdTamanho = t.id
 inner JOIN epi e on ee.IdEpi = e.id
 inner join tipo_protecao tp on e.IdTipoProtecao = tp.id
 WHERE ee.tenant_id = $1;
+
