@@ -79,3 +79,14 @@ func (e *EntradaRepository) BuscaEntradaDashbord(ctx context.Context, tenant int
 
 	return entradas, nil
 }
+
+func (e *EntradaRepository) EntradaEstoque(ctx context.Context, tenant int32) ([]EntradaEpiEstoqueRow, error){
+
+	entradas, err:= e.q.EntradaEpiEstoque(ctx, tenant)
+	if err != nil {
+
+		return []EntradaEpiEstoqueRow{}, helper.TraduzErroPostgres(err)
+	} 
+
+	return entradas, nil
+}

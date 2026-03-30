@@ -17,19 +17,29 @@ type EpiDto struct {
 	Id             int             `json:"id"`
 	Nome           string          `json:"nome"`
 	Fabricante     string          `json:"fabricante"`
-	CA             string          `json:"ca"`
-	Tamanho        []TamanhoDto    `json:"tamanhos"`
+	CA             string          `json:"CA"`
+	Tamanho        []TamanhoDto    `json:"-"`
 	Descricao      string          `json:"descricao"`
-	DataValidadeCa configs.DataBr  `json:"data_validadeCa"`
+	DataValidadeCa configs.DataBr  `json:"validade_CA"`
 	Protecao       TipoProtecaoDto `json:"protecao"`
-	AlertaMinimo   int            `json:"alerta_minimo"`
+	AlertaMinimo   int             `json:"alerta_minimo"`
+}
+
+type EpiDtoEstoque struct {
+	Id             int             `json:"id"`
+	Nome           string          `json:"nome"`
+	Fabricante     string          `json:"fabricante"`
+	CA             string          `json:"ca"`
+	Descricao      string          `json:"descricao"`
+	DataValidadeCa configs.DataBr  `json:"validade_ca"`
+	AlertaMinimo   int             `json:"alerta_minimo"`
+	Protecao       TipoProtecaoDto `json:"protecao"`
 }
 
 type EpiDashBord struct {
-
-	Id int `json:"id"`
-	Nome string `json:"nome"`
-	AlertaMinimo  int `json:"alerta_minimo"`
+	Id           int    `json:"id"`
+	Nome         string `json:"nome"`
+	AlertaMinimo int    `json:"alerta_minimo"`
 }
 
 type UpdateEpiInput struct {
@@ -49,5 +59,4 @@ type EpiResponse struct {
 	Descricao      string          `json:"descricao"`
 	DataValidadeCa configs.DataBr  `json:"data_validadeCa"`
 	Protecao       TipoProtecaoDto `json:"protecao"`
-	
 }

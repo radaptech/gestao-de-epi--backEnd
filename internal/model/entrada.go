@@ -36,6 +36,17 @@ type EntradaEpiDto struct {
 	ValorUnitario              decimal.Decimal     `json:"valor_unitario"`
 }
 
+type EntradaEstoqueDto struct {
+	Id              int           `json:"id"`
+	Lote            string        `json:"lote"`
+	Quantidade      int           `json:"quantidade_inicial"`
+	QuantidadeAtual int           `json:"quantidade_atual"`
+	ValorUnitario   decimal.Decimal       `json:"valor_unitario"`
+	DataValidade    configs.DataBr        `json:"data_validade"`
+	Tamanho         TamanhoDto    `json:"tamanho"` // <-- O tamanho desta caixa!
+	Epi             EpiDtoEstoque `json:"epi"`     // <-- O EPI inteiro aqui!
+}
+
 type EntradaDashbord struct {
 	Id              int             `json:"id"`
 	IdEpi           int             `json:"idEpi"`

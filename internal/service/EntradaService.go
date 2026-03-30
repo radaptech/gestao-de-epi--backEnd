@@ -21,6 +21,7 @@ type EntradaRepository interface {
 	CancelarEntrada(ctx context.Context, args repository.CancelarEntradaParams) (int64, error)
 	TotalEntradas(ctx context.Context, args repository.ContarEntradasFiltradasParams) (int64, error)
 	BuscaEntradaDashbord(ctx context.Context, tenant int32) ([]repository.EntradaDashbordRow, error)
+	EntradaEstoque(ctx context.Context, tenant int32) ([]repository.EntradaEpiEstoqueRow, error)
 }
 
 type EntradaService struct {
@@ -187,15 +188,15 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 					Nome: entrada.ProtecaoNome,
 				},
 			},
-			Data_entrada:       *configs.NewDataBrPtr(entrada.DataEntrada.Time),
-			Quantidade:         int(entrada.Quantidade),
-			Quantidade_Atual:   int(entrada.Quantidadeatual),
-			Lote:               entrada.Lote,
-			Fornecedor:         model.FornecedorDto{
-				ID: int(entrada.Idfornecedor),
-				RazaoSocial: entrada.RazaoSocial,
-				NomeFantasia: entrada.NomeFantasia,
-				CNPJ: entrada.Cnpj,
+			Data_entrada:     *configs.NewDataBrPtr(entrada.DataEntrada.Time),
+			Quantidade:       int(entrada.Quantidade),
+			Quantidade_Atual: int(entrada.Quantidadeatual),
+			Lote:             entrada.Lote,
+			Fornecedor: model.FornecedorDto{
+				ID:                int(entrada.Idfornecedor),
+				RazaoSocial:       entrada.RazaoSocial,
+				NomeFantasia:      entrada.NomeFantasia,
+				CNPJ:              entrada.Cnpj,
 				InscricaoEstadual: entrada.InscricaoEstadual,
 			},
 			Nota_fiscal_serie:  entrada.NotaFiscalSerie.String,
@@ -263,40 +264,84 @@ func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenant
 	return linhasAfetadas, nil
 }
 
+func (e *EntradaService) EntradaDashbordBusca(ctx context.Context, tenantId int32) ([]model.EntradaDashbord, error) {
 
-func (e *EntradaService) EntradaDashbordBusca(ctx context.Context, tenantId int32)([]model.EntradaDashbord, error){
-
-
-	entradas, err:= e.repo.BuscaEntradaDashbord(ctx, tenantId)
+	entradas, err := e.repo.BuscaEntradaDashbord(ctx, tenantId)
 	if err != nil {
 
-		return  []model.EntradaDashbord{}, err
+		return []model.EntradaDashbord{}, err
 	}
-
 
 	dto := make([]model.EntradaDashbord, 0, len(entradas))
 
-	for _, ee:= range entradas {
+	for _, ee := range entradas {
 
 		var valorDecimal decimal.Decimal
 		if fVal, err := ee.ValorUnitario.Float64Value(); err == nil {
 			valorDecimal = decimal.NewFromFloat(fVal.Float64)
 		}
-		ee:= model.EntradaDashbord {
+		ee := model.EntradaDashbord{
 
-			Id: int(ee.ID),
-			IdEpi: int(ee.Idepi),
-			IdTamanho: int(ee.Idtamanho),
+			Id:              int(ee.ID),
+			IdEpi:           int(ee.Idepi),
+			IdTamanho:       int(ee.Idtamanho),
 			QuantidadeAtual: int(ee.Quantidadeatual),
-			ValorUnitario: valorDecimal,
-			Quantidade: int(ee.Quantidade),
-			DataEntrada: *configs.NewDataBrPtr(ee.DataEntrada.Time),
-			Lote: ee.Lote,
+			ValorUnitario:   valorDecimal,
+			Quantidade:      int(ee.Quantidade),
+			DataEntrada:     *configs.NewDataBrPtr(ee.DataEntrada.Time),
+			Lote:            ee.Lote,
 		}
 
 		dto = append(dto, ee)
 	}
 
-
 	return dto, err
+}
+
+func (e *EntradaService) BuscaEntradaEstoque(ctx context.Context, tenantId int32) ([]model.EntradaEstoqueDto, error) {
+
+	entradas, err := e.repo.EntradaEstoque(ctx, tenantId)
+	if err != nil {
+		return []model.EntradaEstoqueDto{}, err
+	}
+
+	dto := make([]model.EntradaEstoqueDto, 0, len(entradas))
+
+	for _, ee := range entradas {
+
+		var valorDecimal decimal.Decimal
+		if fVal, err := ee.ValorUnitario.Float64Value(); err == nil {
+			valorDecimal = decimal.NewFromFloat(fVal.Float64)
+		}
+		ent := model.EntradaEstoqueDto{
+			Id:              int(ee.ID),
+			Lote:            ee.Lote,
+			Quantidade:      int(ee.QuantidadeInicial),
+			QuantidadeAtual: int(ee.QuantidadeAtual),
+			ValorUnitario:   valorDecimal,
+			DataValidade: *configs.NewDataBrPtr(ee.DataValidade.Time),
+			Tamanho: model.TamanhoDto{
+				ID: int(ee.Idtamanho),
+				Tamanho: ee.TamanhoNome,
+			},
+			Epi: model.EpiDtoEstoque{
+				Id: int(ee.Idepi),
+				Nome: ee.EpiNome,
+				Fabricante: ee.Fabricante,
+				CA: ee.Ca,
+				Descricao: ee.Descricao,
+				DataValidadeCa: *configs.NewDataBrPtr(ee.DataValidade.Time),
+				AlertaMinimo: int(ee.AlertaMinimo),
+				Protecao: model.TipoProtecaoDto{
+					ID: int64(ee.Idtipoprotecao),
+					Nome: ee.ProtecaoNome,
+				},
+			},
+		}
+
+		dto = append(dto, ent)
+	}
+
+	return dto, nil
+
 }

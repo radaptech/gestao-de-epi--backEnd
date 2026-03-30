@@ -102,3 +102,17 @@ SELECT
 FROM entrada_epi
 WHERE tenant_id = $1
 ORDER BY data_entrada DESC;
+
+
+-- name: EntradaEpiEstoque :many
+SELECT
+    ee.id, ee.lote, ee.quantidade as quantidade_inicial, ee.quantidadeAtual as quantidade_atual,
+    ee.valor_unitario, ee.data_validade,
+    ee.IdTamanho, t.tamanho as tamanho_nome,
+    ee.IdEpi, e.nome as epi_nome, e.fabricante, e.CA, e.descricao, e.validade_CA,e.alerta_minimo,
+    e.IdTipoProtecao, tp.nome as protecao_nome
+FROM entrada_epi ee
+inner JOIN tamanho t on ee.IdTamanho = t.id
+inner JOIN epi e on ee.IdEpi = e.id
+inner join tipo_protecao tp on e.IdTipoProtecao = tp.id
+WHERE ee.tenant_id = $1;

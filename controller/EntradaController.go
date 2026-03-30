@@ -20,6 +20,7 @@ type EntradaService interface {
 	ListarEntradas(ctx context.Context, f service.FiltroEntradas, tenatId int32) (service.EntradaPaginada, error)
 	CancelarEntrada(ctx context.Context, id, idUser, tenantid int) (int64, error)
 	EntradaDashbordBusca(ctx context.Context, tenantId int32) ([]model.EntradaDashbord, error)
+	BuscaEntradaEstoque(ctx context.Context, tenantId int32) ([]model.EntradaEstoqueDto, error)
 }
 
 type EntradaController struct {
@@ -227,6 +228,32 @@ func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 
 
 		entradas, err:= e.service.EntradaDashbordBusca(ctx, tenantId)
+		if err != nil {
+
+			 ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error": err.Error(),
+			 })
+			 return 
+		}
+
+
+		ctx.JSON(http.StatusOK, entradas)
+	}
+}
+
+func (e *EntradaController) BuscaEntradaEstoque() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+
+		entradas, err:= e.service.BuscaEntradaEstoque(ctx, tenantId)
 		if err != nil {
 
 			 ctx.JSON(http.StatusInternalServerError, gin.H{

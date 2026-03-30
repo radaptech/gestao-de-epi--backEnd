@@ -172,6 +172,78 @@ func (q *Queries) EntradaDashbord(ctx context.Context, tenantID int32) ([]Entrad
 	return items, nil
 }
 
+const entradaEpiEstoque = `-- name: EntradaEpiEstoque :many
+SELECT
+    ee.id, ee.lote, ee.quantidade as quantidade_inicial, ee.quantidadeAtual as quantidade_atual,
+    ee.valor_unitario, ee.data_validade,
+    ee.IdTamanho, t.tamanho as tamanho_nome,
+    ee.IdEpi, e.nome as epi_nome, e.fabricante, e.CA, e.descricao, e.validade_CA,e.alerta_minimo,
+    e.IdTipoProtecao, tp.nome as protecao_nome
+FROM entrada_epi ee
+inner JOIN tamanho t on ee.IdTamanho = t.id
+inner JOIN epi e on ee.IdEpi = e.id
+inner join tipo_protecao tp on e.IdTipoProtecao = tp.id
+WHERE ee.tenant_id = $1
+`
+
+type EntradaEpiEstoqueRow struct {
+	ID                int32
+	Lote              string
+	QuantidadeInicial int32
+	QuantidadeAtual   int32
+	ValorUnitario     pgtype.Numeric
+	DataValidade      pgtype.Date
+	Idtamanho         int32
+	TamanhoNome       string
+	Idepi             int32
+	EpiNome           string
+	Fabricante        string
+	Ca                string
+	Descricao         string
+	ValidadeCa        pgtype.Date
+	AlertaMinimo      int32
+	Idtipoprotecao    int32
+	ProtecaoNome      string
+}
+
+func (q *Queries) EntradaEpiEstoque(ctx context.Context, tenantID int32) ([]EntradaEpiEstoqueRow, error) {
+	rows, err := q.db.Query(ctx, entradaEpiEstoque, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EntradaEpiEstoqueRow
+	for rows.Next() {
+		var i EntradaEpiEstoqueRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Lote,
+			&i.QuantidadeInicial,
+			&i.QuantidadeAtual,
+			&i.ValorUnitario,
+			&i.DataValidade,
+			&i.Idtamanho,
+			&i.TamanhoNome,
+			&i.Idepi,
+			&i.EpiNome,
+			&i.Fabricante,
+			&i.Ca,
+			&i.Descricao,
+			&i.ValidadeCa,
+			&i.AlertaMinimo,
+			&i.Idtipoprotecao,
+			&i.ProtecaoNome,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listarEntradas = `-- name: ListarEntradas :many
 SELECT 
     ee.id, 
