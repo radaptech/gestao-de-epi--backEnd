@@ -155,7 +155,7 @@ func (q *Queries) BuscarTodosItensEntrega(ctx context.Context, arg BuscarTodosIt
 
 const cancelaEntregaPorIdTroca = `-- name: CancelaEntregaPorIdTroca :one
 UPDATE entrega_epi
-SET cancelada_em = NOW(),
+SET cancelada_em =current_date,
     ativo = FALSE,
     id_usuario_entrega_cancelamento = $2
 WHERE IdTroca = $1 
@@ -217,7 +217,7 @@ func (q *Queries) CancelaItemEntregue(ctx context.Context, arg CancelaItemEntreg
 
 const cancelarEntrega = `-- name: CancelarEntrega :one
 UPDATE entrega_epi
-SET cancelada_em = NOW(),
+SET cancelada_em =current_date,
     ativo = FALSE,
     id_usuario_entrega_cancelamento = $2
 WHERE id = $1 
@@ -244,7 +244,7 @@ SELECT
     id, Idfuncionario,data_entrega,
     assinatura,token_validacao
 FROM entrega_epi
-WHERE tenant_id = $1
+WHERE tenant_id = $1 and ativo = TRUE
 ORDER BY data_entrega DESC
 `
 
@@ -286,7 +286,7 @@ const entregaItensDashbord = `-- name: EntregaItensDashbord :many
 SELECT
     id, IdEntrega, IdEpi, IdTamanho, quantidade
 FROM epis_entregues
-WHERE tenant_id = $1
+WHERE tenant_id = $1 and ativo = TRUE
 ORDER BY id DESC
 `
 
@@ -467,6 +467,7 @@ INNER JOIN epi e ON e.id = i.IdEpi
 INNER JOIN tamanho t ON t.id = i.IdTamanho
 where f.matricula = $1
 and ee.tenant_id = $2
+and ee.ativo = TRUE
 ORDER BY ee.data_entrega DESC,ee.id DESC
 `
 

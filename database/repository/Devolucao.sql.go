@@ -121,7 +121,7 @@ func (q *Queries) AddTrocaEpi(ctx context.Context, arg AddTrocaEpiParams) (int32
 
 const cancelarDevolucao = `-- name: CancelarDevolucao :one
 UPDATE devolucao
-SET cancelada_em = NOW(),
+SET cancelada_em = current_date,
     ativo = FALSE,
     id_usuario_devolucao_cancelamento = $2
 WHERE id = $1 

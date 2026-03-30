@@ -125,7 +125,7 @@ func (q *Queries) BuscarTodosTamanhos(ctx context.Context, tenantID int32) ([]Bu
 const deletarTamanho = `-- name: DeletarTamanho :execrows
 UPDATE tamanho
 SET ativo = FALSE,
-    deletado_em = NOW()
+    deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE

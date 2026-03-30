@@ -50,3 +50,11 @@ type EntregaItensDashBord struct {
 	IdTamanho  int `json:"idTamanho"`
 	Quantidade int `json:"quantidade"`
 }
+
+// 1. A versão da Entrega feita para morar dentro do Funcionário
+type EntregaDoFuncionarioDto struct {
+	Id                 int64             `json:"id"`
+	Data_entrega       configs.DataBr    `json:"data_entrega"`
+	Assinatura_Digital string            `json:"assinatura_digital"`
+	Itens              []ItemEntregueDto `json:"itens,omitempty"`
+}

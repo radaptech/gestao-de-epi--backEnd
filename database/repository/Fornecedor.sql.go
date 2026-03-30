@@ -83,7 +83,7 @@ const deletarFornecedor = `-- name: DeletarFornecedor :execrows
 UPDATE fornecedores
 SET 
     ativo = FALSE,
-    cancelado_em = NOW()
+    cancelado_em = current_date
 WHERE id = $1 AND tenant_id = $2 AND cancelado_em IS NULL
 `
 

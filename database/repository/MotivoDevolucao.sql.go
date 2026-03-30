@@ -86,7 +86,7 @@ func (q *Queries) BuscaTodosMotivosDevolucao(ctx context.Context, tenantID int32
 const deleteMotivoDevolucao = `-- name: DeleteMotivoDevolucao :execrows
 UPDATE motivo_devolucao
 SET ativo = FALSE,
-    deletado_em = NOW()
+    deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE

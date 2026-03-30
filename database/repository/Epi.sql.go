@@ -300,7 +300,7 @@ func (q *Queries) BuscarTodosTamanhosAgrupados(ctx context.Context, tenantID int
 
 const deletarEpi = `-- name: DeletarEpi :execrows
 UPDATE epi 
-SET ativo = FALSE, deletado_em = NOW() 
+SET ativo = FALSE, deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE
@@ -321,7 +321,7 @@ func (q *Queries) DeletarEpi(ctx context.Context, arg DeletarEpiParams) (int64, 
 
 const deletarTamanhosPorEpi = `-- name: DeletarTamanhosPorEpi :execrows
 UPDATE tamanhos_epis 
-SET ativo = FALSE, deletado_em = NOW() 
+SET ativo = FALSE, deletado_em = current_date
 WHERE IdEpi = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE
