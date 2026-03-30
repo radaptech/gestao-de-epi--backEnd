@@ -33,101 +33,6 @@ func (q *Queries) AddFuncionario(ctx context.Context, arg AddFuncionarioParams) 
 	return err
 }
 
-const buscaFuncinarioCompleto = `-- name: BuscaFuncinarioCompleto :many
-SELECT
-    fn.id, 
-    fn.nome, 
-    fn.matricula, 
-    fn.IdFuncao, 
-    f.nome as funcao_nome,
-    fn.IdDepartamento, 
-    d.nome as departamento_nome,
-    e.id, e.data_entrega, e.assinatura,
-    ee.id,ee.quantidade,ee.IdTamanho,t.tamanho,
-    ee.IdEpi, ep.nome as epi_nome, ep.fabricante, ep.CA,ep.descricao,ep.validade_CA,
-    ep.alerta_minimo,ep.IdTipoProtecao, tp.nome as tipo_protecao_nome
-FROM funcionario fn
-INNER JOIN departamento d ON fn.IdDepartamento = d.id
-INNER JOIN funcao f ON fn.IdFuncao = f.id
-inner JOIN entrega_epi e ON e.IdFuncionario = fn.id
-inner join epi ep on ep.id = e.IdEpi
-inner join epis_entregues ee on ee.IdEntrega = e.id
-inner join tamanho t on t.id = ee.IdTamanho
-inner join tipo_protecao tp on tp.id = ep.IdTipoProtecao
-WHERE fn.tenant_id = $1 
-  AND fn.ativo = TRUE
-`
-
-type BuscaFuncinarioCompletoRow struct {
-	ID               int32
-	Nome             string
-	Matricula        int32
-	Idfuncao         int32
-	FuncaoNome       string
-	Iddepartamento   int32
-	DepartamentoNome string
-	ID_2             int32
-	DataEntrega      pgtype.Date
-	Assinatura       string
-	ID_3             int32
-	Quantidade       int32
-	Idtamanho        int32
-	Tamanho          string
-	Idepi            int32
-	EpiNome          string
-	Fabricante       string
-	Ca               string
-	Descricao        string
-	ValidadeCa       pgtype.Date
-	AlertaMinimo     int32
-	Idtipoprotecao   int32
-	TipoProtecaoNome string
-}
-
-func (q *Queries) BuscaFuncinarioCompleto(ctx context.Context, tenantID int32) ([]BuscaFuncinarioCompletoRow, error) {
-	rows, err := q.db.Query(ctx, buscaFuncinarioCompleto, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []BuscaFuncinarioCompletoRow
-	for rows.Next() {
-		var i BuscaFuncinarioCompletoRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Nome,
-			&i.Matricula,
-			&i.Idfuncao,
-			&i.FuncaoNome,
-			&i.Iddepartamento,
-			&i.DepartamentoNome,
-			&i.ID_2,
-			&i.DataEntrega,
-			&i.Assinatura,
-			&i.ID_3,
-			&i.Quantidade,
-			&i.Idtamanho,
-			&i.Tamanho,
-			&i.Idepi,
-			&i.EpiNome,
-			&i.Fabricante,
-			&i.Ca,
-			&i.Descricao,
-			&i.ValidadeCa,
-			&i.AlertaMinimo,
-			&i.Idtipoprotecao,
-			&i.TipoProtecaoNome,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const buscaFuncionario = `-- name: BuscaFuncionario :one
 SELECT 
     fn.id, 
@@ -173,6 +78,101 @@ func (q *Queries) BuscaFuncionario(ctx context.Context, arg BuscaFuncionarioPara
 		&i.FuncaoNome,
 	)
 	return i, err
+}
+
+const buscaFuncionarioCompleto = `-- name: BuscaFuncionarioCompleto :many
+SELECT
+    fn.id, 
+    fn.nome, 
+    fn.matricula, 
+    fn.IdFuncao, 
+    f.nome as funcao_nome,
+    fn.IdDepartamento, 
+    d.nome as departamento_nome,
+    e.id, e.data_entrega, e.assinatura,
+    ee.id,ee.quantidade,ee.IdTamanho,t.tamanho,
+    ee.IdEpi, ep.nome as epi_nome, ep.fabricante, ep.CA,ep.descricao,ep.validade_CA,
+    ep.alerta_minimo,ep.IdTipoProtecao, tp.nome as tipo_protecao_nome
+FROM funcionario fn
+INNER JOIN departamento d ON fn.IdDepartamento = d.id
+INNER JOIN funcao f ON fn.IdFuncao = f.id
+inner JOIN entrega_epi e ON e.IdFuncionario = fn.id
+inner join epi ep on ep.id = e.IdEpi
+inner join epis_entregues ee on ee.IdEntrega = e.id
+inner join tamanho t on t.id = ee.IdTamanho
+inner join tipo_protecao tp on tp.id = ep.IdTipoProtecao
+WHERE fn.tenant_id = $1 
+  AND fn.ativo = TRUE
+`
+
+type BuscaFuncionarioCompletoRow struct {
+	ID               int32
+	Nome             string
+	Matricula        int32
+	Idfuncao         int32
+	FuncaoNome       string
+	Iddepartamento   int32
+	DepartamentoNome string
+	ID_2             int32
+	DataEntrega      pgtype.Date
+	Assinatura       string
+	ID_3             int32
+	Quantidade       int32
+	Idtamanho        int32
+	Tamanho          string
+	Idepi            int32
+	EpiNome          string
+	Fabricante       string
+	Ca               string
+	Descricao        string
+	ValidadeCa       pgtype.Date
+	AlertaMinimo     int32
+	Idtipoprotecao   int32
+	TipoProtecaoNome string
+}
+
+func (q *Queries) BuscaFuncionarioCompleto(ctx context.Context, tenantID int32) ([]BuscaFuncionarioCompletoRow, error) {
+	rows, err := q.db.Query(ctx, buscaFuncionarioCompleto, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscaFuncionarioCompletoRow
+	for rows.Next() {
+		var i BuscaFuncionarioCompletoRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nome,
+			&i.Matricula,
+			&i.Idfuncao,
+			&i.FuncaoNome,
+			&i.Iddepartamento,
+			&i.DepartamentoNome,
+			&i.ID_2,
+			&i.DataEntrega,
+			&i.Assinatura,
+			&i.ID_3,
+			&i.Quantidade,
+			&i.Idtamanho,
+			&i.Tamanho,
+			&i.Idepi,
+			&i.EpiNome,
+			&i.Fabricante,
+			&i.Ca,
+			&i.Descricao,
+			&i.ValidadeCa,
+			&i.AlertaMinimo,
+			&i.Idtipoprotecao,
+			&i.TipoProtecaoNome,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const buscaFuncionarioDashbord = `-- name: BuscaFuncionarioDashbord :many

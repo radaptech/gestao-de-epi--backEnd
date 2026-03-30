@@ -104,3 +104,8 @@ func (f *FuncionarioRepository) BuscarFuncionarioDashbord(ctx context.Context, t
 
 	return funcionarios, nil
 }
+
+func (f *FuncionarioRepository) BuscaFuncionarioCompleto(ctx context.Context, tenant int32)([]BuscaFuncinarioCompletoRow, error){
+
+	funcionarios, err:= f.q.BuscaFuncinarioCompleto()
+}

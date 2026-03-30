@@ -108,7 +108,7 @@ WHERE tenant_id = $1
   AND ativo = TRUE 
   order by nome asc;
 
--- name: BuscaFuncinarioCompleto :many
+-- name: BuscaFuncionarioCompleto :many
 SELECT
     fn.id, 
     fn.nome, 
