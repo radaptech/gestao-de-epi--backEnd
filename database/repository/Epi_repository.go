@@ -84,3 +84,15 @@ func (e *EpiRepository) BuscaEpiDashbord(ctx context.Context, tenant int32) ([]B
 
 	return epis, err
 }
+
+
+func (e *EpiRepository) BuscaEpiTenant(ctx context.Context, tenant int32) ([]BuscaTodosItensEntreguesDoTenantRow, error){
+
+	epi, err:= e.q.BuscaTodosItensEntreguesDoTenant(ctx, tenant)
+	if err != nil {
+
+		return []BuscaTodosItensEntreguesDoTenantRow{},err
+	}
+
+	return epi, nil
+}

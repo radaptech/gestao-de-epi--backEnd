@@ -94,6 +94,82 @@ func (q *Queries) BuscaEpiDashbord(ctx context.Context, tenantID int32) ([]Busca
 	return items, nil
 }
 
+const buscaTodosItensEntreguesDoTenant = `-- name: BuscaTodosItensEntreguesDoTenant :many
+SELECT
+    ee.id,
+    ee.IdEntrega, -- 🔑 CHAVE MESTRA: Liga o item à entrega correta no Go!
+    ee.quantidade,
+    ee.IdTamanho,
+    t.tamanho as tamanho_nome,
+    ee.IdEpi,
+    ep.nome as epi_nome,
+    ep.fabricante,
+    ep.CA,
+    ep.descricao,
+    ep.validade_CA,
+    ep.alerta_minimo,
+    ep.IdTipoProtecao,
+    tp.nome as tipo_protecao_nome
+FROM epis_entregues ee
+INNER JOIN entrega_epi e ON e.id = ee.IdEntrega
+INNER JOIN epi ep ON ep.id = ee.IdEpi
+INNER JOIN tamanho t ON t.id = ee.IdTamanho
+INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
+WHERE e.tenant_id = $1
+`
+
+type BuscaTodosItensEntreguesDoTenantRow struct {
+	ID               int32
+	Identrega        int32
+	Quantidade       int32
+	Idtamanho        int32
+	TamanhoNome      string
+	Idepi            int32
+	EpiNome          string
+	Fabricante       string
+	Ca               string
+	Descricao        string
+	ValidadeCa       pgtype.Date
+	AlertaMinimo     int32
+	Idtipoprotecao   int32
+	TipoProtecaoNome string
+}
+
+func (q *Queries) BuscaTodosItensEntreguesDoTenant(ctx context.Context, tenantID int32) ([]BuscaTodosItensEntreguesDoTenantRow, error) {
+	rows, err := q.db.Query(ctx, buscaTodosItensEntreguesDoTenant, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscaTodosItensEntreguesDoTenantRow
+	for rows.Next() {
+		var i BuscaTodosItensEntreguesDoTenantRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Identrega,
+			&i.Quantidade,
+			&i.Idtamanho,
+			&i.TamanhoNome,
+			&i.Idepi,
+			&i.EpiNome,
+			&i.Fabricante,
+			&i.Ca,
+			&i.Descricao,
+			&i.ValidadeCa,
+			&i.AlertaMinimo,
+			&i.Idtipoprotecao,
+			&i.TipoProtecaoNome,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const buscarEpi = `-- name: BuscarEpi :one
 SELECT 
     e.id, e.nome, e.fabricante, e.CA, e.descricao,

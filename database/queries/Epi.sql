@@ -86,3 +86,27 @@ FROM epi
 WHERE tenant_id = $1 -- SEGURANÇA
   AND ativo = TRUE
 ORDER BY nome;
+
+
+-- name: BuscaTodosItensEntreguesDoTenant :many
+SELECT
+    ee.id,
+    ee.IdEntrega, -- 🔑 CHAVE MESTRA: Liga o item à entrega correta no Go!
+    ee.quantidade,
+    ee.IdTamanho,
+    t.tamanho as tamanho_nome,
+    ee.IdEpi,
+    ep.nome as epi_nome,
+    ep.fabricante,
+    ep.CA,
+    ep.descricao,
+    ep.validade_CA,
+    ep.alerta_minimo,
+    ep.IdTipoProtecao,
+    tp.nome as tipo_protecao_nome
+FROM epis_entregues ee
+INNER JOIN entrega_epi e ON e.id = ee.IdEntrega
+INNER JOIN epi ep ON ep.id = ee.IdEpi
+INNER JOIN tamanho t ON t.id = ee.IdTamanho
+INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
+WHERE e.tenant_id = $1;

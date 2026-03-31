@@ -46,7 +46,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
 	funcaoService := service.NewFuncaoService(repoFuncao)
 	FornecedorService := service.NewFornecedorService(repoFornecedor)
-	funcionarioService := service.NewFuncionarioService(repoFuncionario, db)
+	funcionarioService := service.NewFuncionarioService(repoFuncionario,repoEntrega ,repoEpi,db)
 	tamanhoService := service.NewTamanhoService(repoTamanho)
 	TipoProtecaoService := service.NewProtecaoService(repoTipoProtecao)
 	epiService := service.NewEpiService(repoEpi, db)
@@ -121,6 +121,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/funcionarios", c.Funcionario.ListarFuncionarios())
 		api.GET("/funcionario/:matricula", c.Funcionario.ListarFuncionarioPorMatricula())
 		api.GET("/funcionarios-dashbord", c.Funcionario.BuscaFuncionarioDashbord())
+		api.GET("/funcionario-estoque", c.Funcionario.FuncionarioCompleto())
 
 		//tamanhos disponiveis para vincular a um epi
 		api.GET("/tamanhos", c.Tamanho.ListarTodosTamanhos())

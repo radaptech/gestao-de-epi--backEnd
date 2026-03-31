@@ -28,6 +28,7 @@ type EntregaRepository interface {
 	ListasEntregasPorMatricula(ctx context.Context, args repository.ListarHistoricoEntregasPorMatriculaParams) ([]repository.ListarHistoricoEntregasPorMatriculaRow, error)
 	BuscaEntregaDashbord(ctx context.Context, tenant int32) ([]repository.EntregaDashbordRow, error)
 	BuscaEntregaItensDashbord(ctx context.Context, tenant int32) ([]repository.EntregaItensDashbordRow, error)
+	BuscaTodasEntregasDoTenant(ctx context.Context, tenantId int32) ([]repository.BuscaTodasEntregasDoTenantRow, error)
 }
 
 type EntregaService struct {
@@ -504,3 +505,4 @@ func (e *EntregaService) BuscaItemDash(ctx context.Context, tenantID int32) ([]m
 
 	return dto, nil
 }
+

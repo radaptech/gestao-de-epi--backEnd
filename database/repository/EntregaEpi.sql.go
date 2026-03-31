@@ -82,6 +82,49 @@ func (q *Queries) AddItemEntregue(ctx context.Context, arg AddItemEntregueParams
 	return i, err
 }
 
+const buscaTodasEntregasDoTenant = `-- name: BuscaTodasEntregasDoTenant :many
+SELECT 
+    id, 
+    IdFuncionario,
+    data_entrega, 
+    assinatura
+FROM entrega_epi -- Ajuste para o nome exato da sua tabela
+WHERE tenant_id = $1 and ativo = TRUE
+ORDER BY data_entrega DESC
+`
+
+type BuscaTodasEntregasDoTenantRow struct {
+	ID            int32
+	Idfuncionario int32
+	DataEntrega   pgtype.Date
+	Assinatura    string
+}
+
+func (q *Queries) BuscaTodasEntregasDoTenant(ctx context.Context, tenantID int32) ([]BuscaTodasEntregasDoTenantRow, error) {
+	rows, err := q.db.Query(ctx, buscaTodasEntregasDoTenant, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscaTodasEntregasDoTenantRow
+	for rows.Next() {
+		var i BuscaTodasEntregasDoTenantRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Idfuncionario,
+			&i.DataEntrega,
+			&i.Assinatura,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const buscarTodosItensEntrega = `-- name: BuscarTodosItensEntrega :many
 SELECT 
     i.IdEntrega as entrega_id, i.id as item_id, i.quantidade,

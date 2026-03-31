@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -24,17 +25,20 @@ type FuncionarioRepository interface {
 	AtualizarFuncionarioNome(ctx context.Context, arg repository.UpdateFuncionarioNomeParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioDepartamento(ctx context.Context, arg repository.UpdateFuncionarioDepartamentoParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioFuncao(ctx context.Context, arg repository.UpdateFuncionarioFuncaoParams, qtx *repository.Queries) (int64, error)
-	BuscarFuncionarioDashbord(ctx context.Context, tenant int32)([]repository.BuscaFuncionarioDashbordRow, error)
+	BuscarFuncionarioDashbord(ctx context.Context, tenant int32) ([]repository.BuscaFuncionarioDashbordRow, error)
+	BuscaFuncionarioCompleto(ctx context.Context, tenant int32) ([]repository.BuscaFuncionarioCompletoRow, error)
 }
 
 type FuncionarioService struct {
-	repo    FuncionarioRepository
-	db      *pgxpool.Pool
-	queries *repository.Queries
+	repo        FuncionarioRepository
+	repoEntrega EntregaRepository
+	repoEpi     EpiRepository
+	db          *pgxpool.Pool
+	queries     *repository.Queries
 }
 
-func NewFuncionarioService(f FuncionarioRepository, pool *pgxpool.Pool) *FuncionarioService {
-	return &FuncionarioService{repo: f, db: pool, queries: repository.New(pool)}
+func NewFuncionarioService(f FuncionarioRepository, e EntregaRepository, ep EpiRepository ,pool *pgxpool.Pool) *FuncionarioService {
+	return &FuncionarioService{repo: f,repoEntrega: e ,repoEpi: ep,db: pool, queries: repository.New(pool)}
 }
 
 func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.FuncionarioINserir, tenantId int32) error {
@@ -75,11 +79,11 @@ func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula st
 		return model.Funcionario_Dto{}, helper.ErrId
 	}
 
-	Matricula, err:= strconv.Atoi(matricula)
+	Matricula, err := strconv.Atoi(matricula)
 	if err != nil {
 		return model.Funcionario_Dto{}, err
 	}
-	
+
 	funcionario, err := f.repo.ListarFuncionario(ctx, repository.BuscaFuncionarioParams{
 		Matricula: int32(Matricula),
 		TenantID:  tenantId,
@@ -93,7 +97,7 @@ func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula st
 		return model.Funcionario_Dto{}, err
 	}
 
-	funcMatricula:= strconv.Itoa(int(funcionario.Matricula))
+	funcMatricula := strconv.Itoa(int(funcionario.Matricula))
 
 	funcDto := model.Funcionario_Dto{
 		ID:        int(funcionario.ID),
@@ -327,28 +331,137 @@ func (f *FuncionarioService) AtualizarFuncionarioCompleto(ctx context.Context, i
 	return tx.Commit(ctx)
 }
 
+func (f *FuncionarioService) FuncionariosDashbord(ctx context.Context, tenantId int32) ([]model.FuncionarioDashbord, error) {
 
-func (f *FuncionarioService) FuncionariosDashbord(ctx context.Context, tenantId int32)([]model.FuncionarioDashbord, error){
-
-	funcionarios, err:= f.repo.BuscarFuncionarioDashbord(ctx, tenantId)
-	if err != nil{
+	funcionarios, err := f.repo.BuscarFuncionarioDashbord(ctx, tenantId)
+	if err != nil {
 
 		return []model.FuncionarioDashbord{}, err
 	}
 
-	dto:= make([]model.FuncionarioDashbord, 0, len(funcionarios))
+	dto := make([]model.FuncionarioDashbord, 0, len(funcionarios))
 
 	for _, ff := range funcionarios {
 
-		matricula:= strconv.Itoa(int(ff.Matricula))
+		matricula := strconv.Itoa(int(ff.Matricula))
 		fun := model.FuncionarioDashbord{
 
-			Id: int(ff.ID),
-			Nome: ff.Nome,
+			Id:        int(ff.ID),
+			Nome:      ff.Nome,
 			Matricula: matricula,
 		}
 
 		dto = append(dto, fun)
+	}
+
+	return dto, nil
+}
+
+func (f *FuncionarioService) FuncionarioCompleto(ctx context.Context, tenantId int32) ([]model.FuncionarioCompletoDto, error) {
+
+	// 1. Busca todos os funcionários
+	funcionarios, err := f.repo.BuscaFuncionarioCompleto(ctx, tenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Busca TODAS as entregas desse Tenant
+	entregasDB, err := f.repoEntrega.BuscaTodasEntregasDoTenant(ctx, tenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Busca TODOS os Itens entregues desse Tenant
+	// (Assumindo que você criou o método no repoEntrega ou similar)
+	itensDB, err := f.repoEpi.BuscaEpiTenant(ctx, tenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. MÁGICA 1: Agrupa os Itens usando um Map (Chave = ID da Entrega)
+	mapItens := make(map[int64][]model.ItemEntregueDto)
+
+	for _, item := range itensDB {
+		idEntrega := int64(item.Identrega)
+
+		// Cuidado aqui com os tipos de data. Se for pgtype.Date, acesse o .Time
+		dtoItem := model.ItemEntregueDto{
+			Id:         int64(item.ID),
+			Quantidade: int(item.Quantidade),
+			Tamanho: model.TamanhoDto{
+				ID:      int(item.Idtamanho),
+				Tamanho: item.TamanhoNome,
+			},
+			Epi: model.EpiResponse{
+				Id:             int(item.Idepi),
+				Nome:           item.EpiNome,
+				Fabricante:     item.Fabricante,
+				CA:             item.Ca,
+				Descricao:      item.Descricao,
+				DataValidadeCa: *configs.NewDataBrPtr(item.ValidadeCa.Time),
+				AlertaMinimo:   int(item.AlertaMinimo),
+				Protecao: model.TipoProtecaoDto{
+					ID:   int64(item.Idtipoprotecao),
+					Nome: item.TipoProtecaoNome,
+				},
+			},
+		}
+
+		mapItens[idEntrega] = append(mapItens[idEntrega], dtoItem)
+	}
+
+	// 5. MÁGICA 2: Agrupa as entregas usando um Map (Chave = ID do Funcionário)
+	mapEntregas := make(map[int][]model.EntregaDoFuncionarioDto)
+
+	for _, e := range entregasDB {
+		funcID := int(e.Idfuncionario)
+		entregaID := int64(e.ID)
+
+		// Pega os itens daquela entrega (se não tiver, garante um array vazio pro JSON ficar bonito)
+		itensDaEntrega := mapItens[entregaID]
+		if itensDaEntrega == nil {
+			itensDaEntrega = []model.ItemEntregueDto{}
+		}
+
+		dtoEntrega := model.EntregaDoFuncionarioDto{
+			Id:                 entregaID,
+			Data_entrega:       *configs.NewDataBrPtr(e.DataEntrega.Time),
+			Assinatura_Digital: e.Assinatura,
+			Itens:              itensDaEntrega, // Pluga a lista de Itens aqui!
+		}
+
+		mapEntregas[funcID] = append(mapEntregas[funcID], dtoEntrega)
+	}
+
+	// 6. Monta o DTO final do Funcionário
+	dto := make([]model.FuncionarioCompletoDto, 0, len(funcionarios))
+
+	for _, funcionario := range funcionarios {
+		funcID := int(funcionario.ID)
+		matricula := strconv.Itoa(int(funcionario.Matricula))
+
+		// Pega as entregas (se não tiver, garante array vazio)
+		entregasDoFunc := mapEntregas[funcID]
+		if entregasDoFunc == nil {
+			entregasDoFunc = []model.EntregaDoFuncionarioDto{}
+		}
+
+		ff := model.FuncionarioCompletoDto{
+			ID:        funcID,
+			Nome:      funcionario.Nome,
+			Matricula: matricula,
+			Funcao: model.FuncaoDto{
+				ID:     int(funcionario.Idfuncao),
+				Funcao: funcionario.FuncaoNome,
+				Departamento: model.DepartamentoDto{
+					ID:           int(funcionario.Iddepartamento),
+					Departamento: funcionario.DepartamentoNome,
+				},
+			},
+			Entregas: entregasDoFunc, // Pluga a lista de Entregas aqui!
+		}
+
+		dto = append(dto, ff)
 	}
 
 	return dto, nil

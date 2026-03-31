@@ -105,7 +105,16 @@ func (f *FuncionarioRepository) BuscarFuncionarioDashbord(ctx context.Context, t
 	return funcionarios, nil
 }
 
-func (f *FuncionarioRepository) BuscaFuncionarioCompleto(ctx context.Context, tenant int32)([]BuscaFuncinarioCompletoRow, error){
+func (f *FuncionarioRepository) BuscaFuncionarioCompleto(ctx context.Context, tenant int32)([]BuscaFuncionarioCompletoRow, error){
 
-	funcionarios, err:= f.q.BuscaFuncinarioCompleto()
+	funcionarios, err:= f.q.BuscaFuncionarioCompleto(ctx, tenant)
+	if err != nil {
+
+		return []BuscaFuncionarioCompletoRow{}, helper.TraduzErroPostgres(err)
+	}
+
+
+	return funcionarios, nil
 }
+
+

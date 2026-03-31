@@ -58,3 +58,10 @@ type EntregaDoFuncionarioDto struct {
 	Assinatura_Digital string            `json:"assinatura_digital"`
 	Itens              []ItemEntregueDto `json:"itens,omitempty"`
 }
+
+type ItemEntregueFuncionario struct {
+	Id         int64       `json:"id"`
+	Quantidade int         `json:"quantidade"`
+	Tamanho    TamanhoDto  `json:"tamanho"`
+	Epi        EpiResponse `json:"epi"`
+}

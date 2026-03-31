@@ -116,18 +116,10 @@ SELECT
     fn.IdFuncao, 
     f.nome as funcao_nome,
     fn.IdDepartamento, 
-    d.nome as departamento_nome,
-    e.id, e.data_entrega, e.assinatura,
-    ee.id,ee.quantidade,ee.IdTamanho,t.tamanho,
-    ee.IdEpi, ep.nome as epi_nome, ep.fabricante, ep.CA,ep.descricao,ep.validade_CA,
-    ep.alerta_minimo,ep.IdTipoProtecao, tp.nome as tipo_protecao_nome
+    d.nome as departamento_nome
 FROM funcionario fn
 INNER JOIN departamento d ON fn.IdDepartamento = d.id
 INNER JOIN funcao f ON fn.IdFuncao = f.id
-inner JOIN entrega_epi e ON e.IdFuncionario = fn.id
-inner join epi ep on ep.id = e.IdEpi
-inner join epis_entregues ee on ee.IdEntrega = e.id
-inner join tamanho t on t.id = ee.IdTamanho
-inner join tipo_protecao tp on tp.id = ep.IdTipoProtecao
 WHERE fn.tenant_id = $1 
   AND fn.ativo = TRUE;
+

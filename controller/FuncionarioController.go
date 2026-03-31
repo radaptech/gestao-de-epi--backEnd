@@ -20,6 +20,7 @@ type FuncionarioService interface {
 	DeletarFuncionario(ctx context.Context, id int, tenantId int32) error
 	AtualizarFuncionarioCompleto(ctx context.Context, id int, req model.UpdateFuncionarioRequest, tenantId int) error
 	FuncionariosDashbord(ctx context.Context, tenantId int32) ([]model.FuncionarioDashbord, error)
+	FuncionarioCompleto(ctx context.Context, tenantId int32) ([]model.FuncionarioCompletoDto, error)
 }
 
 type FuncionarioController struct {
@@ -369,5 +370,32 @@ func (f *FuncionarioController) BuscaFuncionarioDashbord() gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, funcionarios)
+	}
+}
+
+func (f *FuncionarioController) FuncionarioCompleto() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantID, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+		funcionarios, err := f.Service.FuncionarioCompleto(ctx, tenantID)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao busca todos os funcionarios",
+				"detalhes": err.Error(),
+			})
+
+			return
+		}
+
+		ctx.JSON(http.StatusOK, funcionarios)
+
 	}
 }

@@ -132,3 +132,13 @@ SELECT
 FROM epis_entregues
 WHERE tenant_id = $1 and ativo = TRUE
 ORDER BY id DESC;
+
+-- name: BuscaTodasEntregasDoTenant :many
+SELECT 
+    id, 
+    IdFuncionario,
+    data_entrega, 
+    assinatura
+FROM entrega_epi -- Ajuste para o nome exato da sua tabela
+WHERE tenant_id = $1 and ativo = TRUE
+ORDER BY data_entrega DESC;

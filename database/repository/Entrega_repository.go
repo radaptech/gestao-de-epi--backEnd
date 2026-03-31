@@ -159,3 +159,16 @@ func (e *EntregaRepository) BuscaEntregaItensDashbord(ctx context.Context, tenan
 
 	return itens, nil
 }
+
+// Repositorio (ex: repository/funcionario_repository.go)
+
+func (e *EntregaRepository) BuscaTodasEntregasDoTenant(ctx context.Context, tenantId int32) ([]BuscaTodasEntregasDoTenantRow, error) {
+
+    
+    entregas, err := e.q.BuscaTodasEntregasDoTenant(ctx, tenantId)
+    if err != nil {
+        return nil, helper.TraduzErroPostgres(err)
+    }
+    
+    return entregas, nil
+}

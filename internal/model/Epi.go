@@ -57,6 +57,7 @@ type EpiResponse struct {
 	Fabricante     string          `json:"fabricante"`
 	CA             string          `json:"ca"`
 	Descricao      string          `json:"descricao"`
-	DataValidadeCa configs.DataBr  `json:"data_validadeCa"`
+	DataValidadeCa configs.DataBr  `json:"validade_ca"`
+	AlertaMinimo   int             `json:"alerta_minimo"`
 	Protecao       TipoProtecaoDto `json:"protecao"`
 }

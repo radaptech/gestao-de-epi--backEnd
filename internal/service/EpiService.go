@@ -24,6 +24,7 @@ type EpiRepository interface {
 	CancelarEpi(ctx context.Context, qtx *repository.Queries, arg repository.DeletarEpiParams) (int64, error)
 	AtualizaEpi(ctx context.Context, epi repository.UpdateEpiCampoParams) (int64, error)
 	BuscaEpiDashbord(ctx context.Context, tenant int32) ([]repository.BuscaEpiDashbordRow, error)
+	BuscaEpiTenant(ctx context.Context, tenant int32) ([]repository.BuscaTodosItensEntreguesDoTenantRow, error)
 }
 
 type EpiService struct {
