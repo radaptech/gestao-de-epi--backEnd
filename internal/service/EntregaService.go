@@ -232,7 +232,7 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 
 	todosItens, err := e.queries.BuscarTodosItensEntrega(ctx, repository.BuscarTodosItensEntregaParams{
 		TenantID:  tenantId,
-		IDEntrega: f.EntregaID,
+		IDEntrega: 0, // Envia 0 para a query SQL ignorar o filtro de ID específico
 	})
 	if err != nil {
 		return EntregaPaginada{}, err

@@ -92,7 +92,7 @@ func (e *EstoqueController) MostrarSaldo() gin.HandlerFunc {
 			filtro.Pagina = 1
 		}
 		if filtro.Quantidade <= 0 {
-			filtro.Quantidade = 4 // Padrão de 4 itens se não informar
+			filtro.Quantidade = 1000 // Padrão de 4 itens se não informar
 		}
 
 		saldos, err := e.service.MostrarSaldoAtual(ctx, filtro, tenantId)

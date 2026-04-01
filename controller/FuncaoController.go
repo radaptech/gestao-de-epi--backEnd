@@ -136,7 +136,7 @@ func (f *FuncaoController) ListarFuncoes() gin.HandlerFunc {
 			filtro.Pagina = 1
 		}
 		if filtro.Quantidade <= 0 {
-			filtro.Quantidade = 10 // Padrão de 10 itens se não informar
+			filtro.Quantidade = 1000 // Padrão de 10 itens se não informar
 		}
 
 		funcoes, err := f.service.ListasTodasFuncao(ctx,filtro ,tenantID)

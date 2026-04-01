@@ -135,7 +135,7 @@ func (e *EpiController) ListarEpis() gin.HandlerFunc {
 			filtro.Pagina = 1
 		}
 		if filtro.Quantidade <= 0 {
-			filtro.Quantidade = 10 // Padrão de 10 itens se não informar
+			filtro.Quantidade = 1000 // Padrão de 10 itens se não informar
 		}
 
 		epis, err := e.service.ListarEpis(ctx, filtro, tenantId)
