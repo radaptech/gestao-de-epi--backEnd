@@ -32,7 +32,7 @@ type EntregaDto struct {
 	Funcionario        Funcionario_Dto   `json:"funcionario"`
 	Data_entrega       configs.DataBr    `json:"data_entrega"`
 	Assinatura_Digital string            `json:"assinatura_digital"`
-	Itens              []ItemEntregueDto `json:"itens,omitempty"`
+	Itens              []ItemEntregueDto `json:"itens"`
 }
 
 type EntregaDashbord struct {
