@@ -33,6 +33,7 @@ type EntregaDto struct {
 	Data_entrega       configs.DataBr    `json:"data_entrega"`
 	Assinatura_Digital string            `json:"assinatura_digital"`
 	Itens              []ItemEntregueDto `json:"itens"`
+	Token_validacao    string            `json:"token_validacao"`
 }
 
 type EntregaDashbord struct {

@@ -290,6 +290,7 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 			Data_entrega:       configs.DataBr(entrega.DataEntrega.Time),
 			Assinatura_Digital: entrega.Assinatura,
 			Itens:              itensMap[entrega.EntregaID],
+			Token_validacao:    entrega.TokenValidacao.String,
 			Id_user:            int(entrega.IDUsuarioEntrega.Int32),
 		}
 
