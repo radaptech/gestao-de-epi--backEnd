@@ -17,7 +17,7 @@ func VerificaRole(rolePermitida string) gin.HandlerFunc{
 
 			ctx.JSON(http.StatusForbidden, gin.H{
 
-				"erro": "Acesso negado,apenas " + rolePermitida + "s podem fazer isso",
+				"erro": "Acesso negado: privilégios insuficientes",
 			})
 			ctx.Abort()
 			return 
