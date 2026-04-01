@@ -23,33 +23,23 @@ RETURNING IdEntrada, quantidade;
 
 -- name: ListarEntregas :many
 SELECT 
-    ee.id as entrega_id, ee.data_entrega, ee.assinatura, ee.token_validacao, ee.id_usuario_entrega,   
+    ee.id as entrega_id, ee.data_entrega, ee.assinatura, ee.token_validacao, ee.id_usuario_entrega,    
     f.id as func_id, f.nome as func_nome, f.matricula,
     d.id as dep_id, d.nome as dep_nome,
     ff.id as funcao_id, ff.nome as funcao_nome,
-    e.id as epi_id, e.nome as epi_nome, e.fabricante, e.CA, e.descricao as epi_desc, e.validade_CA,
-    tp.id as tp_id, tp.nome as tp_nome,
-    t.id as tam_id, t.tamanho as tam_nome,
-    i.quantidade,
     COUNT(*) OVER() as total_geral
 FROM entrega_epi ee
 INNER JOIN funcionario f ON ee.IdFuncionario = f.id
 INNER JOIN departamento d ON f.IdDepartamento = d.id
 INNER JOIN funcao ff ON f.IdFuncao = ff.id
-INNER JOIN epis_entregues i ON i.IdEntrega = ee.id
-INNER JOIN epi e ON i.IdEpi = e.id
-INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
-INNER JOIN tamanho t ON i.IdTamanho = t.id
 WHERE 
-    ee.tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Filtro Principal
+    ee.tenant_id = sqlc.arg('tenant_id')
     AND (
         (sqlc.arg('canceladas')::boolean IS FALSE AND ee.cancelada_em IS NULL) OR
         (sqlc.arg('canceladas')::boolean IS TRUE AND ee.cancelada_em IS NOT NULL)
     )
     AND (sqlc.narg('id_entrega')::int IS NULL OR ee.id = sqlc.narg('id_entrega'))
     AND (sqlc.narg('id_funcionario')::int IS NULL OR ee.IdFuncionario = sqlc.narg('id_funcionario'))
-    AND (sqlc.narg('data_inicio')::date IS NULL OR ee.data_entrega >= sqlc.narg('data_inicio'))
-    AND (sqlc.narg('data_fim')::date IS NULL OR ee.data_entrega <= sqlc.narg('data_fim'))
 ORDER BY ee.data_entrega DESC
 LIMIT $1 OFFSET $2;
 
@@ -75,7 +65,7 @@ INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
 INNER JOIN tamanho t ON i.IdTamanho = t.id
 WHERE 
     i.tenant_id = sqlc.arg('tenant_id') 
-    AND i.IdEntrega = sqlc.arg('id_entrega') -- FALTOU ISSO
+    AND (sqlc.arg('id_entrega')::int = 0 OR i.IdEntrega = sqlc.arg('id_entrega'))
     AND i.ativo = TRUE;
 
 -- name: ListarItensEntregueCancelados :many

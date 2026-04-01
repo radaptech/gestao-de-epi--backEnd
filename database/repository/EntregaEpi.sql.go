@@ -137,7 +137,7 @@ INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
 INNER JOIN tamanho t ON i.IdTamanho = t.id
 WHERE 
     i.tenant_id = $1 
-    AND i.IdEntrega = $2 -- FALTOU ISSO
+    AND ($2::int = 0 OR i.IdEntrega = $2)
     AND i.ativo = TRUE
 `
 
@@ -369,33 +369,23 @@ func (q *Queries) EntregaItensDashbord(ctx context.Context, tenantID int32) ([]E
 
 const listarEntregas = `-- name: ListarEntregas :many
 SELECT 
-    ee.id as entrega_id, ee.data_entrega, ee.assinatura, ee.token_validacao, ee.id_usuario_entrega,   
+    ee.id as entrega_id, ee.data_entrega, ee.assinatura, ee.token_validacao, ee.id_usuario_entrega,    
     f.id as func_id, f.nome as func_nome, f.matricula,
     d.id as dep_id, d.nome as dep_nome,
     ff.id as funcao_id, ff.nome as funcao_nome,
-    e.id as epi_id, e.nome as epi_nome, e.fabricante, e.CA, e.descricao as epi_desc, e.validade_CA,
-    tp.id as tp_id, tp.nome as tp_nome,
-    t.id as tam_id, t.tamanho as tam_nome,
-    i.quantidade,
     COUNT(*) OVER() as total_geral
 FROM entrega_epi ee
 INNER JOIN funcionario f ON ee.IdFuncionario = f.id
 INNER JOIN departamento d ON f.IdDepartamento = d.id
 INNER JOIN funcao ff ON f.IdFuncao = ff.id
-INNER JOIN epis_entregues i ON i.IdEntrega = ee.id
-INNER JOIN epi e ON i.IdEpi = e.id
-INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
-INNER JOIN tamanho t ON i.IdTamanho = t.id
 WHERE 
-    ee.tenant_id = $3 -- SEGURANÇA: Filtro Principal
+    ee.tenant_id = $3
     AND (
         ($4::boolean IS FALSE AND ee.cancelada_em IS NULL) OR
         ($4::boolean IS TRUE AND ee.cancelada_em IS NOT NULL)
     )
     AND ($5::int IS NULL OR ee.id = $5)
     AND ($6::int IS NULL OR ee.IdFuncionario = $6)
-    AND ($7::date IS NULL OR ee.data_entrega >= $7)
-    AND ($8::date IS NULL OR ee.data_entrega <= $8)
 ORDER BY ee.data_entrega DESC
 LIMIT $1 OFFSET $2
 `
@@ -407,8 +397,6 @@ type ListarEntregasParams struct {
 	Canceladas    bool
 	IDEntrega     pgtype.Int4
 	IDFuncionario pgtype.Int4
-	DataInicio    pgtype.Date
-	DataFim       pgtype.Date
 }
 
 type ListarEntregasRow struct {
@@ -424,17 +412,6 @@ type ListarEntregasRow struct {
 	DepNome          string
 	FuncaoID         int32
 	FuncaoNome       string
-	EpiID            int32
-	EpiNome          string
-	Fabricante       string
-	Ca               string
-	EpiDesc          string
-	ValidadeCa       pgtype.Date
-	TpID             int32
-	TpNome           string
-	TamID            int32
-	TamNome          string
-	Quantidade       int32
 	TotalGeral       int64
 }
 
@@ -446,8 +423,6 @@ func (q *Queries) ListarEntregas(ctx context.Context, arg ListarEntregasParams) 
 		arg.Canceladas,
 		arg.IDEntrega,
 		arg.IDFuncionario,
-		arg.DataInicio,
-		arg.DataFim,
 	)
 	if err != nil {
 		return nil, err
@@ -469,17 +444,6 @@ func (q *Queries) ListarEntregas(ctx context.Context, arg ListarEntregasParams) 
 			&i.DepNome,
 			&i.FuncaoID,
 			&i.FuncaoNome,
-			&i.EpiID,
-			&i.EpiNome,
-			&i.Fabricante,
-			&i.Ca,
-			&i.EpiDesc,
-			&i.ValidadeCa,
-			&i.TpID,
-			&i.TpNome,
-			&i.TamID,
-			&i.TamNome,
-			&i.Quantidade,
 			&i.TotalGeral,
 		); err != nil {
 			return nil, err

@@ -219,8 +219,6 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 		Canceladas:    f.Canceladas,
 		IDEntrega:     pgtype.Int4{Int32: f.EntregaID, Valid: f.EntregaID > 0},
 		IDFuncionario: pgtype.Int4{Int32: f.FuncionarioId, Valid: f.FuncionarioId > 0},
-		DataInicio:    pgtype.Date{Time: f.DataInicio.Time(), Valid: !f.DataInicio.IsZero()},
-		DataFim:       pgtype.Date{Time: f.DataFim.Time(), Valid: !f.DataFim.IsZero()},
 		TenantID:      tenantId,
 	}
 
@@ -266,6 +264,13 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 
 	for _, entrega := range entregas {
 
+		itensDaEntrega := itensMap[entrega.EntregaID]
+
+		// 2. ESTE É O AJUSTE: Se for nulo, forçamos um array vazio []
+		// Sem isso, o JSON vai como "null". Com isso, vai como "[]"
+		if itensDaEntrega == nil {
+			itensDaEntrega = []model.ItemEntregueDto{}
+		}
 		Matricula := strconv.Itoa(int(entrega.Matricula))
 		e := model.EntregaDto{
 			Id: int64(entrega.EntregaID),
@@ -446,40 +451,35 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 	return pdfEntrega, nil
 }
 
-func (e *EntregaService) BuscaEntregaDash(ctx context.Context, tenantId int32)([]model.EntregaDashbord, error){
+func (e *EntregaService) BuscaEntregaDash(ctx context.Context, tenantId int32) ([]model.EntregaDashbord, error) {
 
-	entregas, err:= e.repo.BuscaEntregaDashbord(ctx, tenantId)
+	entregas, err := e.repo.BuscaEntregaDashbord(ctx, tenantId)
 	if err != nil {
 
 		return []model.EntregaDashbord{}, err
 	}
 
-
 	dto := make([]model.EntregaDashbord, 0, len(entregas))
 
 	for _, ee := range entregas {
 
-		
-		e:= model.EntregaDashbord{
-			Id: int(ee.ID),
-			IdFuncionario: int(ee.Idfuncionario),
-			Data_entrega: *configs.NewDataBrPtr(ee.DataEntrega.Time),
-			Assinatura: ee.Assinatura,
+		e := model.EntregaDashbord{
+			Id:             int(ee.ID),
+			IdFuncionario:  int(ee.Idfuncionario),
+			Data_entrega:   *configs.NewDataBrPtr(ee.DataEntrega.Time),
+			Assinatura:     ee.Assinatura,
 			TokenValidacao: ee.TokenValidacao.String,
-
 		}
 
 		dto = append(dto, e)
 	}
 
-
 	return dto, nil
 }
 
-func (e *EntregaService) BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error){
+func (e *EntregaService) BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error) {
 
-
-	itens, err:= e.repo.BuscaEntregaItensDashbord(ctx, tenantID)
+	itens, err := e.repo.BuscaEntregaItensDashbord(ctx, tenantID)
 	if err != nil {
 
 		return []model.EntregaItensDashBord{}, err
@@ -489,20 +489,17 @@ func (e *EntregaService) BuscaItemDash(ctx context.Context, tenantID int32) ([]m
 
 	for _, item := range itens {
 
-		i:= model.EntregaItensDashBord{
-			Id: int(item.ID),
-			IdEntrega: int(item.Identrega),
-			IdEpi: int(item.Idepi),
-			IdTamanho: int(item.Idtamanho),
+		i := model.EntregaItensDashBord{
+			Id:         int(item.ID),
+			IdEntrega:  int(item.Identrega),
+			IdEpi:      int(item.Idepi),
+			IdTamanho:  int(item.Idtamanho),
 			Quantidade: int(item.Quantidade),
-
 		}
 
 		dto = append(dto, i)
-		
-	}
 
+	}
 
 	return dto, nil
 }
-
