@@ -18,7 +18,7 @@ type EpiDto struct {
 	Nome           string          `json:"nome"`
 	Fabricante     string          `json:"fabricante"`
 	CA             string          `json:"CA"`
-	Tamanho        []TamanhoDto    `json:"-"`
+	Tamanho        []TamanhoDto    `json:"tamanhos"`
 	Descricao      string          `json:"descricao"`
 	DataValidadeCa configs.DataBr  `json:"validade_CA"`
 	Protecao       TipoProtecaoDto `json:"protecao"`
