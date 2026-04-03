@@ -139,23 +139,26 @@ FROM fornecedores
 WHERE 
     tenant_id = $1
         AND (
-        ($2::boolean IS FALSE AND cancelado_em IS NULL) OR
-        ($2::boolean IS TRUE AND cancelado_em IS NOT NULL)
+        $2::boolean IS TRUE -- Nova condição para ignorar o filtro de cancelados
+        OR
+        ($3::boolean IS FALSE AND cancelado_em IS NULL) OR
+        ($3::boolean IS TRUE AND cancelado_em IS NOT NULL)
     )
     
-    AND ($3::text IS NULL OR nome_fantasia ILIKE '%' || $3 || '%' OR razao_social ILIKE '%' || $3 || '%')
-    AND ($4::text IS NULL OR cnpj ILIKE '%' || $4 || '%')
+    AND ($4::text IS NULL OR nome_fantasia ILIKE '%' || $4 || '%' OR razao_social ILIKE '%' || $4 || '%')
+    AND ($5::text IS NULL OR cnpj ILIKE '%' || $5 || '%')
 ORDER BY id DESC
-LIMIT $6 OFFSET $5
+LIMIT $7 OFFSET $6
 `
 
 type ListarFornecedoresParams struct {
-	TenantID   int32
-	Canceladas bool
-	Nome       pgtype.Text
-	Cnpj       pgtype.Text
-	Offset     int32
-	Limit      int32
+	TenantID               int32
+	IgnorarFiltroCancelado pgtype.Bool
+	Canceladas             bool
+	Nome                   pgtype.Text
+	Cnpj                   pgtype.Text
+	Offset                 int32
+	Limit                  int32
 }
 
 type ListarFornecedoresRow struct {
@@ -171,6 +174,7 @@ type ListarFornecedoresRow struct {
 func (q *Queries) ListarFornecedores(ctx context.Context, arg ListarFornecedoresParams) ([]ListarFornecedoresRow, error) {
 	rows, err := q.db.Query(ctx, listarFornecedores,
 		arg.TenantID,
+		arg.IgnorarFiltroCancelado,
 		arg.Canceladas,
 		arg.Nome,
 		arg.Cnpj,

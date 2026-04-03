@@ -26,6 +26,8 @@ FROM fornecedores
 WHERE 
     tenant_id = sqlc.arg('tenant_id')
         AND (
+        sqlc.narg('ignorar_filtro_cancelado')::boolean IS TRUE -- Nova condição para ignorar o filtro de cancelados
+        OR
         (sqlc.arg('canceladas')::boolean IS FALSE AND cancelado_em IS NULL) OR
         (sqlc.arg('canceladas')::boolean IS TRUE AND cancelado_em IS NOT NULL)
     )
