@@ -260,7 +260,7 @@ SELECT
     e.validade_CA,
     e.IdTipoProtecao, 
     tp.nome as protecao_nome,
-    ee.IdTamanho, 
+    ee.IdTamanho AS id_tamanho, 
     t.tamanho as tamanho_nome, 
     ee.quantidade, 
     ee.quantidadeAtual, 
@@ -333,7 +333,7 @@ type ListarEntradasRow struct {
 	ValidadeCa                   pgtype.Date
 	Idtipoprotecao               int32
 	ProtecaoNome                 string
-	Idtamanho                    int32
+	IDTamanho                    int32
 	TamanhoNome                  string
 	Quantidade                   int32
 	Quantidadeatual              int32
@@ -387,7 +387,7 @@ func (q *Queries) ListarEntradas(ctx context.Context, arg ListarEntradasParams) 
 			&i.ValidadeCa,
 			&i.Idtipoprotecao,
 			&i.ProtecaoNome,
-			&i.Idtamanho,
+			&i.IDTamanho,
 			&i.TamanhoNome,
 			&i.Quantidade,
 			&i.Quantidadeatual,

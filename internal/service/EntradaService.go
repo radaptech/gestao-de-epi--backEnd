@@ -177,7 +177,7 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 				CA:         entrada.Ca,
 				Tamanho: []model.TamanhoDto{
 					{
-						ID:      int(entrada.Idtamanho),
+						ID:      int(entrada.IDTamanho),
 						Tamanho: entrada.TamanhoNome,
 					},
 				},
@@ -191,6 +191,7 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 			Data_entrada:     *configs.NewDataBrPtr(entrada.DataEntrada.Time),
 			Quantidade:       int(entrada.Quantidade),
 			Quantidade_Atual: int(entrada.Quantidadeatual),
+			IdTamanho: int(entrada.IDTamanho),
 			Lote:             entrada.Lote,
 			Fornecedor: model.FornecedorDto{
 				ID:                int(entrada.Idfornecedor),

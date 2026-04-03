@@ -28,6 +28,7 @@ type EntradaEpiDto struct {
 	Data_entrada               configs.DataBr      `json:"data_entrada"`
 	Quantidade                 int                 `json:"quantidade"`
 	Quantidade_Atual           int                 `json:"quantidadeAtual"`
+	IdTamanho                  int                 `json:"id_tamanho"`
 	Lote                       string              `json:"lote"`
 	Fornecedor                 FornecedorDto       `json:"fornecedor"`
 	Nota_fiscal_serie          string              `json:"nota_fiscal_serie"`
