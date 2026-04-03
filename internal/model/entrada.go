@@ -27,10 +27,10 @@ type EntradaEpiDto struct {
 	Epi                        EpiDto              `json:"epi"`
 	Data_entrada               configs.DataBr      `json:"data_entrada"`
 	Quantidade                 int                 `json:"quantidade"`
-	Quantidade_Atual           int                 `json:"quantidade_Atual"`
+	Quantidade_Atual           int                 `json:"quantidadeAtual"`
 	Lote                       string              `json:"lote"`
 	Fornecedor                 FornecedorDto       `json:"fornecedor"`
-	Nota_fiscal_serie          string              `json:"notaFicalSerie"`
+	Nota_fiscal_serie          string              `json:"nota_fiscal_serie"`
 	Nota_fiscal_numero         string              `json:"notaFiscalNumero"`
 	UsuarioEntradaCancelamento RecuperaUserEntrada `json:"usuario_Cancelamento"`
 	ValorUnitario              decimal.Decimal     `json:"valor_unitario"`
