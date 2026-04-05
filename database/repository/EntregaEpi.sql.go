@@ -133,7 +133,7 @@ SELECT
     t.id as tam_id, t.tamanho as tam_nome
 FROM epis_entregues i
 INNER JOIN epi e ON i.id_epi = e.id
-INNER JOIN tipo_protecao tp ON e.id_tipo_protecao = tp.id
+INNER JOIN tipo_protecao tp ON e.idtipoprotecao = tp.id
 INNER JOIN tamanho t ON i.id_tamanho = t.id
 WHERE 
     i.tenant_id = $1 
@@ -375,9 +375,9 @@ SELECT
     ff.id as funcao_id, ff.nome as funcao_nome,
     COUNT(*) OVER() as total_geral
 FROM entrega_epi ee
-INNER JOIN funcionario f ON ee.id_funcionario = f.id
-INNER JOIN departamento d ON f.id_departamento = d.id
-INNER JOIN funcao ff ON f.id_funcao = ff.id
+INNER JOIN funcionario f ON ee.idfuncionario = f.id
+INNER JOIN departamento d ON f.iddepartamento = d.id
+INNER JOIN funcao ff ON f.idfuncao = ff.id
 WHERE 
     ee.tenant_id = $3
     AND (
@@ -385,7 +385,7 @@ WHERE
         ($4::boolean IS TRUE AND ee.cancelada_em IS NOT NULL)
     )
     AND ($5::int IS NULL OR ee.id = $5)
-    AND ($6::int IS NULL OR ee.id_funcionario = $6)
+    AND ($6::int IS NULL OR ee.idfuncionario = $6)
 ORDER BY ee.data_entrega DESC
 LIMIT $1 OFFSET $2
 `
@@ -396,7 +396,7 @@ type ListarEntregasParams struct {
 	TenantID      int32
 	Canceladas    bool
 	IDEntrega     pgtype.Int4
-	IDFuncionario pgtype.Int4
+	Idfuncionario pgtype.Int4
 }
 
 type ListarEntregasRow struct {
@@ -422,7 +422,7 @@ func (q *Queries) ListarEntregas(ctx context.Context, arg ListarEntregasParams) 
 		arg.TenantID,
 		arg.Canceladas,
 		arg.IDEntrega,
-		arg.IDFuncionario,
+		arg.Idfuncionario,
 	)
 	if err != nil {
 		return nil, err

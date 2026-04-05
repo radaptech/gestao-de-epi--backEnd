@@ -170,7 +170,7 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 		Offset:        offset,
 		Canceladas:    f.Canceladas,
 		IDEntrega:     pgtype.Int4{Int32: f.EntregaID, Valid: f.EntregaID > 0},
-		IDFuncionario: pgtype.Int4{Int32: f.FuncionarioId, Valid: f.FuncionarioId > 0},
+		Idfuncionario: pgtype.Int4{Int32: f.FuncionarioId, Valid: f.FuncionarioId > 0},
 		TenantID:      tenantId,
 	})
 	if err != nil { return EntregaPaginada{}, err }

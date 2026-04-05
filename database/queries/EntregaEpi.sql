@@ -29,9 +29,9 @@ SELECT
     ff.id as funcao_id, ff.nome as funcao_nome,
     COUNT(*) OVER() as total_geral
 FROM entrega_epi ee
-INNER JOIN funcionario f ON ee.id_funcionario = f.id
-INNER JOIN departamento d ON f.id_departamento = d.id
-INNER JOIN funcao ff ON f.id_funcao = ff.id
+INNER JOIN funcionario f ON ee.idfuncionario = f.id
+INNER JOIN departamento d ON f.iddepartamento = d.id
+INNER JOIN funcao ff ON f.idfuncao = ff.id
 WHERE 
     ee.tenant_id = sqlc.arg('tenant_id')
     AND (
@@ -39,7 +39,7 @@ WHERE
         (sqlc.arg('canceladas')::boolean IS TRUE AND ee.cancelada_em IS NOT NULL)
     )
     AND (sqlc.narg('id_entrega')::int IS NULL OR ee.id = sqlc.narg('id_entrega'))
-    AND (sqlc.narg('id_funcionario')::int IS NULL OR ee.id_funcionario = sqlc.narg('id_funcionario'))
+    AND (sqlc.narg('idfuncionario')::int IS NULL OR ee.idfuncionario = sqlc.narg('idfuncionario'))
 ORDER BY ee.data_entrega DESC
 LIMIT $1 OFFSET $2;
 
@@ -61,7 +61,7 @@ SELECT
     t.id as tam_id, t.tamanho as tam_nome
 FROM epis_entregues i
 INNER JOIN epi e ON i.id_epi = e.id
-INNER JOIN tipo_protecao tp ON e.id_tipo_protecao = tp.id
+INNER JOIN tipo_protecao tp ON e.idtipoprotecao = tp.id
 INNER JOIN tamanho t ON i.id_tamanho = t.id
 WHERE 
     i.tenant_id = sqlc.arg('tenant_id') 

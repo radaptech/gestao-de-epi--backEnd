@@ -260,15 +260,14 @@ func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
 			return
 		}
 
-
-		entregas, err:= e.Service.BuscaEntregaDash(ctx, tenantId)
+		entregas, err := e.Service.BuscaEntregaDash(ctx, tenantId)
 		if err != nil {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-				"error":err.Error(),
+				"error": err.Error(),
 			})
-			return 
+			return
 		}
 
 		ctx.JSON(http.StatusOK, entregas)
@@ -288,15 +287,14 @@ func (e *EntregaController) BuscarEntregaItenDashbord() gin.HandlerFunc {
 			return
 		}
 
-
-		itens, err:= e.Service.BuscaItemDash(ctx, tenantId)
+		itens, err := e.Service.BuscaItemDash(ctx, tenantId)
 		if err != nil {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-				"error":err.Error(),
+				"error": err.Error(),
 			})
-			return 
+			return
 		}
 
 		ctx.JSON(http.StatusOK, itens)
