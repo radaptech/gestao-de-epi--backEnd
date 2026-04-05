@@ -12,11 +12,14 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
+// --- INTERFACE DO REPOSITORY ---
 type EntradaRepository interface {
-	Adicionar(ctx context.Context, args repository.AddEntradaEpiParams) error
+	// Agora precisamos de uma função que lide com a transação para NF + Itens
+	AdicionarCompleta(ctx context.Context, nfArgs repository.CreateEntradaNFParams, itens []repository.CreateEntradaEpiItemParams) error
 	ListarEntradas(ctx context.Context, args repository.ListarEntradasParams) ([]repository.ListarEntradasRow, error)
 	CancelarEntrada(ctx context.Context, args repository.CancelarEntradaParams) (int64, error)
 	TotalEntradas(ctx context.Context, args repository.ContarEntradasFiltradasParams) (int64, error)
@@ -26,64 +29,58 @@ type EntradaRepository interface {
 
 type EntradaService struct {
 	repo EntradaRepository
+	db   *pgxpool.Pool
 }
 
-func NewEntradaService(e EntradaRepository) *EntradaService {
-
-	return &EntradaService{repo: e}
+func NewEntradaService(e EntradaRepository, db *pgxpool.Pool) *EntradaService {
+	return &EntradaService{repo: e, db: db}
 }
 
-func (e *EntradaService) Adicionar(ctx context.Context, model model.EntradaEpiInserir, tenantID int32) error {
-
-	//data de entrada menor que a atual
+// Adicionar: Processa a entrada de uma Nota Fiscal e todos os seus EPIs vinculados
+func (e *EntradaService) Adicionar(ctx context.Context, input model.EntradaEpiInserir, tenantID int32) error {
+	// 1. Validação de Datas
 	hoje := time.Now().Truncate(24 * time.Hour)
-	if model.Data_entrada.Time().Truncate(24 * time.Hour).Before(hoje) {
-
-		return helper.ErrDataMenor
-	}
-	//data de validade igual a de fabricacao
-	if model.DataValidade.Time().Equal(model.DataFabricacao.Time()) {
-
-		return helper.ErrDataIgual
-	}
-	//data de validade menor a de fabricacao
-	if model.DataValidade.Time().Before(model.DataFabricacao.Time()) {
-		return helper.ErrDataMenorValidade
+	if input.Data_emissao.Time().After(hoje) {
+		return fmt.Errorf("data de emissão não pode ser futura")
 	}
 
-	model.Lote = strings.TrimSpace(model.Lote)
-
-	model.Nota_fiscal_numero = strings.TrimSpace(model.Nota_fiscal_numero)
-	model.Nota_fiscal_serie = strings.TrimSpace(model.Nota_fiscal_serie)
-
-	var vm pgtype.Numeric
-	err := vm.Scan(model.ValorUnitario.String())
-	if err != nil {
-		return err
-	}
-
-	err = e.repo.Adicionar(ctx, repository.AddEntradaEpiParams{
-		Idepi:            int32(model.ID_epi),
-		Idtamanho:        int32(model.Id_tamanho),
-		DataEntrada:      pgtype.Date{Time: model.Data_entrada.Time(), Valid: true},
-		Quantidade:       int32(model.Quantidade),
-		Quantidadeatual:  int32(model.Quantidade_Atual),
-		DataFabricacao:   pgtype.Date{Time: model.DataFabricacao.Time(), Valid: true},
-		DataValidade:     pgtype.Date{Time: model.DataValidade.Time(), Valid: true},
-		Idfornecedor:     int32(model.Id_fornecedor),
-		Lote:             model.Lote,
-		ValorUnitario:    vm,
-		NotaFiscalNumero: model.Nota_fiscal_numero,
-		NotaFiscalSerie:  pgtype.Text{String: model.Nota_fiscal_serie, Valid: true},
-		IDUsuarioCriacao: pgtype.Int4{Int32: int32(model.Id_user), Valid: true},
+	// 2. Prepara os parâmetros da Nota Fiscal (Cabeçalho)
+	nfArgs := repository.CreateEntradaNFParams{
 		TenantID:         tenantID,
-	})
-	if err != nil {
-
-		return err
+		Fornecedor:       strings.TrimSpace(input.Fornecedor),
+		NotaFiscalNumero: strings.TrimSpace(input.Nota_fiscal_numero),
+		NotaFiscalSerie:  pgtype.Text{String: strings.TrimSpace(input.Nota_fiscal_serie), Valid: true},
+		DataEmissao:      pgtype.Date{Time: input.Data_emissao.Time(), Valid: true},
+		IDUsuarioCriacao: int32(input.Id_user), // Auditoria da Nota
 	}
 
-	return nil
+	// 3. Prepara a lista de Itens (EPIs no estoque)
+	var itensParams []repository.CreateEntradaEpiItemParams
+	for _, item := range input.Itens {
+		// Valida se validade é menor que fabricação
+		if item.DataValidade.Time().Before(item.DataFabricacao.Time()) {
+			return helper.ErrDataMenorValidade
+		}
+
+		var vm pgtype.Numeric
+		vm.Scan(item.ValorUnitario.String())
+
+		itensParams = append(itensParams, repository.CreateEntradaEpiItemParams{
+			TenantID:         tenantID,
+			IDEpi:            int32(item.ID_epi),
+			IDTamanho:        int32(item.Id_tamanho),
+			Quantidade:       int32(item.Quantidade),
+			QuantidadeAtual:  int32(item.Quantidade), // Inicialmente igual ao total
+			DataFabricacao:   pgtype.Date{Time: item.DataFabricacao.Time(), Valid: true},
+			DataValidade:     pgtype.Date{Time: item.DataValidade.Time(), Valid: true},
+			Lote:             strings.TrimSpace(item.Lote),
+			ValorUnitario:    vm,
+			IDUsuarioCriacao: int32(input.Id_user), // Auditoria do Item
+		})
+	}
+
+	// 4. Chama o repo que executa tudo em uma Transação SQL
+	return e.repo.AdicionarCompleta(ctx, nfArgs, itensParams)
 }
 
 type FiltroEntradas struct {
@@ -104,18 +101,19 @@ type EntradaPaginada struct {
 	PaginaFinal int32                 `json:"pagina_final"`
 }
 
-func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, tenatId int32) (EntradaPaginada, error) {
-
+// ListarEntradas: Busca paginada com filtros de EPI, Data e Nota Fiscal
+func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, tenantId int32) (EntradaPaginada, error) {
 	limit := f.Quantidade
 	if limit <= 0 {
-		limit = 1
+		limit = 10
 	}
 	paginaAtual := f.Pagina
 	if paginaAtual <= 0 {
 		paginaAtual = 1
 	}
-	offset := max((paginaAtual-1)*limit, 0)
+	offset := (paginaAtual - 1) * limit
 
+	// Filtro mapeado para o sqlc
 	filtro := repository.ListarEntradasParams{
 		Canceladas: f.Canceladas,
 		IDEpi:      pgtype.Int4{Int32: f.EpiID, Valid: f.EpiID > 0},
@@ -125,224 +123,132 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 		NotaFiscal: pgtype.Text{String: f.NotaFiscal, Valid: f.NotaFiscal != ""},
 		Limit:      limit,
 		Offset:     offset,
-		TenantID:   tenatId,
+		TenantID:   tenantId,
 	}
 
 	entradas, err := e.repo.ListarEntradas(ctx, filtro)
 	if err != nil {
-
 		return EntradaPaginada{}, err
 	}
 
 	dto := make([]model.EntradaEpiDto, 0, len(entradas))
-
-	for _, entrada := range entradas {
-
+	for _, ent := range entradas {
 		var valorDecimal decimal.Decimal
-		if fVal, err := entrada.ValorUnitario.Float64Value(); err == nil {
+		if fVal, err := ent.ValorUnitario.Float64Value(); err == nil {
 			valorDecimal = decimal.NewFromFloat(fVal.Float64)
 		}
 
-		var idUsuario int
-		if entrada.IDUsuarioCriacao.Valid {
-			idUsuario = int(entrada.IDUsuarioCriacao.Int32)
-		} else {
-			idUsuario = 0 // ou algum valor padrão
-		}
-
-		var idUsuarioCancelamento int
-		if entrada.IDUsuarioCriacaoCancelamento.Valid {
-			idUsuarioCancelamento = int(entrada.IDUsuarioCriacaoCancelamento.Int32)
-		} else {
-			idUsuarioCancelamento = 0
-		}
-
-		nomeCriacao := "" // Valor padrão se vier nulo do banco
-		if entrada.UsuarioCriacaoNome.Valid {
-			nomeCriacao = entrada.UsuarioCriacaoNome.String
-		}
-
-		// 2. Tratamento para Usuario de Cancelamento (se houver essa coluna)
-		nomeCancelamento := ""
-		if entrada.UsuarioCancelamentoNome.Valid {
-			nomeCancelamento = entrada.UsuarioCancelamentoNome.String
-		}
-
-		e := model.EntradaEpiDto{
-			ID: int(entrada.ID),
-			Epi: model.EpiDto{
-				Id:         int(entrada.Idepi),
-				Nome:       entrada.EpiNome,
-				Fabricante: entrada.Fabricante,
-				CA:         entrada.Ca,
-				Tamanho: []model.TamanhoDto{
-					{
-						ID:      int(entrada.IDTamanho),
-						Tamanho: entrada.TamanhoNome,
-					},
-				},
-				Descricao:      entrada.EpiDescricao,
-				DataValidadeCa: configs.DataBr(entrada.ValidadeCa.Time),
-				Protecao: model.TipoProtecaoDto{
-					ID:   int64(entrada.Idtipoprotecao),
-					Nome: entrada.ProtecaoNome,
-				},
-			},
-			Data_entrada:     *configs.NewDataBrPtr(entrada.DataEntrada.Time),
-			Quantidade:       int(entrada.Quantidade),
-			Quantidade_Atual: int(entrada.Quantidadeatual),
-			IdTamanho: int(entrada.IDTamanho),
-			Lote:             entrada.Lote,
-			Fornecedor: model.FornecedorDto{
-				ID:                int(entrada.Idfornecedor),
-				RazaoSocial:       entrada.RazaoSocial,
-				NomeFantasia:      entrada.NomeFantasia,
-				CNPJ:              entrada.Cnpj,
-				InscricaoEstadual: entrada.InscricaoEstadual,
-			},
-			Nota_fiscal_serie:  entrada.NotaFiscalSerie.String,
-			Nota_fiscal_numero: entrada.NotaFiscalNumero,
+		dto = append(dto, model.EntradaEpiDto{
+			ID:                 int(ent.ID),
+			EpiNome:            ent.EpiNome,
+			TamanhoNome:        ent.TamanhoNome,
+			Quantidade:         int(ent.Quantidade),
+			Quantidade_Atual:   int(ent.QuantidadeAtual),
+			Lote:               ent.Lote,
+			Fornecedor:         ent.Fornecedor,
+			Nota_fiscal_numero: ent.NotaFiscalNumero,
+			Data_entrada:       configs.DataBr(ent.DataEntrada.Time),
 			ValorUnitario:      valorDecimal,
-			UsuarioEntrada: model.RecuperaUserEntrada{
-				Id:   idUsuario,
-				Nome: nomeCriacao,
-			},
-			UsuarioEntradaCancelamento: model.RecuperaUserEntrada{
-				Id:   idUsuarioCancelamento,
-				Nome: nomeCancelamento,
-			},
-		}
-
-		dto = append(dto, e)
+		})
 	}
 
-	total, err := e.repo.TotalEntradas(ctx, repository.ContarEntradasFiltradasParams{
+	total, _ := e.repo.TotalEntradas(ctx, repository.ContarEntradasFiltradasParams{
 		Canceladas: filtro.Canceladas,
 		IDEpi:      filtro.IDEpi,
-		IDEntrada:  filtro.IDEntrada,
 		DataInicio: filtro.DataInicio,
-		DataFim:    filtro.DataFim,
 		NotaFiscal: filtro.NotaFiscal,
-		TenantID:   tenatId,
+		TenantID:   tenantId,
 	})
-	if err != nil {
-		return EntradaPaginada{}, err
-	}
-
-	paginaFinal := int32(math.Ceil(float64(total) / float64(limit)))
 
 	return EntradaPaginada{
 		Entradas:    dto,
 		Total:       total,
 		Pagina:      paginaAtual,
-		PaginaFinal: paginaFinal,
+		PaginaFinal: int32(math.Ceil(float64(total) / float64(limit))),
 	}, nil
 }
 
-func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenantid int) (int64, error) {
-
+// CancelarEntrada: Soft delete que registra quem cancelou
+func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenantId int) (int64, error) {
 	if id <= 0 {
-
 		return 0, helper.ErrId
 	}
 
 	arg := repository.CancelarEntradaParams{
-		ID:                           int32(id),
-		IDUsuarioCriacaoCancelamento: pgtype.Int4{Int32: int32(idUser), Valid: true},
-		TenantID:                     int32(tenantid),
-	}
-	linhasAfetadas, err := e.repo.CancelarEntrada(ctx, arg)
-	if err != nil {
-
-		return 0, fmt.Errorf("erro técnico ao cancelar: %w", err)
+		ID:                    int32(id),
+		IDUsuarioCancelamento: pgtype.Int4{Int32: int32(idUser), Valid: true},
+		TenantID:              int32(tenantId),
 	}
 
-	if linhasAfetadas == 0 {
-
-		return 0, helper.ErrNaoEncontrado
-	}
-
-	return linhasAfetadas, nil
+	return e.repo.CancelarEntrada(ctx, arg)
 }
 
-func (e *EntradaService) EntradaDashbordBusca(ctx context.Context, tenantId int32) ([]model.EntradaDashbord, error) {
-
-	entradas, err := e.repo.BuscaEntradaDashbord(ctx, tenantId)
-	if err != nil {
-
-		return []model.EntradaDashbord{}, err
-	}
-
-	dto := make([]model.EntradaDashbord, 0, len(entradas))
-
-	for _, ee := range entradas {
-
-		var valorDecimal decimal.Decimal
-		if fVal, err := ee.ValorUnitario.Float64Value(); err == nil {
-			valorDecimal = decimal.NewFromFloat(fVal.Float64)
-		}
-		ee := model.EntradaDashbord{
-
-			Id:              int(ee.ID),
-			IdEpi:           int(ee.Idepi),
-			IdTamanho:       int(ee.Idtamanho),
-			QuantidadeAtual: int(ee.Quantidadeatual),
-			ValorUnitario:   valorDecimal,
-			Quantidade:      int(ee.Quantidade),
-			DataEntrada:     *configs.NewDataBrPtr(ee.DataEntrada.Time),
-			Lote:            ee.Lote,
-		}
-
-		dto = append(dto, ee)
-	}
-
-	return dto, err
-}
-
+// BuscaEntradaEstoque: Usado para o almoxarife selecionar o lote na hora da entrega
 func (e *EntradaService) BuscaEntradaEstoque(ctx context.Context, tenantId int32) ([]model.EntradaEstoqueDto, error) {
-
 	entradas, err := e.repo.EntradaEstoque(ctx, tenantId)
 	if err != nil {
 		return []model.EntradaEstoqueDto{}, err
 	}
 
 	dto := make([]model.EntradaEstoqueDto, 0, len(entradas))
-
 	for _, ee := range entradas {
-
 		var valorDecimal decimal.Decimal
 		if fVal, err := ee.ValorUnitario.Float64Value(); err == nil {
 			valorDecimal = decimal.NewFromFloat(fVal.Float64)
 		}
-		ent := model.EntradaEstoqueDto{
+
+		dto = append(dto, model.EntradaEstoqueDto{
 			Id:              int(ee.ID),
 			Lote:            ee.Lote,
 			Quantidade:      int(ee.QuantidadeInicial),
 			QuantidadeAtual: int(ee.QuantidadeAtual),
 			ValorUnitario:   valorDecimal,
-			DataValidade: *configs.NewDataBrPtr(ee.DataValidade.Time),
-			Tamanho: model.TamanhoDto{
-				ID: int(ee.Idtamanho),
-				Tamanho: ee.TamanhoNome,
-			},
+			DataValidade:    configs.DataBr(ee.DataValidade.Time),
+			Tamanho:         model.TamanhoDto{ID: int(ee.IDTamanho), Tamanho: ee.TamanhoNome},
 			Epi: model.EpiDtoEstoque{
-				Id: int(ee.Idepi),
-				Nome: ee.EpiNome,
-				Fabricante: ee.Fabricante,
-				CA: ee.Ca,
-				Descricao: ee.Descricao,
-				DataValidadeCa: *configs.NewDataBrPtr(ee.DataValidade.Time),
+				Id: ee.IDEpi, Nome: ee.EpiNome, Fabricante: ee.Fabricante,
+				Ca: ee.Ca, Descricao: ee.Descricao, DataValidadeCa: configs.DataBr(ee.DataValidade.Time),
 				AlertaMinimo: int(ee.AlertaMinimo),
-				Protecao: model.TipoProtecaoDto{
-					ID: int64(ee.Idtipoprotecao),
-					Nome: ee.ProtecaoNome,
-				},
+				Protecao:     model.TipoProtecaoDto{ID: int64(ee.Idtipoprotecao), Nome: ee.ProtecaoNome},
 			},
+		})
+	}
+	return dto, nil
+}
+
+// EntradaDashbordBusca retorna um resumo das entradas para popular os gráficos do Dashboard
+func (e *EntradaService) EntradaDashbordBusca(ctx context.Context, tenantId int32) ([]model.EntradaDashbord, error) {
+	// Busca os dados brutos do repositório (referente aos itens de entrada)
+	entradas, err := e.repo.BuscaEntradaDashbord(ctx, tenantId)
+	if err != nil {
+		// Retorna slice vazia em vez de nil para evitar problemas no JSON do Frontend
+		return []model.EntradaDashbord{}, err
+	}
+
+	dto := make([]model.EntradaDashbord, 0, len(entradas))
+
+	for _, ee := range entradas {
+		// Conversão segura do tipo Numeric do Postgres para Decimal do Go
+		var valorDecimal decimal.Decimal
+		if fVal, err := ee.ValorUnitario.Float64Value(); err == nil {
+			valorDecimal = decimal.NewFromFloat(fVal.Float64)
 		}
 
-		dto = append(dto, ent)
+		// Mapeia para o DTO do Dashboard (Note o uso de int32 vindo do sqlc)
+		d := model.EntradaDashbord{
+			Id:              int(ee.ID),
+			IdEpi:           int(ee.IDEpi),
+			IdTamanho:       int(ee.IDTamanho),
+			QuantidadeAtual: int(ee.QuantidadeAtual),
+			ValorUnitario:   valorDecimal,
+			Quantidade:      int(ee.Quantidade),
+			// Usa o helper para garantir o ponteiro da data formatada
+			DataEntrada: configs.DataBr(ee.DataEntrada.Time),
+			Lote:        ee.Lote,
+		}
+
+		dto = append(dto, d)
 	}
 
 	return dto, nil
-
 }

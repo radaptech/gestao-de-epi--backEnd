@@ -1,63 +1,72 @@
 package model
 
-import "github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
+import (
+	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
+)
 
+// EpiInserir representa o formulário de cadastro de um novo modelo de EPI
 type EpiInserir struct {
 	Nome           string         `json:"nome" binding:"required"`
-	Fabricante     string         `json:"fabricante" binding:"required,max=50"`
-	CA             string         `json:"ca" binding:"required,numeric,min=1,max=10"`
+	Fabricante     string         `json:"fabricante" binding:"required,max=100"`
+	CA             string         `json:"ca" binding:"required,max=20"`
 	Descricao      string         `json:"descricao" binding:"lte=250"`
 	DataValidadeCa configs.DataBr `json:"data_validade_ca" binding:"required"`
-	Idtamanho      []int          `json:"id_tamanho" binding:"required,min=1"`
-	IDprotecao     int            `json:"id_protecao" binding:"required,numeric"`
-	AlertaMinimo   int            `json:"alerta_minimo" binding:"required,gte=0"`
+	IdTamanho      []int32        `json:"id_tamanho" binding:"required,min=1"` // Lista de tamanhos permitidos para este EPI
+	IDProtecao     int32          `json:"id_protecao" binding:"required,numeric"`
+	AlertaMinimo   int32          `json:"alerta_minimo" binding:"required,gte=0"`
 }
 
+// EpiDto é o retorno completo usado na listagem de cadastros
 type EpiDto struct {
-	Id             int             `json:"id"`
+	Id             int32           `json:"id"`
 	Nome           string          `json:"nome"`
 	Fabricante     string          `json:"fabricante"`
-	CA             string          `json:"CA"`
-	Tamanho        []TamanhoDto    `json:"tamanhos"`
+	CA             string          `json:"ca"`
+	Tamanhos       []TamanhoDto    `json:"tamanhos"` // Slive de objetos Tamanho (id e nome)
 	Descricao      string          `json:"descricao"`
-	DataValidadeCa configs.DataBr  `json:"validade_CA"`
+	DataValidadeCa configs.DataBr  `json:"validade_ca"`
+	Protecao       TipoProtecaoDto `json:"protecao"`
+	AlertaMinimo   int32           `json:"alerta_minimo"`
+}
+
+// UpdateEpiInput usa ponteiros para permitir atualização parcial (PATCH)
+type UpdateEpiInput struct {
+	Nome           *string         `json:"nome"`
+	Fabricante     *string         `json:"fabricante"`
+	CA             *string         `json:"ca"`
+	Descricao      *string         `json:"descricao"`
+	DataValidadeCa *configs.DataBr `json:"validade_ca"`
+	IdProtecao     *int32          `json:"id_protecao"`
+	AlertaMinimo   *int32          `json:"alerta_minimo"`
+	Tamanhos       []int32         `json:"tamanhos"` // Se enviado, você deve resetar os tamanhos no banco
+}
+
+// EpiResponse é a versão simplificada para compor outros DTOs (como o de Entrega)
+type EpiResponse struct {
+	Id             int32           `json:"id"`
+	Nome           string          `json:"nome"`
+	Fabricante     string          `json:"fabricante"`
+	CA             string          `json:"ca"`
+	Descricao      string          `json:"descricao"`
+	DataValidadeCa configs.DataBr  `json:"validade_ca"`
 	Protecao       TipoProtecaoDto `json:"protecao"`
 	AlertaMinimo   int             `json:"alerta_minimo"`
+}
+
+// EpiDashBord é o resumo para os cards do dashboard
+type EpiDashBord struct {
+	Id           int32  `json:"id"`
+	Nome         string `json:"nome"`
+	AlertaMinimo int32  `json:"alerta_minimo"`
 }
 
 type EpiDtoEstoque struct {
-	Id             int             `json:"id"`
+	Id             int32           `json:"id"`
 	Nome           string          `json:"nome"`
 	Fabricante     string          `json:"fabricante"`
-	CA             string          `json:"ca"`
 	Descricao      string          `json:"descricao"`
-	DataValidadeCa configs.DataBr  `json:"validade_ca"`
-	AlertaMinimo   int             `json:"alerta_minimo"`
-	Protecao       TipoProtecaoDto `json:"protecao"`
-}
-
-type EpiDashBord struct {
-	Id           int    `json:"id"`
-	Nome         string `json:"nome"`
-	AlertaMinimo int    `json:"alerta_minimo"`
-}
-
-type UpdateEpiInput struct {
-	Nome       *string         `json:"nome"`
-	Fabricante *string         `json:"fabricante"`
-	CA         *string         `json:"ca"`
-	Descricao  *string         `json:"descricao"`
-	ValidadeCa *configs.DataBr `json:"validadeCa"`
-	Tamanhos   []int32         `json:"tamanhos"` // Novos IDs de tamanhos
-}
-
-type EpiResponse struct {
-	Id             int             `json:"id"`
-	Nome           string          `json:"nome"`
-	Fabricante     string          `json:"fabricante"`
-	CA             string          `json:"ca"`
-	Descricao      string          `json:"descricao"`
-	DataValidadeCa configs.DataBr  `json:"validade_ca"`
-	AlertaMinimo   int             `json:"alerta_minimo"`
+	DataValidadeCa configs.DataBr  `json:"validadeCa"`
+	Ca             string          `json:"ca"`
+	AlertaMinimo   int             `json:"alertaMinimo"`
 	Protecao       TipoProtecaoDto `json:"protecao"`
 }

@@ -91,11 +91,11 @@ ORDER BY nome;
 -- name: BuscaTodosItensEntreguesDoTenant :many
 SELECT
     ee.id,
-    ee.IdEntrega, -- 🔑 CHAVE MESTRA: Liga o item à entrega correta no Go!
+    ee.id_entrega_cabecalho, -- 🔑 CHAVE MESTRA: Liga o item à entrega correta no Go!
     ee.quantidade,
-    ee.IdTamanho,
+    ee.id_tamanho,
     t.tamanho as tamanho_nome,
-    ee.IdEpi,
+    ee.id_epi,
     ep.nome as epi_nome,
     ep.fabricante,
     ep.CA,

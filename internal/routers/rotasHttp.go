@@ -50,7 +50,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	tamanhoService := service.NewTamanhoService(repoTamanho)
 	TipoProtecaoService := service.NewProtecaoService(repoTipoProtecao)
 	epiService := service.NewEpiService(repoEpi, db)
-	entradaService := service.NewEntradaService(repoEntrada)
+	entradaService := service.NewEntradaService(repoEntrada, db)
 	entregaService := service.NewEntregaService(repoEntrega, db)
 	estoqueService := service.NewEstoqueService(repoEstoque)
 

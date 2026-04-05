@@ -70,7 +70,7 @@ func (e *EpiService) Salvar(ctx context.Context, model model.EpiInserir, tenantI
 		Ca:             model.CA,
 		Descricao:      model.Descricao,
 		ValidadeCa:     pgtype.Date{Time: model.DataValidadeCa.Time(), Valid: true},
-		Idtipoprotecao: int32(model.IDprotecao),
+		Idtipoprotecao: int32(model.IDProtecao),
 		AlertaMinimo:   int32(model.AlertaMinimo),
 		TenantID:       tenantID,
 	})
@@ -79,7 +79,7 @@ func (e *EpiService) Salvar(ctx context.Context, model model.EpiInserir, tenantI
 		return err
 	}
 
-	for _, tamanhoId := range model.Idtamanho {
+	for _, tamanhoId := range model.IdTamanho {
 		err := qtx.AddEpiTamanho(ctx, repository.AddEpiTamanhoParams{
 			Idepi:     epiId,
 			Idtamanho: int32(tamanhoId),
@@ -115,19 +115,18 @@ type EpiPaginado struct {
 
 func (e *EpiService) ListarEpis(ctx context.Context, f EpiFiltro, tenantId int32) (EpiPaginado, error) {
 
+	p := Paginacao(f.FiltroPaginacao)
 
-	p:= Paginacao(f.FiltroPaginacao)
+	filtro := repository.BuscarTodosEpisPaginadoParams{
 
-	filtro:= repository.BuscarTodosEpisPaginadoParams{
-
-		Limit: p.Limit,
-		Offset: p.Offset,
-		TenantID: tenantId,
-		Nome: pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
-		Ca: pgtype.Text{String: f.Ca, Valid: f.Ca != ""},
-		ID: pgtype.Int4{Int32: f.IdEpi, Valid: f.IdEpi > 0},
+		Limit:      p.Limit,
+		Offset:     p.Offset,
+		TenantID:   tenantId,
+		Nome:       pgtype.Text{String: f.Nome, Valid: f.Nome != ""},
+		Ca:         pgtype.Text{String: f.Ca, Valid: f.Ca != ""},
+		ID:         pgtype.Int4{Int32: f.IdEpi, Valid: f.IdEpi > 0},
 		Cancelados: f.Cancelados,
-		Fabricante: pgtype.Text{String: f.Fabricante, Valid:f.Fabricante != ""},
+		Fabricante: pgtype.Text{String: f.Fabricante, Valid: f.Fabricante != ""},
 	}
 	epis, err := e.repo.ListarEpis(ctx, filtro)
 	if err != nil {
@@ -164,22 +163,22 @@ func (e *EpiService) ListarEpis(ctx context.Context, f EpiFiltro, tenantId int32
 	for _, epi := range epis {
 
 		e := model.EpiDto{
-			Id:             int(epi.ID),
+			Id:             epi.ID,
 			Nome:           epi.Nome,
 			Fabricante:     epi.Fabricante,
 			CA:             epi.Ca,
-			Tamanho:        tamanhosMap[epi.ID],
+			Tamanhos:        tamanhosMap[epi.ID],
 			Descricao:      epi.Descricao,
 			DataValidadeCa: *configs.NewDataBrPtr(epi.ValidadeCa.Time),
 			Protecao: model.TipoProtecaoDto{
 				ID:   int64(epi.Idtipoprotecao),
 				Nome: epi.TipoProtecaoNome,
 			},
-			AlertaMinimo: int(epi.AlertaMinimo),
+			AlertaMinimo: epi.AlertaMinimo,
 		}
 
-		if e.Tamanho == nil {
-			e.Tamanho = []model.TamanhoDto{}
+		if e.Tamanhos == nil {
+			e.Tamanhos = []model.TamanhoDto{}
 		}
 
 		dto = append(dto, e)
@@ -243,11 +242,11 @@ func (e *EpiService) ListarEpi(ctx context.Context, id int, tenantid int32) (mod
 	}
 
 	return model.EpiDto{
-		Id:             int(epi.ID),
+		Id:             epi.ID,
 		Nome:           epi.Nome,
 		Fabricante:     epi.Fabricante,
 		CA:             epi.Ca,
-		Tamanho:        tamdTO,
+		Tamanhos:        tamdTO,
 		Descricao:      epi.Descricao,
 		DataValidadeCa: *configs.NewDataBrPtr(epi.ValidadeCa.Time),
 		Protecao: model.TipoProtecaoDto{
@@ -333,14 +332,14 @@ func (e *EpiService) AtualizaEpi(ctx context.Context, model model.UpdateEpiInput
 
 	// Tratamento seguro para Data
 	var validadeCa pgtype.Date
-	if model.ValidadeCa != nil {
+	if model.DataValidadeCa != nil {
 		hoje := time.Now().Truncate(24 * time.Hour)
 
 		if validadeCa.Time.Before(hoje) {
 
 			return helper.ErrDataMenor
 		}
-		validadeCa = pgtype.Date{Time: model.ValidadeCa.Time(), Valid: true}
+		validadeCa = pgtype.Date{Time: model.DataValidadeCa.Time(), Valid: true}
 	} else {
 		validadeCa = pgtype.Date{Valid: false}
 	}
@@ -395,30 +394,26 @@ func (e *EpiService) AtualizaEpi(ctx context.Context, model model.UpdateEpiInput
 	return tx.Commit(ctx)
 }
 
+func (e *EpiService) ListarEpiDashbord(ctx context.Context, tenantId int32) ([]model.EpiDashBord, error) {
 
-func (e *EpiService) ListarEpiDashbord(ctx context.Context, tenantId int32) ([]model.EpiDashBord, error){
-
-
-	epis, err:= e.repo.BuscaEpiDashbord(ctx, tenantId)
+	epis, err := e.repo.BuscaEpiDashbord(ctx, tenantId)
 	if err != nil {
 
-		return  []model.EpiDashBord{}, err
+		return []model.EpiDashBord{}, err
 	}
 
-
-	dto:= make([]model.EpiDashBord, 0, len(epis))
+	dto := make([]model.EpiDashBord, 0, len(epis))
 
 	for _, e := range epis {
 
-		ee:= model.EpiDashBord{
-			Id: int(e.ID),
-			Nome: e.Nome,
-			AlertaMinimo: int(e.AlertaMinimo),
+		ee := model.EpiDashBord{
+			Id:           e.ID,
+			Nome:         e.Nome,
+			AlertaMinimo: e.AlertaMinimo,
 		}
 
 		dto = append(dto, ee)
 	}
 
-
-	return dto,err
+	return dto, err
 }

@@ -11,71 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addEntradaEpi = `-- name: AddEntradaEpi :exec
-INSERT INTO entrada_epi (
-    tenant_id, -- Novo campo obrigatório
-    IdEpi, IdTamanho, data_entrada, quantidade, quantidadeAtual, 
-    data_fabricacao, data_validade, lote, Idfornecedor, valor_unitario, nota_fiscal_numero, nota_fiscal_serie, id_usuario_criacao
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-`
-
-type AddEntradaEpiParams struct {
-	TenantID         int32
-	Idepi            int32
-	Idtamanho        int32
-	DataEntrada      pgtype.Date
-	Quantidade       int32
-	Quantidadeatual  int32
-	DataFabricacao   pgtype.Date
-	DataValidade     pgtype.Date
-	Lote             string
-	Idfornecedor     int32
-	ValorUnitario    pgtype.Numeric
-	NotaFiscalNumero string
-	NotaFiscalSerie  pgtype.Text
-	IDUsuarioCriacao pgtype.Int4
-}
-
-func (q *Queries) AddEntradaEpi(ctx context.Context, arg AddEntradaEpiParams) error {
-	_, err := q.db.Exec(ctx, addEntradaEpi,
-		arg.TenantID,
-		arg.Idepi,
-		arg.Idtamanho,
-		arg.DataEntrada,
-		arg.Quantidade,
-		arg.Quantidadeatual,
-		arg.DataFabricacao,
-		arg.DataValidade,
-		arg.Lote,
-		arg.Idfornecedor,
-		arg.ValorUnitario,
-		arg.NotaFiscalNumero,
-		arg.NotaFiscalSerie,
-		arg.IDUsuarioCriacao,
-	)
-	return err
-}
-
 const cancelarEntrada = `-- name: CancelarEntrada :execrows
-UPDATE entrada_epi 
+UPDATE entrada_epi_item 
 SET 
-    cancelada_em = current_date, 
+    cancelada_em = CURRENT_TIMESTAMP, 
     ativo = FALSE,
-    id_usuario_criacao_cancelamento = $2
+    id_usuario_cancelamento = $2 -- <-- O sqlc vai gerar IDUsuarioCancelamento
 WHERE id = $1 
-  AND tenant_id = $3 -- SEGURANÇA: Só cancela se for do mesmo tenant
-  AND cancelada_em IS NULL 
-  AND quantidadeAtual = quantidade
+  AND tenant_id = $3
+  AND cancelada_em IS NULL
 `
 
 type CancelarEntradaParams struct {
-	ID                           int32
-	IDUsuarioCriacaoCancelamento pgtype.Int4
-	TenantID                     int32
+	ID                    int32
+	IDUsuarioCancelamento pgtype.Int4
+	TenantID              int32
 }
 
 func (q *Queries) CancelarEntrada(ctx context.Context, arg CancelarEntradaParams) (int64, error) {
-	result, err := q.db.Exec(ctx, cancelarEntrada, arg.ID, arg.IDUsuarioCriacaoCancelamento, arg.TenantID)
+	result, err := q.db.Exec(ctx, cancelarEntrada, arg.ID, arg.IDUsuarioCancelamento, arg.TenantID)
 	if err != nil {
 		return 0, err
 	}
@@ -84,27 +38,24 @@ func (q *Queries) CancelarEntrada(ctx context.Context, arg CancelarEntradaParams
 
 const contarEntradasFiltradas = `-- name: ContarEntradasFiltradas :one
 SELECT COUNT(*) 
-FROM entrada_epi ee
+FROM entrada_epi_item ei
+INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
 WHERE 
-    ee.tenant_id = $1 -- SEGURANÇA: Filtro de Tenant
+    ei.tenant_id = $1
     AND (
-        ($2::boolean IS FALSE AND ee.cancelada_em IS NULL) OR
-        ($2::boolean IS TRUE AND ee.cancelada_em IS NOT NULL)
+        ($2::boolean IS FALSE AND ei.cancelada_em IS NULL) OR
+        ($2::boolean IS TRUE AND ei.cancelada_em IS NOT NULL)
     )
-    AND ($3::int IS NULL OR ee.IdEpi = $3)
-    AND ($4::int IS NULL OR ee.id = $4)
-    AND ($5::date IS NULL OR ee.data_entrada >= $5)
-    AND ($6::date IS NULL OR ee.data_entrada <= $6)
-    AND ($7::text IS NULL OR ee.nota_fiscal_numero ILIKE '%' || $7 || '%')
+    AND ($3::int IS NULL OR ei.id_epi = $3)
+    AND ($4::date IS NULL OR nf.data_emissao >= $4)
+    AND ($5::text IS NULL OR nf.nota_fiscal_numero ILIKE '%' || $5 || '%')
 `
 
 type ContarEntradasFiltradasParams struct {
 	TenantID   int32
 	Canceladas bool
 	IDEpi      pgtype.Int4
-	IDEntrada  pgtype.Int4
 	DataInicio pgtype.Date
-	DataFim    pgtype.Date
 	NotaFiscal pgtype.Text
 }
 
@@ -113,9 +64,7 @@ func (q *Queries) ContarEntradasFiltradas(ctx context.Context, arg ContarEntrada
 		arg.TenantID,
 		arg.Canceladas,
 		arg.IDEpi,
-		arg.IDEntrada,
 		arg.DataInicio,
-		arg.DataFim,
 		arg.NotaFiscal,
 	)
 	var count int64
@@ -123,20 +72,88 @@ func (q *Queries) ContarEntradasFiltradas(ctx context.Context, arg ContarEntrada
 	return count, err
 }
 
+const createEntradaEpiItem = `-- name: CreateEntradaEpiItem :exec
+INSERT INTO entrada_epi_item (
+    tenant_id, entrada_nf_id, id_epi, id_tamanho, quantidade, 
+    quantidade_atual, data_fabricacao, data_validade, lote, valor_unitario,id_usuario_criacao
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+`
+
+type CreateEntradaEpiItemParams struct {
+	TenantID         int32
+	EntradaNfID      int32
+	IDEpi            int32
+	IDTamanho        int32
+	Quantidade       int32
+	QuantidadeAtual  int32
+	DataFabricacao   pgtype.Date
+	DataValidade     pgtype.Date
+	Lote             string
+	ValorUnitario    pgtype.Numeric
+	IDUsuarioCriacao int32
+}
+
+func (q *Queries) CreateEntradaEpiItem(ctx context.Context, arg CreateEntradaEpiItemParams) error {
+	_, err := q.db.Exec(ctx, createEntradaEpiItem,
+		arg.TenantID,
+		arg.EntradaNfID,
+		arg.IDEpi,
+		arg.IDTamanho,
+		arg.Quantidade,
+		arg.QuantidadeAtual,
+		arg.DataFabricacao,
+		arg.DataValidade,
+		arg.Lote,
+		arg.ValorUnitario,
+		arg.IDUsuarioCriacao,
+	)
+	return err
+}
+
+const createEntradaNF = `-- name: CreateEntradaNF :one
+INSERT INTO entrada_nf (tenant_id, fornecedor, nota_fiscal_numero, nota_fiscal_serie, data_emissao, id_usuario_criacao)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id
+`
+
+type CreateEntradaNFParams struct {
+	TenantID         int32
+	Fornecedor       string
+	NotaFiscalNumero string
+	NotaFiscalSerie  pgtype.Text
+	DataEmissao      pgtype.Date
+	IDUsuarioCriacao int32
+}
+
+func (q *Queries) CreateEntradaNF(ctx context.Context, arg CreateEntradaNFParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createEntradaNF,
+		arg.TenantID,
+		arg.Fornecedor,
+		arg.NotaFiscalNumero,
+		arg.NotaFiscalSerie,
+		arg.DataEmissao,
+		arg.IDUsuarioCriacao,
+	)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const entradaDashbord = `-- name: EntradaDashbord :many
 SELECT
-    id,IdEpi, IdTamanho, quantidadeAtual, valor_unitario, quantidade,
-    data_entrada, lote
-FROM entrada_epi
-WHERE tenant_id = $1 and ativo = TRUE
-ORDER BY data_entrada DESC
+    ei.id, ei.id_epi, ei.id_tamanho, ei.quantidade_atual, ei.valor_unitario, ei.quantidade,
+    nf.data_emissao as data_entrada, ei.lote
+FROM entrada_epi_item ei
+INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
+WHERE ei.tenant_id = $1 AND ei.ativo = TRUE
+ORDER BY nf.data_emissao DESC
 `
 
 type EntradaDashbordRow struct {
 	ID              int32
-	Idepi           int32
-	Idtamanho       int32
-	Quantidadeatual int32
+	IDEpi           int32
+	IDTamanho       int32
+	QuantidadeAtual int32
 	ValorUnitario   pgtype.Numeric
 	Quantidade      int32
 	DataEntrada     pgtype.Date
@@ -154,9 +171,9 @@ func (q *Queries) EntradaDashbord(ctx context.Context, tenantID int32) ([]Entrad
 		var i EntradaDashbordRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Idepi,
-			&i.Idtamanho,
-			&i.Quantidadeatual,
+			&i.IDEpi,
+			&i.IDTamanho,
+			&i.QuantidadeAtual,
 			&i.ValorUnitario,
 			&i.Quantidade,
 			&i.DataEntrada,
@@ -174,19 +191,20 @@ func (q *Queries) EntradaDashbord(ctx context.Context, tenantID int32) ([]Entrad
 
 const entradaEpiEstoque = `-- name: EntradaEpiEstoque :many
 SELECT
-    ee.id, ee.lote, ee.quantidade as quantidade_inicial, ee.quantidadeAtual as quantidade_atual,
-    ee.valor_unitario, ee.data_validade,
-    ee.IdTamanho, t.tamanho as tamanho_nome,
-    ee.IdEpi, e.nome as epi_nome, e.fabricante, e.CA, e.descricao, e.validade_CA,e.alerta_minimo,
+    ei.id, ei.lote, ei.quantidade as quantidade_inicial, ei.quantidade_atual,
+    ei.valor_unitario, ei.data_validade,
+    ei.id_tamanho, t.tamanho as tamanho_nome,
+    ei.id_epi, e.nome as epi_nome, e.fabricante, e.ca, e.descricao, e.validade_ca, e.alerta_minimo,
     e.IdTipoProtecao, tp.nome as protecao_nome
-FROM entrada_epi ee
-inner JOIN tamanho t on ee.IdTamanho = t.id
-inner JOIN epi e on ee.IdEpi = e.id
-inner join tipo_protecao tp on e.IdTipoProtecao = tp.id
-WHERE ee.tenant_id = $1
-  AND ee.ativo = TRUE
-  AND ee.quantidadeAtual > 0
-ORDER BY ee.data_entrada ASC
+FROM entrada_epi_item ei
+INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
+INNER JOIN tamanho t ON ei.id_tamanho = t.id
+INNER JOIN epi e ON ei.id_epi = e.id
+INNER JOIN tipo_protecao tp ON e.id_tipo_protecao = tp.id
+WHERE ei.tenant_id = $1
+  AND ei.ativo = TRUE
+  AND ei.quantidade_atual > 0
+ORDER BY nf.data_emissao ASC
 `
 
 type EntradaEpiEstoqueRow struct {
@@ -196,9 +214,9 @@ type EntradaEpiEstoqueRow struct {
 	QuantidadeAtual   int32
 	ValorUnitario     pgtype.Numeric
 	DataValidade      pgtype.Date
-	Idtamanho         int32
+	IDTamanho         int32
 	TamanhoNome       string
-	Idepi             int32
+	IDEpi             int32
 	EpiNome           string
 	Fabricante        string
 	Ca                string
@@ -225,9 +243,9 @@ func (q *Queries) EntradaEpiEstoque(ctx context.Context, tenantID int32) ([]Entr
 			&i.QuantidadeAtual,
 			&i.ValorUnitario,
 			&i.DataValidade,
-			&i.Idtamanho,
+			&i.IDTamanho,
 			&i.TamanhoNome,
-			&i.Idepi,
+			&i.IDEpi,
 			&i.EpiNome,
 			&i.Fabricante,
 			&i.Ca,
@@ -249,63 +267,45 @@ func (q *Queries) EntradaEpiEstoque(ctx context.Context, tenantID int32) ([]Entr
 
 const listarEntradas = `-- name: ListarEntradas :many
 SELECT 
-    ee.id, 
-    ee.IdEpi, 
+    ei.id, 
+    ei.id_epi, 
     e.nome as epi_nome, 
     e.fabricante, 
-    e.CA, 
+    e.ca, 
     e.descricao as epi_descricao,
-    ee.data_fabricacao, 
-    ee.data_validade, 
-    e.validade_CA,
+    ei.data_fabricacao, 
+    ei.data_validade, 
+    e.validade_ca,
     e.IdTipoProtecao, 
     tp.nome as protecao_nome,
-    ee.IdTamanho AS id_tamanho, 
+    ei.id_tamanho, 
     t.tamanho as tamanho_nome, 
-    ee.quantidade, 
-    ee.quantidadeAtual, 
-    ee.data_entrada,
-    ee.lote, 
-    ee.Idfornecedor,
-    f.razao_social,
-    f.nome_fantasia,
-    f.cnpj,
-    f.inscricao_estadual,
-    ee.valor_unitario, 
-    ee.nota_fiscal_numero, 
-    ee.nota_fiscal_serie, 
-    
-    -- Campos de Usuário Criação
-    ee.id_usuario_criacao,
-    u_criacao.nome as usuario_criacao_nome,
-    
-    -- Campos de Usuário Cancelamento
-    ee.id_usuario_criacao_cancelamento,
-    u_cancelamento.nome as usuario_cancelamento_nome,
-    ee.cancelada_em -- É bom retornar a data também para saber quando foi
-
-FROM entrada_epi ee
-INNER JOIN epi e ON ee.IdEpi = e.id
-INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
-INNER JOIN tamanho t ON ee.IdTamanho = t.id
-INNER JOIN fornecedores f on ee.IdFornecedor = f.id
-
-LEFT JOIN usuarios u_criacao ON ee.id_usuario_criacao = u_criacao.id
-
-LEFT JOIN usuarios u_cancelamento ON ee.id_usuario_criacao_cancelamento = u_cancelamento.id
-
+    ei.quantidade, 
+    ei.quantidade_atual, 
+    nf.data_emissao as data_entrada, -- Vem da NF agora
+    ei.lote,
+    ei.valor_unitario, 
+    nf.fornecedor,
+    nf.nota_fiscal_numero, 
+    nf.nota_fiscal_serie, 
+    ei.cancelada_em
+FROM entrada_epi_item ei
+INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
+INNER JOIN epi e ON ei.id_epi = e.id
+INNER JOIN tipo_protecao tp ON e.id_tipo_protecao = tp.id
+INNER JOIN tamanho t ON ei.id_tamanho = t.id
 WHERE 
-    ee.tenant_id = $1
+    ei.tenant_id = $1
     AND (
-        ($2::boolean IS FALSE AND ee.cancelada_em IS NULL) OR
-        ($2::boolean IS TRUE AND ee.cancelada_em IS NOT NULL)
+        ($2::boolean IS FALSE AND ei.cancelada_em IS NULL) OR
+        ($2::boolean IS TRUE AND ei.cancelada_em IS NOT NULL)
     )
-    AND ($3::int IS NULL OR ee.IdEpi = $3)
-    AND ($4::int IS NULL OR ee.id = $4)
-    AND ($5::date IS NULL OR ee.data_entrada >= $5)
-    AND ($6::date IS NULL OR ee.data_entrada <= $6)
-    AND ($7::text IS NULL OR ee.nota_fiscal_numero ILIKE '%' || $7 || '%')
-ORDER BY ee.data_entrada DESC
+    AND ($3::int IS NULL OR ei.id_epi = $3)
+    AND ($4::int IS NULL OR ei.id = $4)
+    AND ($5::date IS NULL OR nf.data_emissao >= $5)
+    AND ($6::date IS NULL OR nf.data_emissao <= $6)
+    AND ($7::text IS NULL OR nf.nota_fiscal_numero ILIKE '%' || $7 || '%')
+ORDER BY nf.data_emissao DESC
 LIMIT $9 OFFSET $8
 `
 
@@ -322,40 +322,30 @@ type ListarEntradasParams struct {
 }
 
 type ListarEntradasRow struct {
-	ID                           int32
-	Idepi                        int32
-	EpiNome                      string
-	Fabricante                   string
-	Ca                           string
-	EpiDescricao                 string
-	DataFabricacao               pgtype.Date
-	DataValidade                 pgtype.Date
-	ValidadeCa                   pgtype.Date
-	Idtipoprotecao               int32
-	ProtecaoNome                 string
-	IDTamanho                    int32
-	TamanhoNome                  string
-	Quantidade                   int32
-	Quantidadeatual              int32
-	DataEntrada                  pgtype.Date
-	Lote                         string
-	Idfornecedor                 int32
-	RazaoSocial                  string
-	NomeFantasia                 string
-	Cnpj                         string
-	InscricaoEstadual            string
-	ValorUnitario                pgtype.Numeric
-	NotaFiscalNumero             string
-	NotaFiscalSerie              pgtype.Text
-	IDUsuarioCriacao             pgtype.Int4
-	UsuarioCriacaoNome           pgtype.Text
-	IDUsuarioCriacaoCancelamento pgtype.Int4
-	UsuarioCancelamentoNome      pgtype.Text
-	CanceladaEm                  pgtype.Timestamp
+	ID               int32
+	IDEpi            int32
+	EpiNome          string
+	Fabricante       string
+	Ca               string
+	EpiDescricao     string
+	DataFabricacao   pgtype.Date
+	DataValidade     pgtype.Date
+	ValidadeCa       pgtype.Date
+	Idtipoprotecao   int32
+	ProtecaoNome     string
+	IDTamanho        int32
+	TamanhoNome      string
+	Quantidade       int32
+	QuantidadeAtual  int32
+	DataEntrada      pgtype.Date
+	Lote             string
+	ValorUnitario    pgtype.Numeric
+	Fornecedor       string
+	NotaFiscalNumero string
+	NotaFiscalSerie  pgtype.Text
+	CanceladaEm      pgtype.Timestamp
 }
 
-// JOIN 1: Quem criou a entrada
-// JOIN 2: Quem cancelou a entrada (só vai retornar dados se tiver sido cancelada)
 func (q *Queries) ListarEntradas(ctx context.Context, arg ListarEntradasParams) ([]ListarEntradasRow, error) {
 	rows, err := q.db.Query(ctx, listarEntradas,
 		arg.TenantID,
@@ -377,7 +367,7 @@ func (q *Queries) ListarEntradas(ctx context.Context, arg ListarEntradasParams) 
 		var i ListarEntradasRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Idepi,
+			&i.IDEpi,
 			&i.EpiNome,
 			&i.Fabricante,
 			&i.Ca,
@@ -390,21 +380,13 @@ func (q *Queries) ListarEntradas(ctx context.Context, arg ListarEntradasParams) 
 			&i.IDTamanho,
 			&i.TamanhoNome,
 			&i.Quantidade,
-			&i.Quantidadeatual,
+			&i.QuantidadeAtual,
 			&i.DataEntrada,
 			&i.Lote,
-			&i.Idfornecedor,
-			&i.RazaoSocial,
-			&i.NomeFantasia,
-			&i.Cnpj,
-			&i.InscricaoEstadual,
 			&i.ValorUnitario,
+			&i.Fornecedor,
 			&i.NotaFiscalNumero,
 			&i.NotaFiscalSerie,
-			&i.IDUsuarioCriacao,
-			&i.UsuarioCriacaoNome,
-			&i.IDUsuarioCriacaoCancelamento,
-			&i.UsuarioCancelamentoNome,
 			&i.CanceladaEm,
 		); err != nil {
 			return nil, err

@@ -46,25 +46,36 @@ type Empresa struct {
 	CriadoEm     pgtype.Timestamp
 }
 
-type EntradaEpi struct {
-	ID                           int32
-	TenantID                     int32
-	Idepi                        int32
-	Idtamanho                    int32
-	DataEntrada                  pgtype.Date
-	Quantidade                   int32
-	Quantidadeatual              int32
-	DataFabricacao               pgtype.Date
-	DataValidade                 pgtype.Date
-	Lote                         string
-	Idfornecedor                 int32
-	ValorUnitario                pgtype.Numeric
-	CanceladaEm                  pgtype.Timestamp
-	Ativo                        bool
-	NotaFiscalNumero             string
-	NotaFiscalSerie              pgtype.Text
-	IDUsuarioCriacao             pgtype.Int4
-	IDUsuarioCriacaoCancelamento pgtype.Int4
+type EntradaEpiItem struct {
+	ID                    int32
+	TenantID              int32
+	EntradaNfID           int32
+	IDEpi                 int32
+	IDTamanho             int32
+	Quantidade            int32
+	QuantidadeAtual       int32
+	DataFabricacao        pgtype.Date
+	DataValidade          pgtype.Date
+	Lote                  string
+	ValorUnitario         pgtype.Numeric
+	CanceladaEm           pgtype.Timestamp
+	Ativo                 bool
+	IDUsuarioCriacao      int32
+	IDUsuarioCancelamento pgtype.Int4
+}
+
+type EntradaNf struct {
+	ID                    int32
+	TenantID              int32
+	Fornecedor            string
+	NotaFiscalNumero      string
+	NotaFiscalSerie       pgtype.Text
+	DataEmissao           pgtype.Date
+	DataRegistro          pgtype.Timestamp
+	Ativo                 bool
+	IDUsuarioCriacao      int32
+	IDUsuarioCancelamento pgtype.Int4
+	CanceladaEm           pgtype.Timestamp
 }
 
 type EntregaEpi struct {
@@ -96,15 +107,15 @@ type Epi struct {
 }
 
 type EpisEntregue struct {
-	ID         int32
-	TenantID   int32
-	Identrega  int32
-	Identrada  int32
-	Idepi      int32
-	Idtamanho  int32
-	Quantidade int32
-	Ativo      bool
-	DeletadoEm pgtype.Timestamp
+	ID                 int32
+	TenantID           int32
+	IDEntregaCabecalho int32
+	IDEntradaItem      int32
+	IDEpi              int32
+	IDTamanho          int32
+	Quantidade         int32
+	Ativo              bool
+	DeletadoEm         pgtype.Timestamp
 }
 
 type Fornecedore struct {

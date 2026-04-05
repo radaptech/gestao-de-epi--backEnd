@@ -12,22 +12,22 @@ import (
 )
 
 const abaterEstoqueLote = `-- name: AbaterEstoqueLote :execrows
-UPDATE entrada_epi 
-SET quantidadeAtual = quantidadeAtual - $1 
+UPDATE entrada_epi_item 
+SET quantidade_atual = quantidade_atual - $1 
 WHERE id = $2 
-  AND tenant_id = $3 -- SEGURANÇA: Garante que o lote pertence à empresa antes de subtrair
+  AND tenant_id = $3 
   AND ativo = TRUE
-  AND quantidadeAtual >= $1
+  AND quantidade_atual >= $1
 `
 
 type AbaterEstoqueLoteParams struct {
-	Quantidadeatual int32
+	QuantidadeAtual int32
 	ID              int32
 	TenantID        int32
 }
 
 func (q *Queries) AbaterEstoqueLote(ctx context.Context, arg AbaterEstoqueLoteParams) (int64, error) {
-	result, err := q.db.Exec(ctx, abaterEstoqueLote, arg.Quantidadeatual, arg.ID, arg.TenantID)
+	result, err := q.db.Exec(ctx, abaterEstoqueLote, arg.QuantidadeAtual, arg.ID, arg.TenantID)
 	if err != nil {
 		return 0, err
 	}
@@ -35,16 +35,16 @@ func (q *Queries) AbaterEstoqueLote(ctx context.Context, arg AbaterEstoqueLotePa
 }
 
 const devolverItemAoEstoque = `-- name: DevolverItemAoEstoque :exec
-UPDATE entrada_epi
-SET quantidadeAtual = entrada_epi.quantidadeAtual + $4 -- Quantidade é o $4 agora
+UPDATE entrada_epi_item
+SET quantidade_atual = entrada_epi_item.quantidade_atual + $4 -- 👈 Explicitamos a tabela aqui
 WHERE id = (
-    SELECT ee.id
-    FROM entrada_epi ee
-    WHERE ee.tenant_id = $1 -- SEGURANÇA NA SUBQUERY
-      AND ee.IdEpi = $2 
-      AND ee.IdTamanho = $3
-      AND ee.ativo = TRUE -- Boa prática garantir que não devolve para lote inativo
-    ORDER BY ee.data_entrada DESC
+    SELECT eei.id
+    FROM entrada_epi_item eei
+    WHERE eei.tenant_id = $1 
+      AND eei.id_epi = $2 
+      AND eei.id_tamanho = $3
+      AND eei.ativo = TRUE
+    ORDER BY eei.id DESC 
     LIMIT 1
 )
 AND tenant_id = $1
@@ -52,34 +52,32 @@ AND tenant_id = $1
 
 type DevolverItemAoEstoqueParams struct {
 	TenantID        int32
-	Idepi           int32
-	Idtamanho       int32
-	Quantidadeatual int32
+	IDEpi           int32
+	IDTamanho       int32
+	QuantidadeAtual int32
 }
 
 func (q *Queries) DevolverItemAoEstoque(ctx context.Context, arg DevolverItemAoEstoqueParams) error {
 	_, err := q.db.Exec(ctx, devolverItemAoEstoque,
 		arg.TenantID,
-		arg.Idepi,
-		arg.Idtamanho,
-		arg.Quantidadeatual,
+		arg.IDEpi,
+		arg.IDTamanho,
+		arg.QuantidadeAtual,
 	)
 	return err
 }
 
 const listarEstoqueAtual = `-- name: ListarEstoqueAtual :many
-
-
 SELECT 
-    e.IdEpi, 
+    e.id_epi, 
     p.nome AS nome_epi,
-    SUM(e.quantidadeAtual) AS quantidade_total,
+    SUM(e.quantidade_atual)::bigint AS quantidade_total,
     COUNT(*) OVER() AS total_geral
-FROM entrada_epi e
-inner JOIN epi p ON e.IdEpi = p.id
-WHERE e.tenant_id = $3 -- SEGURANÇA: Só busca estoque da empresa logada
+FROM entrada_epi_item e
+INNER JOIN epi p ON e.id_epi = p.id
+WHERE e.tenant_id = $3
   AND e.ativo = TRUE
-GROUP BY e.IdEpi, p.nome
+GROUP BY e.id_epi, p.nome
 LIMIT $1 OFFSET $2
 `
 
@@ -90,13 +88,12 @@ type ListarEstoqueAtualParams struct {
 }
 
 type ListarEstoqueAtualRow struct {
-	Idepi           int32
+	IDEpi           int32
 	NomeEpi         string
 	QuantidadeTotal int64
 	TotalGeral      int64
 }
 
-// SEGURANÇA NO UPDATE
 func (q *Queries) ListarEstoqueAtual(ctx context.Context, arg ListarEstoqueAtualParams) ([]ListarEstoqueAtualRow, error) {
 	rows, err := q.db.Query(ctx, listarEstoqueAtual, arg.Limit, arg.Offset, arg.TenantID)
 	if err != nil {
@@ -107,7 +104,7 @@ func (q *Queries) ListarEstoqueAtual(ctx context.Context, arg ListarEstoqueAtual
 	for rows.Next() {
 		var i ListarEstoqueAtualRow
 		if err := rows.Scan(
-			&i.Idepi,
+			&i.IDEpi,
 			&i.NomeEpi,
 			&i.QuantidadeTotal,
 			&i.TotalGeral,
@@ -123,12 +120,12 @@ func (q *Queries) ListarEstoqueAtual(ctx context.Context, arg ListarEstoqueAtual
 }
 
 const listarLotesParaConsumo = `-- name: ListarLotesParaConsumo :many
-SELECT id, quantidadeAtual, data_validade, valor_unitario 
-FROM entrada_epi 
-WHERE tenant_id = $1 -- SEGURANÇA: Só busca lotes da empresa logada
-  AND IdEpi = $2 
-  AND IdTamanho = $3 
-  AND quantidadeAtual > 0 
+SELECT id, quantidade_atual, data_validade, valor_unitario 
+FROM entrada_epi_item 
+WHERE tenant_id = $1 
+  AND id_epi = $2 
+  AND id_tamanho = $3 
+  AND quantidade_atual > 0 
   AND data_validade >= CURRENT_DATE
   AND ativo = TRUE
 ORDER BY data_validade ASC
@@ -137,20 +134,20 @@ FOR UPDATE
 
 type ListarLotesParaConsumoParams struct {
 	TenantID  int32
-	Idepi     int32
-	Idtamanho int32
+	IDEpi     int32
+	IDTamanho int32
 }
 
 type ListarLotesParaConsumoRow struct {
 	ID              int32
-	Quantidadeatual int32
+	QuantidadeAtual int32
 	DataValidade    pgtype.Date
 	ValorUnitario   pgtype.Numeric
 }
 
 // O PostgreSQL usa FOR UPDATE para travar apenas as linhas desse cliente específico.
 func (q *Queries) ListarLotesParaConsumo(ctx context.Context, arg ListarLotesParaConsumoParams) ([]ListarLotesParaConsumoRow, error) {
-	rows, err := q.db.Query(ctx, listarLotesParaConsumo, arg.TenantID, arg.Idepi, arg.Idtamanho)
+	rows, err := q.db.Query(ctx, listarLotesParaConsumo, arg.TenantID, arg.IDEpi, arg.IDTamanho)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +157,7 @@ func (q *Queries) ListarLotesParaConsumo(ctx context.Context, arg ListarLotesPar
 		var i ListarLotesParaConsumoRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Quantidadeatual,
+			&i.QuantidadeAtual,
 			&i.DataValidade,
 			&i.ValorUnitario,
 		); err != nil {
@@ -176,17 +173,17 @@ func (q *Queries) ListarLotesParaConsumo(ctx context.Context, arg ListarLotesPar
 
 const listarSaldoEstoque = `-- name: ListarSaldoEstoque :many
 SELECT 
-    e.IdEpi, 
+    e.id_epi, 
     p.nome AS nome_epi,
-    SUM(e.quantidadeAtual)::int AS quantidade_atual,
-    SUM(e.valor_unitario * e.quantidadeAtual )::float AS saldo_atual,
+    SUM(e.quantidade_atual)::int AS quantidade_atual,
+    SUM(e.valor_unitario * e.quantidade_atual)::float AS saldo_atual,
     COUNT(*) OVER() AS total_geral
-    from entrada_epi e
-inner JOIN epi p ON e.IdEpi = p.id
-WHERE e.tenant_id = $3 -- SEGURANÇA: Só busca estoque da empresa logada
+FROM entrada_epi_item e
+INNER JOIN epi p ON e.id_epi = p.id
+WHERE e.tenant_id = $3
   AND e.ativo = TRUE
-  AND p.fabricante = $4 OR $4 IS NULL -- Filtro adicional para fabricante
-GROUP BY e.IdEpi, p.nome
+  AND (p.fabricante = $4 OR $4 IS NULL)
+GROUP BY e.id_epi, p.nome
 LIMIT $1 OFFSET $2
 `
 
@@ -198,7 +195,7 @@ type ListarSaldoEstoqueParams struct {
 }
 
 type ListarSaldoEstoqueRow struct {
-	Idepi           int32
+	IDEpi           int32
 	NomeEpi         string
 	QuantidadeAtual int32
 	SaldoAtual      float64
@@ -220,7 +217,7 @@ func (q *Queries) ListarSaldoEstoque(ctx context.Context, arg ListarSaldoEstoque
 	for rows.Next() {
 		var i ListarSaldoEstoqueRow
 		if err := rows.Scan(
-			&i.Idepi,
+			&i.IDEpi,
 			&i.NomeEpi,
 			&i.QuantidadeAtual,
 			&i.SaldoAtual,
@@ -238,49 +235,53 @@ func (q *Queries) ListarSaldoEstoque(ctx context.Context, arg ListarSaldoEstoque
 
 const registrarItemEntrega = `-- name: RegistrarItemEntrega :exec
 INSERT INTO epis_entregues (
-    tenant_id, -- Novo campo
-    IdEpi, IdTamanho, quantidade, IdEntrega, IdEntrada
+    tenant_id, 
+    id_epi, 
+    id_tamanho, 
+    quantidade, 
+    id_entrega_cabecalho, 
+    id_entrada_item
 ) 
 VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type RegistrarItemEntregaParams struct {
-	TenantID   int32
-	Idepi      int32
-	Idtamanho  int32
-	Quantidade int32
-	Identrega  int32
-	Identrada  int32
+	TenantID           int32
+	IDEpi              int32
+	IDTamanho          int32
+	Quantidade         int32
+	IDEntregaCabecalho int32
+	IDEntradaItem      int32
 }
 
 func (q *Queries) RegistrarItemEntrega(ctx context.Context, arg RegistrarItemEntregaParams) error {
 	_, err := q.db.Exec(ctx, registrarItemEntrega,
 		arg.TenantID,
-		arg.Idepi,
-		arg.Idtamanho,
+		arg.IDEpi,
+		arg.IDTamanho,
 		arg.Quantidade,
-		arg.Identrega,
-		arg.Identrada,
+		arg.IDEntregaCabecalho,
+		arg.IDEntradaItem,
 	)
 	return err
 }
 
 const reporEstoqueLote = `-- name: ReporEstoqueLote :execrows
-UPDATE entrada_epi 
-SET quantidadeAtual = quantidadeAtual + $1 
+UPDATE entrada_epi_item 
+SET quantidade_atual = quantidade_atual + $1 
 WHERE id = $2 
-  AND tenant_id = $3 -- SEGURANÇA
+  AND tenant_id = $3 
   AND ativo = TRUE
 `
 
 type ReporEstoqueLoteParams struct {
-	Quantidadeatual int32
+	QuantidadeAtual int32
 	ID              int32
 	TenantID        int32
 }
 
 func (q *Queries) ReporEstoqueLote(ctx context.Context, arg ReporEstoqueLoteParams) (int64, error) {
-	result, err := q.db.Exec(ctx, reporEstoqueLote, arg.Quantidadeatual, arg.ID, arg.TenantID)
+	result, err := q.db.Exec(ctx, reporEstoqueLote, arg.QuantidadeAtual, arg.ID, arg.TenantID)
 	if err != nil {
 		return 0, err
 	}

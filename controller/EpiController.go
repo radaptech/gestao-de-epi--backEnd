@@ -54,8 +54,8 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 			CA:             input.CA,
 			Descricao:      input.Descricao,
 			DataValidadeCa: input.DataValidadeCa,
-			Idtamanho:      input.Idtamanho,
-			IDprotecao:     input.IDprotecao,
+			IdTamanho:      input.IdTamanho,
+			IDProtecao:     input.IDProtecao,
 			AlertaMinimo:   input.AlertaMinimo,
 		}
 

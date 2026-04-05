@@ -41,7 +41,7 @@ func NewFuncionarioService(f FuncionarioRepository, e EntregaRepository, ep EpiR
 	return &FuncionarioService{repo: f,repoEntrega: e ,repoEpi: ep,db: pool, queries: repository.New(pool)}
 }
 
-func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.FuncionarioINserir, tenantId int32) error {
+func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.FuncionarioInserir, tenantId int32) error {
 
 	model.Nome = strings.TrimSpace(model.Nome)
 
@@ -100,7 +100,7 @@ func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula st
 	funcMatricula := strconv.Itoa(int(funcionario.Matricula))
 
 	funcDto := model.Funcionario_Dto{
-		ID:        int(funcionario.ID),
+		ID:        funcionario.ID,
 		Nome:      funcionario.Nome,
 		Matricula: funcMatricula,
 		Funcao: model.FuncaoDto{
@@ -157,7 +157,7 @@ func (funcio *FuncionarioService) ListaTodosFuncionarios(ctx context.Context, f 
 	for _, funcionario := range funcionarios {
 
 		funcs := model.Funcionario_Dto{
-			ID:        int(funcionario.ID),
+			ID:        funcionario.ID,
 			Nome:      funcionario.Nome,
 			Matricula: funcionario.Matricula,
 			Funcao: model.FuncaoDto{
@@ -314,7 +314,7 @@ func (f *FuncionarioService) AtualizarFuncionarioCompleto(ctx context.Context, i
 
 	// 2. Atualiza Departamento (se foi enviado)
 	if req.IdDepartamento != nil {
-		err := f.AtualizaDepartamentoFuncionario(ctx, id, *req.IdDepartamento, tenantId, qtx)
+		err := f.AtualizaDepartamentoFuncionario(ctx, id, int(*req.IdDepartamento), tenantId, qtx)
 		if err != nil {
 			return err
 		}
@@ -322,7 +322,7 @@ func (f *FuncionarioService) AtualizarFuncionarioCompleto(ctx context.Context, i
 
 	// 3. Atualiza Função (se foi enviado)
 	if req.IdFuncao != nil {
-		err := f.AtualizaFuncaoFuncionario(ctx, id, *req.IdFuncao, tenantId, qtx)
+		err := f.AtualizaFuncaoFuncionario(ctx, id, int(*req.IdFuncao), tenantId, qtx)
 		if err != nil {
 			return err
 		}
@@ -346,7 +346,7 @@ func (f *FuncionarioService) FuncionariosDashbord(ctx context.Context, tenantId 
 		matricula := strconv.Itoa(int(ff.Matricula))
 		fun := model.FuncionarioDashbord{
 
-			Id:        int(ff.ID),
+			Id:        ff.ID,
 			Nome:      ff.Nome,
 			Matricula: matricula,
 		}
@@ -382,18 +382,18 @@ func (f *FuncionarioService) FuncionarioCompleto(ctx context.Context, tenantId i
 	mapItens := make(map[int64][]model.ItemEntregueDto)
 
 	for _, item := range itensDB {
-		idEntrega := int64(item.Identrega)
+		idEntrega := int64(item.IDEntregaCabecalho)
 
 		// Cuidado aqui com os tipos de data. Se for pgtype.Date, acesse o .Time
 		dtoItem := model.ItemEntregueDto{
-			Id:         int64(item.ID),
-			Quantidade: int(item.Quantidade),
+			Id:         item.ID,
+			Quantidade: item.Quantidade,
 			Tamanho: model.TamanhoDto{
-				ID:      int(item.Idtamanho),
+				ID:      int(item.IDTamanho),
 				Tamanho: item.TamanhoNome,
 			},
 			Epi: model.EpiResponse{
-				Id:             int(item.Idepi),
+				Id:             item.IDEpi,
 				Nome:           item.EpiNome,
 				Fabricante:     item.Fabricante,
 				CA:             item.Ca,
@@ -447,7 +447,7 @@ func (f *FuncionarioService) FuncionarioCompleto(ctx context.Context, tenantId i
 		}
 
 		ff := model.FuncionarioCompletoDto{
-			ID:        funcID,
+			ID:        int32(funcID),
 			Nome:      funcionario.Nome,
 			Matricula: matricula,
 			Funcao: model.FuncaoDto{

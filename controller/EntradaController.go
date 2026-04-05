@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
+	
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -51,7 +51,7 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 
 		// 1. Remove espaços extras no começo/fim
 		// 2. Transforma tudo em MAIÚSCULO para padronizar
-		input.Lote = strings.ToUpper(strings.TrimSpace(input.Lote))
+		
 
 		tenantId, ok := middleware.GetTenantID(ctx)
 		if !ok {

@@ -97,11 +97,11 @@ func (q *Queries) BuscaEpiDashbord(ctx context.Context, tenantID int32) ([]Busca
 const buscaTodosItensEntreguesDoTenant = `-- name: BuscaTodosItensEntreguesDoTenant :many
 SELECT
     ee.id,
-    ee.IdEntrega, -- 🔑 CHAVE MESTRA: Liga o item à entrega correta no Go!
+    ee.id_entrega_cabecalho, -- 🔑 CHAVE MESTRA: Liga o item à entrega correta no Go!
     ee.quantidade,
-    ee.IdTamanho,
+    ee.id_tamanho,
     t.tamanho as tamanho_nome,
-    ee.IdEpi,
+    ee.id_epi,
     ep.nome as epi_nome,
     ep.fabricante,
     ep.CA,
@@ -119,20 +119,20 @@ WHERE e.tenant_id = $1
 `
 
 type BuscaTodosItensEntreguesDoTenantRow struct {
-	ID               int32
-	Identrega        int32
-	Quantidade       int32
-	Idtamanho        int32
-	TamanhoNome      string
-	Idepi            int32
-	EpiNome          string
-	Fabricante       string
-	Ca               string
-	Descricao        string
-	ValidadeCa       pgtype.Date
-	AlertaMinimo     int32
-	Idtipoprotecao   int32
-	TipoProtecaoNome string
+	ID                 int32
+	IDEntregaCabecalho int32
+	Quantidade         int32
+	IDTamanho          int32
+	TamanhoNome        string
+	IDEpi              int32
+	EpiNome            string
+	Fabricante         string
+	Ca                 string
+	Descricao          string
+	ValidadeCa         pgtype.Date
+	AlertaMinimo       int32
+	Idtipoprotecao     int32
+	TipoProtecaoNome   string
 }
 
 func (q *Queries) BuscaTodosItensEntreguesDoTenant(ctx context.Context, tenantID int32) ([]BuscaTodosItensEntreguesDoTenantRow, error) {
@@ -146,11 +146,11 @@ func (q *Queries) BuscaTodosItensEntreguesDoTenant(ctx context.Context, tenantID
 		var i BuscaTodosItensEntreguesDoTenantRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Identrega,
+			&i.IDEntregaCabecalho,
 			&i.Quantidade,
-			&i.Idtamanho,
+			&i.IDTamanho,
 			&i.TamanhoNome,
-			&i.Idepi,
+			&i.IDEpi,
 			&i.EpiNome,
 			&i.Fabricante,
 			&i.Ca,

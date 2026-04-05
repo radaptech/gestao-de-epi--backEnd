@@ -14,7 +14,7 @@ import (
 )
 
 type FuncionarioService interface {
-	SalvarFuncionario(ctx context.Context, model model.FuncionarioINserir, tenantId int32) error
+	SalvarFuncionario(ctx context.Context, model model.FuncionarioInserir, tenantId int32) error
 	ListarFuncionario(ctx context.Context, matricula string, tenantId int32) (model.Funcionario_Dto, error)
 	ListaTodosFuncionarios(ctx context.Context, f service.FiltroFuncionario, tenantId int32) (service.FuncionarioPaginado, error)
 	DeletarFuncionario(ctx context.Context, id int, tenantId int32) error
@@ -51,7 +51,7 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		var input model.FuncionarioINserir
+		var input model.FuncionarioInserir
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
@@ -61,7 +61,7 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		novoFunc := model.FuncionarioINserir{
+		novoFunc := model.FuncionarioInserir{
 			Nome:            input.Nome,
 			ID_departamento: input.ID_departamento,
 			ID_funcao:       input.ID_funcao,
