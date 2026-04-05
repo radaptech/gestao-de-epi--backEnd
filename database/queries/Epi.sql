@@ -105,8 +105,8 @@ SELECT
     ep.IdTipoProtecao,
     tp.nome as tipo_protecao_nome
 FROM epis_entregues ee
-INNER JOIN entrega_epi e ON e.id = ee.IdEntrega
-INNER JOIN epi ep ON ep.id = ee.IdEpi
-INNER JOIN tamanho t ON t.id = ee.IdTamanho
+INNER JOIN entrega_epi e ON e.id = ee.id_entrega_cabecalho
+INNER JOIN epi ep ON ep.id = ee.id_epi
+INNER JOIN tamanho t ON t.id = ee.id_tamanho
 INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
 WHERE e.tenant_id = $1;

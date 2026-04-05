@@ -19,7 +19,6 @@ WHERE fn.matricula = $1
   AND fn.ativo = TRUE;
 
 -- name: BuscarTodosFuncionarios :many
--- name: BuscarTodosFuncionarios :many
 SELECT 
     fn.id, 
     fn.nome, 
