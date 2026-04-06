@@ -47,7 +47,7 @@ func (e *EntradaService) Adicionar(ctx context.Context, input model.EntradaEpiIn
 	// 2. Prepara os parâmetros da Nota Fiscal (Cabeçalho)
 	nfArgs := repository.CreateEntradaNFParams{
 		TenantID:         tenantID,
-		Fornecedor:       strings.TrimSpace(input.Fornecedor),
+		Idfornecedor:       input.Idfornecedor,
 		NotaFiscalNumero: strings.TrimSpace(input.Nota_fiscal_numero),
 		NotaFiscalSerie:  pgtype.Text{String: strings.TrimSpace(input.Nota_fiscal_serie), Valid: true},
 		DataEmissao:      pgtype.Date{Time: input.Data_emissao.Time(), Valid: true},
@@ -139,17 +139,32 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 		}
 
 		dto = append(dto, model.EntradaEpiDto{
-			ID:                 int(ent.ID),
-			EpiNome:            ent.EpiNome,
-			TamanhoNome:        ent.TamanhoNome,
-			Quantidade:         int(ent.Quantidade),
-			Quantidade_Atual:   int(ent.QuantidadeAtual),
-			Lote:               ent.Lote,
-			Fornecedor:         ent.Fornecedor,
-			Nota_fiscal_numero: ent.NotaFiscalNumero,
-			Nota_fiscal_serie:  ent.NotaFiscalSerie.String,
-			Data_entrada:       configs.DataBr(ent.DataEntrada.Time),
-			ValorUnitario:      valorDecimal,
+			ID: int(ent.ID),
+			IDEpi: int(ent.ID),
+			IDTamanho: int(ent.IDTamanho),
+			IDFornecedor: int(ent.Idfornecedor),
+			DataEntrada: *configs.NewDataBrPtr(ent.DataEntrada.Time),
+			Quantidade: int(ent.Quantidade),
+			QuantidadeAtual: int(ent.QuantidadeAtual),
+			ValorUnitario: valorDecimal,
+			Lote: ent.Lote,
+			NotaFiscalNumero: ent.NotaFiscalNumero,
+			NotaFiscalSerie: ent.NotaFiscalSerie.String,
+			Epi: model.EpiSimples{
+				ID: int(ent.IDEpi),
+				Nome: ent.EpiNome,
+				Fabricante: ent.Fabricante,
+			},
+			Tamanho: model.TamanhoSimples{
+				ID: int(ent.IDTamanho),
+				Tamanho: ent.TamanhoNome,
+			},
+			Fornecedor: model.FornecedorSimples{
+				ID: int(ent.Idfornecedor),
+				NomeFantasia: ent.NomeFantasia,
+				RazaoSocial: ent.RazaoSocial,
+			},
+
 		})
 	}
 

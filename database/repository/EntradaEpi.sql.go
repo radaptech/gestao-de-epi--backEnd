@@ -111,28 +111,28 @@ func (q *Queries) CreateEntradaEpiItem(ctx context.Context, arg CreateEntradaEpi
 }
 
 const createEntradaNF = `-- name: CreateEntradaNF :one
-INSERT INTO entrada_nf (tenant_id, fornecedor, nota_fiscal_numero, nota_fiscal_serie, data_emissao, id_usuario_criacao)
+INSERT INTO entrada_nf (tenant_id, nota_fiscal_numero, nota_fiscal_serie, data_emissao, id_usuario_criacao, Idfornecedor)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
 `
 
 type CreateEntradaNFParams struct {
 	TenantID         int32
-	Fornecedor       string
 	NotaFiscalNumero string
 	NotaFiscalSerie  pgtype.Text
 	DataEmissao      pgtype.Date
 	IDUsuarioCriacao int32
+	Idfornecedor     int32
 }
 
 func (q *Queries) CreateEntradaNF(ctx context.Context, arg CreateEntradaNFParams) (int32, error) {
 	row := q.db.QueryRow(ctx, createEntradaNF,
 		arg.TenantID,
-		arg.Fornecedor,
 		arg.NotaFiscalNumero,
 		arg.NotaFiscalSerie,
 		arg.DataEmissao,
 		arg.IDUsuarioCriacao,
+		arg.Idfornecedor,
 	)
 	var id int32
 	err := row.Scan(&id)
@@ -285,12 +285,15 @@ SELECT
     nf.data_emissao as data_entrada, -- Vem da NF agora
     ei.lote,
     ei.valor_unitario, 
-    nf.fornecedor,
+    nf.Idfornecedor,
+    f.nome_fantasia,
+    f.razao_social,
     nf.nota_fiscal_numero, 
     nf.nota_fiscal_serie, 
     ei.cancelada_em
 FROM entrada_epi_item ei
 INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
+INNER JOIN fornecedores f ON nf.Idfornecedor = f.id
 INNER JOIN epi e ON ei.id_epi = e.id
 INNER JOIN tipo_protecao tp ON e.idtipoprotecao = tp.id
 INNER JOIN tamanho t ON ei.id_tamanho = t.id
@@ -340,7 +343,9 @@ type ListarEntradasRow struct {
 	DataEntrada      pgtype.Date
 	Lote             string
 	ValorUnitario    pgtype.Numeric
-	Fornecedor       string
+	Idfornecedor     int32
+	NomeFantasia     string
+	RazaoSocial      string
 	NotaFiscalNumero string
 	NotaFiscalSerie  pgtype.Text
 	CanceladaEm      pgtype.Timestamp
@@ -384,7 +389,9 @@ func (q *Queries) ListarEntradas(ctx context.Context, arg ListarEntradasParams) 
 			&i.DataEntrada,
 			&i.Lote,
 			&i.ValorUnitario,
-			&i.Fornecedor,
+			&i.Idfornecedor,
+			&i.NomeFantasia,
+			&i.RazaoSocial,
 			&i.NotaFiscalNumero,
 			&i.NotaFiscalSerie,
 			&i.CanceladaEm,

@@ -67,7 +67,6 @@ type EntradaEpiItem struct {
 type EntradaNf struct {
 	ID                    int32
 	TenantID              int32
-	Fornecedor            string
 	NotaFiscalNumero      string
 	NotaFiscalSerie       pgtype.Text
 	DataEmissao           pgtype.Date
@@ -76,6 +75,7 @@ type EntradaNf struct {
 	IDUsuarioCriacao      int32
 	IDUsuarioCancelamento pgtype.Int4
 	CanceladaEm           pgtype.Timestamp
+	Idfornecedor          int32
 }
 
 type EntregaEpi struct {

@@ -82,10 +82,10 @@ func (f *FornecedorService) ListarFornecedor(ctx context.Context, filt FiltroFor
 		TenantID:   tenantId,
 		Nome:       pgtype.Text{String: filt.Nome, Valid: filt.Nome != ""},
 		Cnpj:       pgtype.Text{String: filt.Cnpj, Valid: filt.Cnpj != ""},
-		Canceladas: filt.Cancelados,
+		Canceladas: false,
 		Offset:     offset,
 		Limit:      limit,
-		IgnorarFiltroCancelado: pgtype.Bool{Bool: true, Valid: true},
+		IgnorarFiltroCancelado: pgtype.Bool{Bool: false, Valid: false},
 	}
 
 	fornecedores, err := f.repo.ListarFornecedor(ctx, filtro)
