@@ -154,6 +154,7 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 				ID: int(ent.IDEpi),
 				Nome: ent.EpiNome,
 				Fabricante: ent.Fabricante,
+				CA: ent.Ca,
 			},
 			Tamanho: model.TamanhoSimples{
 				ID: int(ent.IDTamanho),
