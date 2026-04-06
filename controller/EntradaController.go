@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -51,7 +50,6 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 
 		// 1. Remove espaços extras no começo/fim
 		// 2. Transforma tudo em MAIÚSCULO para padronizar
-		
 
 		tenantId, ok := middleware.GetTenantID(ctx)
 		if !ok {
@@ -226,17 +224,15 @@ func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 			return
 		}
 
-
-		entradas, err:= e.service.EntradaDashbordBusca(ctx, tenantId)
+		entradas, err := e.service.EntradaDashbordBusca(ctx, tenantId)
 		if err != nil {
 
-			 ctx.JSON(http.StatusInternalServerError, gin.H{
+			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
-			 })
-			 return 
+			})
+			return
 		}
-
 
 		ctx.JSON(http.StatusOK, entradas)
 	}
@@ -252,17 +248,15 @@ func (e *EntradaController) BuscaEntradaEstoque() gin.HandlerFunc {
 			return
 		}
 
-
-		entradas, err:= e.service.BuscaEntradaEstoque(ctx, tenantId)
+		entradas, err := e.service.BuscaEntradaEstoque(ctx, tenantId)
 		if err != nil {
 
-			 ctx.JSON(http.StatusInternalServerError, gin.H{
+			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
-			 })
-			 return 
+			})
+			return
 		}
-
 
 		ctx.JSON(http.StatusOK, entradas)
 	}

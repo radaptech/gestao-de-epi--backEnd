@@ -12,80 +12,65 @@ import (
 )
 
 func AutenticacaoJWT() gin.HandlerFunc {
+    // Carregue a secret uma vez aqui (fora do loop de requisição)
+    jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+    
+    // Verificação de segurança: Se a secret estiver vazia, o servidor nem deve subir direito
+    if len(jwtSecret) == 0 {
+        panic("JWT_SECRET não configurada no ambiente!")
+    }
 
-	return func(ctx *gin.Context) {
+    return func(ctx *gin.Context) {
+        const portador = "Bearer "
+        header := ctx.GetHeader("Authorization")
 
+        if header == "" || !strings.HasPrefix(header, portador) {
+            ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acesso negado: Token ausente ou formato inválido"})
+            return
+        }
 
-		const portador = "Bearer "               //usado para fazer a verificação do Header
-		header := ctx.GetHeader("Authorization") //busca a key
+        tokenString := strings.TrimPrefix(header, portador)
 
-		if header == "" {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token nao encontrado"})
-			return
-		}
+        token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+            if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+                return nil, fmt.Errorf("método de assinatura inesperado: %v", t.Header["alg"])
+            }
+            return jwtSecret, nil
+        })
 
-		//verifica se a meu headaer NAO contem a palavra "Bearer", se nao tiver, da erro
-		if !strings.HasPrefix(header, portador) {
+        if err != nil || !token.Valid {
+            ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token inválido ou expirado"})
+            return
+        }
 
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "formato do token invalido"})
-			return
-		}
+        claims, ok := token.Claims.(jwt.MapClaims)
+        if !ok {
+            ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Falha ao processar permissões"})
+            return
+        }
 
-		//retirando a palavra "Bearer " do meu header, deixando apenas o token
-		tokenString := header[len(portador):]
+        // Exemplo de validação crítica: Se não tiver o ID do usuário, o token é inútil
+        userId, ok := claims["sub"].(float64)
+        if !ok {
+            ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token não contém identificação do usuário"})
+            return
+        }
 
-		//lendo o token e chamando a funcao anonima para retornar a chave secreta que esta no .env
-		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+        // Setando os dados no contexto
+        ctx.Set("userId", uint(userId))
+        
+        if role, ok := claims["role"].(string); ok {
+            ctx.Set("user_role", role)
+        }
+        
+        if tenantId, ok := claims["tenantId"].(float64); ok {
+            ctx.Set("user_TenantId", int32(tenantId))
+        }
 
-			// Verifica se o algoritmo é HMAC (o mesmo usado para criar a secret key)
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("método de assinatura inesperado: %v", t.Header["alg"])
-			}
+        if nome, ok := claims["nome"].(string); ok {
+            ctx.Set("user_nome", nome)
+        }
 
-			//retornando a chave secreta
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		})
-
-		//verificando a validade do token
-		if err != nil || !token.Valid {
-
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token invalido ou expirado"})
-			return
-		}
-
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-
-			// "sub"  guarda o ID do usuário
-			if userId, ok := claims["sub"].(float64); ok {
-
-				ctx.Set("userId", uint(userId)) //anotando o id do usuario no contexto
-			}
-
-			if role, ok:= claims["role"].(string); ok {
-
-				ctx.Set("user_role", role)
-			}
-
-			if TenantId, ok:= claims["tenantId"].(float64); ok{
-
-				ctx.Set("user_TenantId", int32(TenantId))
-			}
-
-			if nome, ok:= claims["nome"].(string); ok {
-
-				ctx.Set("user_nome", nome)
-			}
-		}else {
-			
-			ctx.JSON(http.StatusUnauthorized, gin.H{
-
-				"error": "falha ao extrair os dados do token",
-			})
-
-			ctx.Abort()
-			return 
-		}
-
-		ctx.Next()
-	}
+        ctx.Next()
+    }
 }

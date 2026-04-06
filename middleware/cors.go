@@ -9,50 +9,41 @@ import (
 )
 
 func CorsConfig() gin.HandlerFunc {
+    return cors.New(cors.Config{
+        AllowOriginFunc: func(origin string) bool {
+            // Remove barras no final para comparação segura
+            origin = strings.TrimSuffix(origin, "/")
 
-	return cors.New(cors.Config{
+            if origin == "http://localhost:3000" || 
+               origin == "https://sgepi-front-end.vercel.app" ||
+               origin == "https://radaptech.com.br" || 
+               origin == "https://www.radaptech.com.br" {
+                return true
+            }
 
-		//da onde meu back-end aceita requisições
-		AllowOriginFunc: func(origin string) bool {
-			if origin == "http://localhost:3000" || origin == "https://sgepi-front-end.vercel.app" {
-				return true
-			}
+            // Permitir qualquer subdominio
+            if strings.HasSuffix(origin, ".radaptech.com.br") {
+                return true
+            }
 
-			//dominio principal
-			if origin == "https://radaptech.com.br/" || origin == "https://www.radaptech.com.br/" {
-				//
-				return true
-			}
+            return false
+        },
 
-			//permitir qualquer subdominio ex: (frigorificosaojoao.radaptech.com.br)
+        AllowMethods: []string{"POST", "PUT", "GET", "PATCH", "DELETE", "OPTIONS"},
 
-			if strings.HasSuffix(origin, ".radaptech.com.br"){
-				return true
-			}
+        AllowHeaders: []string{
+            "Origin",
+            "Content-Type",
+            "Accept",
+            "Authorization",
+            "X-Requested-With",
+            "X-tenant-ID", // Adicionei com t minúsculo por segurança
+        },
 
-			return false
-		},
+        ExposeHeaders: []string{"Content-Length"},
 
-		AllowMethods: []string{
-			"POST", "PUT", "GET", "PATCH", "DELETE", "OPTIONS",
-		}, //metados permitidos
-
-		AllowHeaders: []string{
-
-			"Origin",
-			"Content-Type",
-			"Accept",
-			"Authorization",
-			"X-Requested-With",
-			"X-Tenant-ID",
-		}, //cabeçalhos que o front pode enviar
-
-		ExposeHeaders: []string{
-
-			"Content-Length",
-		}, //informações adicionais que o front pode ler
-
-		AllowCredentials: true,
-		MaxAge:           9 * time.Hour, // ate 9 horas para o crs fazer a verificação de novo
-	})
+        AllowCredentials: true,
+        // O navegador armazena a permissão de CORS por esse tempo
+        MaxAge: 12 * time.Hour, 
+    })
 }

@@ -94,8 +94,9 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	api.Use(middleware.TenantMiddleware(queries))
 	{
 
-		api.POST("/cadastro", c.Usuario.Registrar())
+		
 		api.POST("/login", c.Usuario.Login())
+		api.POST("/cadastro", c.Usuario.Registrar())
 	}
 
 	// --- GRUPO 3: Rotas Protegidas (SaaS) ---
@@ -195,6 +196,8 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			//entregas
 			rotasAdm.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())
 			rotasAdm.GET("/:matricula/ficha-pdf", c.Entrega.GerarFichaEpiPDF())
+
+			
 		}
 	}
 
