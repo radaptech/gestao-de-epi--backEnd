@@ -147,6 +147,7 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 			Lote:               ent.Lote,
 			Fornecedor:         ent.Fornecedor,
 			Nota_fiscal_numero: ent.NotaFiscalNumero,
+			Nota_fiscal_serie:  ent.NotaFiscalSerie.String,
 			Data_entrada:       configs.DataBr(ent.DataEntrada.Time),
 			ValorUnitario:      valorDecimal,
 		})

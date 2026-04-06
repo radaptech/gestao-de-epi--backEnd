@@ -36,6 +36,7 @@ type EntradaEpiDto struct {
 	Lote               string          `json:"lote"`
 	Fornecedor         string          `json:"fornecedor"`
 	Nota_fiscal_numero string          `json:"nota_fiscal_numero"`
+	Nota_fiscal_serie  string          `json:"nota_fiscal_serie"`
 	Data_entrada       configs.DataBr  `json:"data_entrada"`
 	ValorUnitario      decimal.Decimal `json:"valor_unitario"`
 	CanceladaEm        *configs.DataBr `json:"cancelada_em,omitempty"`
