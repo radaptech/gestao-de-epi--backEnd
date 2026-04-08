@@ -18,7 +18,7 @@ type EntradaEpiItemInserir struct {
 
 // EntradaEpiInserir é o DTO Mestre (O que o Frontend envia)
 type EntradaEpiInserir struct {
-	Idfornecedor       int32                  `json:"idfornecedor" binding:"required,max=100"`
+	Idfornecedor       int32                   `json:"idfornecedor" binding:"required,max=100"`
 	Nota_fiscal_numero string                  `json:"nota_fiscal_numero" binding:"required,max=50"`
 	Nota_fiscal_serie  string                  `json:"nota_fiscal_serie" binding:"required,max=20"`
 	Data_emissao       configs.DataBr          `json:"data_emissao" binding:"required"`
@@ -43,6 +43,7 @@ type EntradaEpiDto struct {
 	Lote             string          `json:"lote"`
 	NotaFiscalNumero string          `json:"nota_fiscal_numero"`
 	NotaFiscalSerie  string          `json:"nota_fiscal_serie"`
+	UsuarioCriacao   string          `json:"usuario"`
 
 	// 4. Objetos completos (Relacionamentos)
 	Epi        EpiSimples        `json:"epi"`
@@ -60,6 +61,7 @@ type EntradaEstoqueDto struct {
 	DataValidade    configs.DataBr  `json:"data_validade"`
 	Tamanho         TamanhoDto      `json:"tamanho"`
 	Epi             EpiDtoEstoque   `json:"epi"`
+	DataEntrada     configs.DataBr  `json:"data_entrada"`
 }
 
 type EntradaDashbord struct {
