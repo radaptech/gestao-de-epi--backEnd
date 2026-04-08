@@ -150,6 +150,7 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 			Lote: ent.Lote,
 			NotaFiscalNumero: ent.NotaFiscalNumero,
 			NotaFiscalSerie: ent.NotaFiscalSerie.String,
+			UsuarioCriacao: ent.UsuarioCriacao,
 			Epi: model.EpiSimples{
 				ID: int(ent.IDEpi),
 				Nome: ent.EpiNome,
@@ -228,6 +229,7 @@ func (e *EntradaService) BuscaEntradaEstoque(ctx context.Context, tenantId int32
 				AlertaMinimo: int(ee.AlertaMinimo),
 				Protecao:     model.TipoProtecaoDto{ID: int64(ee.Idtipoprotecao), Nome: ee.ProtecaoNome},
 			},
+			DataEntrada: *configs.NewDataBrPtr(ee.DataEntrada.Time),
 		})
 	}
 	return dto, nil

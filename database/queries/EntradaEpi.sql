@@ -34,13 +34,15 @@ SELECT
     f.razao_social,
     nf.nota_fiscal_numero, 
     nf.nota_fiscal_serie, 
-    ei.cancelada_em
+    ei.cancelada_em,
+	us.nome as usuario_criacao
 FROM entrada_epi_item ei
 INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
 INNER JOIN fornecedores f ON nf.Idfornecedor = f.id
 INNER JOIN epi e ON ei.id_epi = e.id
 INNER JOIN tipo_protecao tp ON e.idtipoprotecao = tp.id
 INNER JOIN tamanho t ON ei.id_tamanho = t.id
+INNER JOIN usuarios us ON us.id = nf.id_usuario_criacao
 WHERE 
     ei.tenant_id = sqlc.arg('tenant_id')
     AND (
@@ -94,7 +96,8 @@ SELECT
     ei.valor_unitario, ei.data_validade,
     ei.id_tamanho, t.tamanho as tamanho_nome,
     ei.id_epi, e.nome as epi_nome, e.fabricante, e.ca, e.descricao, e.validade_ca, e.alerta_minimo,
-    e.idtipoprotecao, tp.nome as protecao_nome
+    e.idtipoprotecao, tp.nome as protecao_nome,
+    nf.data_emissao as data_entrada
 FROM entrada_epi_item ei
 INNER JOIN entrada_nf nf ON ei.entrada_nf_id = nf.id
 INNER JOIN tamanho t ON ei.id_tamanho = t.id
