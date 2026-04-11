@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 	const TenantId = "tenantId"
+	
 
 
 func TenantMiddleware(querie *repository.Queries)  gin.HandlerFunc {
@@ -57,3 +58,5 @@ func GetTenantID(c *gin.Context) (int32, bool) {
 	id, ok := val.(int32) 
 	return id, ok
 }
+
+

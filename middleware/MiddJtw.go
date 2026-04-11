@@ -57,7 +57,7 @@ func AutenticacaoJWT() gin.HandlerFunc {
         }
 
         // Setando os dados no contexto
-        ctx.Set("userId", uint(userId))
+        ctx.Set("userId", int32(userId))
         
         if role, ok := claims["role"].(string); ok {
             ctx.Set("user_role", role)

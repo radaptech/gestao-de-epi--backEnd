@@ -59,6 +59,16 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 			return
 		}
 
+		userId, ok := middleware.GetUserID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"erro": "erro au setar usuario",
+			})
+			return
+		}
+
+		input.Id_user = userId
+
 		err := e.service.Adicionar(ctx, input, tenantId)
 		if err != nil {
 

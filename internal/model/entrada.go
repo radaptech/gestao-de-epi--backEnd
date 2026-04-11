@@ -18,11 +18,11 @@ type EntradaEpiItemInserir struct {
 
 // EntradaEpiInserir é o DTO Mestre (O que o Frontend envia)
 type EntradaEpiInserir struct {
-	Idfornecedor       int32                   `json:"idfornecedor" binding:"required,max=100"`
+	Idfornecedor       int32                   `json:"idfornecedor" binding:"required,gt=0"`
 	Nota_fiscal_numero string                  `json:"nota_fiscal_numero" binding:"required,max=50"`
 	Nota_fiscal_serie  string                  `json:"nota_fiscal_serie" binding:"required,max=20"`
 	Data_emissao       configs.DataBr          `json:"data_emissao" binding:"required"`
-	Id_user            int32                   `json:"idUser"`
+	Id_user            int32                   `json:"-"`
 	Itens              []EntradaEpiItemInserir `json:"itens" binding:"required,dive"` // "dive" valida cada item da lista
 }
 
