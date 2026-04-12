@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -269,6 +270,7 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("INPUT RECEBIDO: %+v\n", input)
 		err = e.service.AtualizaEpi(ctx, input, int32(id), tenantID)
 		if err != nil {
 
@@ -334,10 +336,8 @@ func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
 			return
 		}
 
-
-
-		epis, err:= e.service.ListarEpiDashbord(ctx, tenantId)
-				if err != nil {
+		epis, err := e.service.ListarEpiDashbord(ctx, tenantId)
+		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})

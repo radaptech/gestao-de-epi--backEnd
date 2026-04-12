@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -167,7 +168,7 @@ func (e *EpiService) ListarEpis(ctx context.Context, f EpiFiltro, tenantId int32
 			Nome:           epi.Nome,
 			Fabricante:     epi.Fabricante,
 			CA:             epi.Ca,
-			Tamanhos:        tamanhosMap[epi.ID],
+			Tamanhos:       tamanhosMap[epi.ID],
 			Descricao:      epi.Descricao,
 			DataValidadeCa: *configs.NewDataBrPtr(epi.ValidadeCa.Time),
 			Protecao: model.TipoProtecaoDto{
@@ -246,7 +247,7 @@ func (e *EpiService) ListarEpi(ctx context.Context, id int, tenantid int32) (mod
 		Nome:           epi.Nome,
 		Fabricante:     epi.Fabricante,
 		CA:             epi.Ca,
-		Tamanhos:        tamdTO,
+		Tamanhos:       tamdTO,
 		Descricao:      epi.Descricao,
 		DataValidadeCa: *configs.NewDataBrPtr(epi.ValidadeCa.Time),
 		Protecao: model.TipoProtecaoDto{
@@ -333,25 +334,43 @@ func (e *EpiService) AtualizaEpi(ctx context.Context, model model.UpdateEpiInput
 	// Tratamento seguro para Data
 	var validadeCa pgtype.Date
 	if model.DataValidadeCa != nil {
+
+		d := model.DataValidadeCa.Time()
+		dataTime := time.Date(d.Year(), d.Month(), d.Day(), 12, 0, 0, 0, time.Local) // Pega a data que veio do front
 		hoje := time.Now().Truncate(24 * time.Hour)
 
-		if validadeCa.Time.Before(hoje) {
-
+		// Valida se a data enviada é retroativa
+		if dataTime.Before(hoje) {
 			return helper.ErrDataMenor
 		}
-		validadeCa = pgtype.Date{Time: model.DataValidadeCa.Time(), Valid: true}
+		validadeCa = pgtype.Date{Time: dataTime, Valid: true}
 	} else {
 		validadeCa = pgtype.Date{Valid: false}
 	}
 
+	// Para Proteção
+	var idProt int32
+	if model.IdProtecao != nil {
+		idProt = *model.IdProtecao
+	}
+
+	// Para Alerta Mínimo
+	var alertaMin int32
+	if model.AlertaMinimo != nil {
+		alertaMin = *model.AlertaMinimo
+	}
+
+	fmt.Printf("DATA PARA O BANCO: Valid=%v, Valor=%v\n", validadeCa.Valid, validadeCa.Time)
 	u := repository.UpdateEpiCampoParams{
-		ID:         id,
-		Nome:       toPgText(model.Nome),
-		Fabricante: toPgText(model.Fabricante),
-		Ca:         toPgText(model.CA),
-		Descricao:  toPgText(model.Descricao),
-		ValidadeCa: validadeCa,
-		TenantID:   tenantId,
+		ID:             id,
+		Nome:           toPgText(model.Nome),
+		Fabricante:     toPgText(model.Fabricante),
+		Ca:             toPgText(model.CA),
+		Descricao:      toPgText(model.Descricao),
+		ValidadeCa:     validadeCa,
+		IDTipoProtecao: pgtype.Int4{Int32: idProt, Valid: model.IdProtecao != nil},
+		TenantID:       tenantId,
+		AlertaMinimo:   pgtype.Int4{Int32: alertaMin, Valid: model.AlertaMinimo != nil},
 	}
 
 	linhasAfetadas, err := qtx.UpdateEpiCampo(ctx, u)

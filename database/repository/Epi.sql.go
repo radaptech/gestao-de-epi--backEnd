@@ -423,20 +423,24 @@ SET
     fabricante = COALESCE($2, fabricante),
     CA = COALESCE($3, CA),
     descricao = COALESCE($4, descricao),
-    validade_CA = COALESCE($5, validade_CA)
-WHERE id = $6 
-  AND tenant_id = $7 -- SEGURANÇA: Obrigatório para update
+    validade_CA = COALESCE($5, validade_CA),
+    IdTipoProtecao = COALESCE($6::int, IdTipoProtecao),
+    alerta_minimo = COALESCE($7::int, alerta_minimo)  
+    WHERE id = $8 
+  AND tenant_id = $9 -- SEGURANÇA: Obrigatório para update
   AND ativo = TRUE
 `
 
 type UpdateEpiCampoParams struct {
-	Nome       pgtype.Text
-	Fabricante pgtype.Text
-	Ca         pgtype.Text
-	Descricao  pgtype.Text
-	ValidadeCa pgtype.Date
-	ID         int32
-	TenantID   int32
+	Nome           pgtype.Text
+	Fabricante     pgtype.Text
+	Ca             pgtype.Text
+	Descricao      pgtype.Text
+	ValidadeCa     pgtype.Date
+	IDTipoProtecao pgtype.Int4
+	AlertaMinimo   pgtype.Int4
+	ID             int32
+	TenantID       int32
 }
 
 func (q *Queries) UpdateEpiCampo(ctx context.Context, arg UpdateEpiCampoParams) (int64, error) {
@@ -446,6 +450,8 @@ func (q *Queries) UpdateEpiCampo(ctx context.Context, arg UpdateEpiCampoParams) 
 		arg.Ca,
 		arg.Descricao,
 		arg.ValidadeCa,
+		arg.IDTipoProtecao,
+		arg.AlertaMinimo,
 		arg.ID,
 		arg.TenantID,
 	)
