@@ -74,8 +74,10 @@ SET
     fabricante = COALESCE(sqlc.narg('fabricante'), fabricante),
     CA = COALESCE(sqlc.narg('ca'), CA),
     descricao = COALESCE(sqlc.narg('descricao'), descricao),
-    validade_CA = COALESCE(sqlc.narg('validade_ca'), validade_CA)
-WHERE id = sqlc.arg('id') 
+    validade_CA = COALESCE(sqlc.narg('validade_ca'), validade_CA),
+    IdTipoProtecao = COALESCE(sqlc.narg('id_tipo_protecao')::int, IdTipoProtecao),
+    alerta_minimo = COALESCE(sqlc.narg('alerta_minimo')::int, alerta_minimo)  
+    WHERE id = sqlc.arg('id') 
   AND tenant_id = sqlc.arg('tenant_id') -- SEGURANÇA: Obrigatório para update
   AND ativo = TRUE;
 
