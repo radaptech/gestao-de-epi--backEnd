@@ -127,7 +127,7 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 			},
 		}
 		// Chama o service de entrega dentro da mesma transação (qtx)
-		if err := d.repoEntrega.RegistrarEntrega(ctx, qtx, modelEntrega, tenantId); err != nil {
+		if err := d.repoEntrega.RegistrarEntrega(ctx, qtx, modelEntrega, tenantId, token); err != nil {
 			return fmt.Errorf("erro ao realizar nova entrega da troca: %w", err)
 		}
 	}
