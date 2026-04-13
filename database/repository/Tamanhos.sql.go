@@ -51,26 +51,30 @@ func (q *Queries) BuscarTamanho(ctx context.Context, arg BuscarTamanhoParams) (B
 }
 
 const buscarTamanhosPorIdEpi = `-- name: BuscarTamanhosPorIdEpi :many
-SELECT t.id, t.tamanho
+SELECT t.id, t.tamanho, te.IdEpi
 FROM tamanho t
 INNER JOIN tamanhos_epis te ON t.id = te.IdTamanho
 WHERE te.IdEpi = $1 
   AND te.tenant_id = $2 -- SEGURANÇA: Garante que a relação é desta empresa
   AND te.ativo = TRUE
+  AND t.tenant_id = $2 -- O sqlc sabe que é o MESMO tenant_id de cima!
+  AND t.ativo = TRUE
+ORDER BY t.tamanho ASC
 `
 
 type BuscarTamanhosPorIdEpiParams struct {
-	Idepi    int32
+	IDEpi    int32
 	TenantID int32
 }
 
 type BuscarTamanhosPorIdEpiRow struct {
 	ID      int32
 	Tamanho string
+	Idepi   int32
 }
 
 func (q *Queries) BuscarTamanhosPorIdEpi(ctx context.Context, arg BuscarTamanhosPorIdEpiParams) ([]BuscarTamanhosPorIdEpiRow, error) {
-	rows, err := q.db.Query(ctx, buscarTamanhosPorIdEpi, arg.Idepi, arg.TenantID)
+	rows, err := q.db.Query(ctx, buscarTamanhosPorIdEpi, arg.IDEpi, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +82,7 @@ func (q *Queries) BuscarTamanhosPorIdEpi(ctx context.Context, arg BuscarTamanhos
 	var items []BuscarTamanhosPorIdEpiRow
 	for rows.Next() {
 		var i BuscarTamanhosPorIdEpiRow
-		if err := rows.Scan(&i.ID, &i.Tamanho); err != nil {
+		if err := rows.Scan(&i.ID, &i.Tamanho, &i.Idepi); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -145,6 +149,7 @@ func (q *Queries) DeletarTamanho(ctx context.Context, arg DeletarTamanhoParams) 
 }
 
 const updateEpiNosTamanhos = `-- name: UpdateEpiNosTamanhos :execrows
+
 UPDATE tamanhos_epis
 SET IdEpi = $2
 WHERE IdEpi = $1 
@@ -158,6 +163,7 @@ type UpdateEpiNosTamanhosParams struct {
 	TenantID int32
 }
 
+// SEGURANÇA: Garante que só pode deletar tamanhos da própria empresa
 // Esta query atualiza a associação na tabela muitos-para-muitos
 func (q *Queries) UpdateEpiNosTamanhos(ctx context.Context, arg UpdateEpiNosTamanhosParams) (int64, error) {
 	result, err := q.db.Exec(ctx, updateEpiNosTamanhos, arg.Idepi, arg.Idepi_2, arg.TenantID)

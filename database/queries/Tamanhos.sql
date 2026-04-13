@@ -11,12 +11,15 @@ WHERE id = $1
 LIMIT 1;
 
 -- name: BuscarTamanhosPorIdEpi :many
-SELECT t.id, t.tamanho
+SELECT t.id, t.tamanho, te.IdEpi
 FROM tamanho t
 INNER JOIN tamanhos_epis te ON t.id = te.IdTamanho
-WHERE te.IdEpi = $1 
-  AND te.tenant_id = $2 -- SEGURANÇA: Garante que a relação é desta empresa
-  AND te.ativo = TRUE;
+WHERE te.IdEpi = @id_epi 
+  AND te.tenant_id = @tenant_id -- SEGURANÇA: Garante que a relação é desta empresa
+  AND te.ativo = TRUE
+  AND t.tenant_id = @tenant_id -- O sqlc sabe que é o MESMO tenant_id de cima!
+  AND t.ativo = TRUE
+ORDER BY t.tamanho ASC;
 
 -- name: BuscarTodosTamanhos :many
 SELECT id, tamanho 
@@ -31,7 +34,7 @@ SET ativo = FALSE,
     deletado_em = current_date
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
-  AND ativo = TRUE;
+  AND ativo = TRUE; -- SEGURANÇA: Garante que só pode deletar tamanhos da própria empresa
 
 -- name: UpdateEpiNosTamanhos :execrows
 -- Esta query atualiza a associação na tabela muitos-para-muitos

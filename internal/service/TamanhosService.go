@@ -17,11 +17,13 @@ type TamanhoRepository interface {
 	ListarTamanho(ctx context.Context, arg repository.BuscarTamanhoParams) (repository.BuscarTamanhoRow, error)
 	ListarTamanhos(ctx context.Context, tenantId int32) ([]repository.BuscarTodosTamanhosRow, error)
 	CancelarTamanho(ctx context.Context, arg repository.DeletarTamanhoParams) (int64, error)
+	BuscarTamanhoPorIdePI(ctx context.Context, arg repository.BuscarTamanhosPorIdEpiParams) ([]repository.BuscarTamanhosPorIdEpiRow, error)
 	
 }
 
 type TamanhoService struct {
 	repo TamanhoRepository
+	
 }
 
 func NewTamanhoService(t TamanhoRepository) *TamanhoService {
@@ -118,4 +120,33 @@ func (t *TamanhoService) CancelarTamanho(ctx context.Context, id int, tenantId i
 	}
 
 	return nil
+}
+
+func (t *TamanhoService) ListarTamanhoPorIdEpi(ctx context.Context, idEpi, tenantId int32) ([]model.TamanhoEntregaDto, error) {
+
+	tamanhos, err:= t.repo.BuscarTamanhoPorIdePI(ctx, repository.BuscarTamanhosPorIdEpiParams{
+		IDEpi: idEpi,
+		TenantID: tenantId,
+	})
+
+	if err != nil {
+
+		return []model.TamanhoEntregaDto{}, err
+	}
+
+	dto:= make([]model.TamanhoEntregaDto, 0, len(tamanhos))
+
+	for _, tamanho:= range tamanhos {
+
+		tt:= model.TamanhoEntregaDto{
+			ID: int(tamanho.ID),
+			Tamanho: tamanho.Tamanho,
+			Id_epi: tamanho.Idepi,
+		}
+
+		dto = append(dto, tt)
+	}
+
+	return dto, nil
+
 }

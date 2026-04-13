@@ -59,3 +59,14 @@ func (t *TamanhosRepository) CancelarTamanho(ctx context.Context, arg DeletarTam
 
 	return linhasAfetadas, nil
 }
+
+func (t *TamanhosRepository) BuscarTamanhoPorIdePI(ctx context.Context, arg BuscarTamanhosPorIdEpiParams) ([]BuscarTamanhosPorIdEpiRow, error){
+
+	Tamanhos, err:= t.q.BuscarTamanhosPorIdEpi(ctx, arg)
+	if err != nil {
+
+		return  []BuscarTamanhosPorIdEpiRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return Tamanhos, nil
+}
