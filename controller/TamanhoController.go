@@ -17,6 +17,7 @@ type TamanhoService interface {
 	ListarTamanho(ctx context.Context, id int, tenantId int32) (model.TamanhoDto, error)
 	ListarTodosTamanhos(ctx context.Context, tenantId int32) ([]model.TamanhoDto, error)
 	CancelarTamanho(ctx context.Context, id int, tenantId int32) error
+	ListarTamanhoPorIdEpi(ctx context.Context, idEpi, tenantId int32) ([]model.TamanhoEntregaDto, error)
 }
 
 type TamanhoController struct {
@@ -113,6 +114,7 @@ func (t *TamanhoController) ListarTamanhoPorId() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": "id deve ser um numero",
 			})
+			return 
 		}
 
 		tenantId, ok := middleware.GetTenantID(ctx)
@@ -155,6 +157,7 @@ func (t *TamanhoController) DeletarTamanho() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": "id deve ser um numero",
 			})
+			return 
 		}
 
 		tenantId, ok := middleware.GetTenantID(ctx)
@@ -186,6 +189,51 @@ func (t *TamanhoController) DeletarTamanho() gin.HandlerFunc {
 
 
 		ctx.Status(http.StatusNoContent)
+	}
+
+}
+
+func (t *TamanhoController) ListarTamanhoPorIdEpi() gin.HandlerFunc{
+
+	return  func(ctx *gin.Context) {
+
+		idString := ctx.Param("id")
+		id, err := strconv.Atoi(idString)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "id deve ser um numero",
+			})
+			return 
+		}
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+		tamanho, err := t.service.ListarTamanhoPorIdEpi(ctx, int32(id), tenantId)
+		if err != nil {
+
+			if errors.Is(err, helper.ErrNaoEncontrado) {
+
+				ctx.JSON(http.StatusNotFound, gin.H{
+
+					"error": "tamanho nao encontrado",
+					"detalhes": err.Error(),
+				})
+
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, tamanho)
 	}
 
 }

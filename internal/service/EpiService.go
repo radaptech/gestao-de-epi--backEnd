@@ -223,7 +223,7 @@ func (e *EpiService) ListarEpi(ctx context.Context, id int, tenantid int32) (mod
 	}
 
 	tamanhoId, err := e.queries.BuscarTamanhosPorIdEpi(ctx, repository.BuscarTamanhosPorIdEpiParams{
-		Idepi:    epi.ID,
+		IDEpi:    epi.ID,
 		TenantID: tenantid,
 	})
 	if err != nil {

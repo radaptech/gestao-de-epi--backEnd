@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -47,40 +48,55 @@ func NewEntregaService(r EntregaRepository, pool *pgxpool.Pool) *EntregaService 
 }
 
 // Salvar: Ponto de entrada para novas entregas com controle de transação
-func (e *EntregaService) Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32) error {
+func (e *EntregaService) Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32, token string) error {
 	tx, err := e.db.Begin(ctx)
 	if err != nil {
+		fmt.Printf("❌ [TX] Falha ao iniciar transação: %v\n", err)
 		return err
 	}
 	defer tx.Rollback(ctx)
 
 	qtx := e.queries.WithTx(tx)
-	if err := e.RegistrarEntrega(ctx, qtx, model, tenantid); err != nil {
+	if err := e.RegistrarEntrega(ctx, qtx, model, tenantid, token); err != nil {
+		fmt.Printf("⚠️ [SALVAR] RegistrarEntrega falhou: %v\n", err)
 		return err
 	}
 
+	fmt.Println("🚀 [SALVAR] Commit realizado com sucesso!")
 	return tx.Commit(ctx)
 }
 
-// RegistrarEntrega: Lógica de negócio principal (Token, Lotes e Abate de Estoque)
-func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Queries, model model.EntregaParaInserir, tenantId int32) error {
-	funcionario, err := qtx.BuscaFuncionarioPorId(ctx, repository.BuscaFuncionarioPorIdParams{
-		ID:       int32(model.ID_funcionario),
+func (e *EntregaService) TokenEntrega(ctx context.Context, tenantId, idFuncionario int32) (string, error) {
+	fmt.Printf("🔍 [TOKEN] Buscando Funcionario %d | Tenant %d\n", idFuncionario, tenantId)
+	funcionario, err := e.queries.BuscaFuncionarioPorId(ctx, repository.BuscaFuncionarioPorIdParams{
+		ID:       int32(idFuncionario),
 		TenantID: tenantId,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows { return helper.ErrNaoEncontrado }
-		return err
+		fmt.Printf("❌ [TOKEN] Erro na query: %v\n", err)
+		if err == pgx.ErrNoRows {
+			return "", helper.ErrNaoEncontrado
+		}
+		return "", err
 	}
 
-	token := helper.GerarTokenAuditoria(funcionario.Nome, funcionario.FuncaoNome, funcionario.DepartamentoNome, model.Data_entrega.Time())
+	token := helper.GerarTokenAuditoria(funcionario.Nome, funcionario.FuncaoNome,
+		funcionario.DepartamentoNome, time.Now())
 
+	return token, nil
+}
+
+// RegistrarEntrega: Lógica de negócio principal (Token, Lotes e Abate de Estoque)
+func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Queries, model model.EntregaParaInserir, tenantId int32, token string) error {
+	fmt.Printf("\n--- 📝 [ENTREGA] Iniciando Processo ---\n")
+	
 	var idTrocaParaBanco pgtype.Int4
 	if model.IdTroca != nil {
 		idTrocaParaBanco = pgtype.Int4{Int32: int32(*model.IdTroca), Valid: true}
+		fmt.Printf("🔄 [TROCA] Vinculando à troca ID: %d\n", *model.IdTroca)
 	}
 
-	// 1. Salva o Cabeçalho da Entrega
+	// 1. Salva Cabeçalho
 	identrega, err := e.repo.AdicionarEntrega(ctx, qtx, repository.AddEntregaEpiParams{
 		Idfuncionario:    int32(model.ID_funcionario),
 		DataEntrega:      pgtype.Date{Time: model.Data_entrega.Time(), Valid: true},
@@ -90,27 +106,41 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 		Idtroca:          idTrocaParaBanco,
 		TenantID:         tenantId,
 	})
-	if err != nil { return err }
+	if err != nil {
+		fmt.Printf("❌ [PG] Erro no Cabeçalho: %v\n", err)
+		return err
+	}
+	fmt.Printf("✅ [PG] Cabeçalho ID %d salvo\n", identrega)
 
-	// 2. Loop de Itens com busca de lotes (FIFO)
-	for _, item := range model.Itens {
+	// 2. Loop de Itens
+	for i, item := range model.Itens {
+		fmt.Printf("📦 [ITEM %d] EPI %d | Tam %d | Qtd %d\n", i, item.ID_epi, item.ID_tamanho, item.Quantidade)
+		
 		quantidadeNecessaria := item.Quantidade
 
-		entradaLotes, err := e.repo.ListarEntregasDisponiveis(ctx, qtx, repository.ListarLotesParaConsumoParams{
+		lotes, err := e.repo.ListarEntregasDisponiveis(ctx, qtx, repository.ListarLotesParaConsumoParams{
 			IDEpi:     int32(item.ID_epi),
 			IDTamanho: int32(item.ID_tamanho),
 			TenantID:  tenantId,
 		})
-		if err != nil || len(entradaLotes) == 0 {
+		if err != nil {
+			fmt.Printf("❌ [ESTOQUE] Erro ao buscar lotes: %v\n", err)
+			return err
+		}
+
+		if len(lotes) == 0 {
+			fmt.Printf("⚠️ [ESTOQUE] Saldo zerado ou inativo para EPI %d\n", item.ID_epi)
 			return fmt.Errorf("estoque insuficiente para o EPI ID %d", item.ID_epi)
 		}
 
-		for _, lote := range entradaLotes {
-			if quantidadeNecessaria <= 0 { break }
+		for _, lote := range lotes {
+			if quantidadeNecessaria <= 0 {
+				break
+			}
 
 			qtdAbater := min(lote.QuantidadeAtual, int32(quantidadeNecessaria))
-
-			// Registra o item vinculado ao lote original de entrada
+			
+			// Inserir Item
 			_, err := e.repo.AdicionarEntregaItem(ctx, qtx, repository.AddItemEntregueParams{
 				IDEntregaCabecalho: identrega,
 				IDEpi:              int32(item.ID_epi),
@@ -119,21 +149,28 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 				IDEntradaItem:      lote.ID,
 				TenantID:           tenantId,
 			})
-			if err != nil { return err }
+			if err != nil {
+				fmt.Printf("❌ [PG] Erro ao inserir item vinculado ao Lote %d: %v\n", lote.ID, err)
+				return err
+			}
 
-			// Abate do saldo do lote
-			_, err = e.repo.AbaterEstoqueEntrada(ctx, qtx, repository.AbaterEstoqueLoteParams{
+			// Abate
+			afetados, err := e.repo.AbaterEstoqueEntrada(ctx, qtx, repository.AbaterEstoqueLoteParams{
 				QuantidadeAtual: qtdAbater,
 				ID:              lote.ID,
 				TenantID:        tenantId,
 			})
-			if err != nil { return err }
+			if err != nil {
+				fmt.Printf("❌ [PG] Erro no abate do lote %d: %v\n", lote.ID, err)
+				return err
+			}
+			fmt.Printf("📉 [ESTOQUE] Abatidas %d un do Lote %d (Linhas afetadas: %d)\n", qtdAbater, lote.ID, afetados)
 
 			quantidadeNecessaria -= qtdAbater
 		}
 
 		if quantidadeNecessaria > 0 {
-			return fmt.Errorf("estoque insuficiente para o EPI ID %d (faltam %d unidades)", item.ID_epi, quantidadeNecessaria)
+			return fmt.Errorf("estoque insuficiente (faltam %d unidades)", quantidadeNecessaria)
 		}
 	}
 	return nil
@@ -155,14 +192,18 @@ type EntregaPaginada struct {
 	Total       int64              `json:"total"`
 	Pagina      int32              `json:"pagina"`
 	PaginaFinal int32              `json:"pagina_final"`
-
 }
+
 // ListaEntregas: Busca paginada para a tela principal
 func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, tenantId int32) (EntregaPaginada, error) {
 	limit := f.Quantidade
-	if limit <= 0 { limit = 10 }
+	if limit <= 0 {
+		limit = 10
+	}
 	paginaAtual := f.Pagina
-	if paginaAtual <= 0 { paginaAtual = 1 }
+	if paginaAtual <= 0 {
+		paginaAtual = 1
+	}
 	offset := (paginaAtual - 1) * limit
 
 	entregas, err := e.repo.ListarEntregas(ctx, repository.ListarEntregasParams{
@@ -173,14 +214,18 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 		Idfuncionario: pgtype.Int4{Int32: f.FuncionarioId, Valid: f.FuncionarioId > 0},
 		TenantID:      tenantId,
 	})
-	if err != nil { return EntregaPaginada{}, err }
+	if err != nil {
+		return EntregaPaginada{}, err
+	}
 
 	// Busca todos os itens para evitar N+1 queries
 	todosItens, err := e.queries.BuscarTodosItensEntrega(ctx, repository.BuscarTodosItensEntregaParams{
 		TenantID:  tenantId,
 		IDEntrega: 0,
 	})
-	if err != nil { return EntregaPaginada{}, err }
+	if err != nil {
+		return EntregaPaginada{}, err
+	}
 
 	itensMap := make(map[int32][]model.ItemEntregueDto)
 	for _, I := range todosItens {
@@ -191,7 +236,7 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 				Descricao: I.EpiDesc, DataValidadeCa: configs.DataBr(I.ValidadeCa.Time),
 				Protecao: model.TipoProtecaoDto{ID: int64(I.TpID), Nome: I.TpNome},
 			},
-			Tamanho: model.TamanhoDto{ID: int(I.TamID), Tamanho: I.TamNome},
+			Tamanho:    model.TamanhoDto{ID: int(I.TamID), Tamanho: I.TamNome},
 			Quantidade: I.Quantidade,
 		})
 	}
@@ -199,7 +244,9 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 	dto := make([]model.EntregaDto, 0, len(entregas))
 	for _, ent := range entregas {
 		itens := itensMap[ent.EntregaID]
-		if itens == nil { itens = []model.ItemEntregueDto{} }
+		if itens == nil {
+			itens = []model.ItemEntregueDto{}
+		}
 
 		dto = append(dto, model.EntregaDto{
 			Id: ent.EntregaID,
@@ -219,7 +266,9 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 	}
 
 	var total int64
-	if len(entregas) > 0 { total = entregas[0].TotalGeral }
+	if len(entregas) > 0 {
+		total = entregas[0].TotalGeral
+	}
 
 	return EntregaPaginada{
 		Entradas: dto, Total: total, Pagina: paginaAtual,
@@ -227,18 +276,21 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 	}, nil
 }
 
-// CancelarEntrega: Gerencia a reversão de uma entrega e reposição de estoque
 func (e *EntregaService) CancelarEntrega(ctx context.Context, tenantId, id, iduser int) error {
-	if id <= 0 { return helper.ErrId }
+	fmt.Printf("⚠️ [CANCELAR] Iniciando cancelamento da Entrega %d\n", id)
 	tx, err := e.db.Begin(ctx)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback(ctx)
 
 	qtx := e.queries.WithTx(tx)
 	if err := e.RegistrarCancelamento(ctx, qtx, tenantId, id, iduser); err != nil {
+		fmt.Printf("❌ [CANCELAR] Falha: %v\n", err)
 		return err
 	}
 
+	fmt.Println("✅ [CANCELAR] Concluído com sucesso")
 	return tx.Commit(ctx)
 }
 
@@ -250,13 +302,19 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 	}
 
 	identrega, err := e.repo.Cancelar(ctx, qtx, arg)
-	if err != nil || identrega == 0 { return helper.ErrNaoEncontrado }
+	if err != nil || identrega == 0 {
+		return helper.ErrNaoEncontrado
+	}
 
-	// Cancela itens e recupera os dados para reposição
-	_, _ = e.repo.CancelarEntregaItem(ctx, qtx, repository.CancelaItemEntregueParams{
+	// Cancela itens
+	_, err = e.repo.CancelarEntregaItem(ctx, qtx, repository.CancelaItemEntregueParams{
 		IDEntregaCabecalho: identrega,
 		TenantID:           arg.TenantID,
 	})
+	if err != nil {
+		fmt.Printf("❌ [PG] Erro ao marcar itens como cancelados: %v\n", err)
+		return err
+	}
 
 	cancelados, err := e.repo.ListarEpisEntreguesCancelados(ctx, qtx, repository.ListarItensEntregueCanceladosParams{
 		IDEntregaCabecalho: identrega,
@@ -264,12 +322,16 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 	})
 
 	for _, c := range cancelados {
-		_, err := e.repo.ReporEstoqueEntrada(ctx, qtx, repository.ReporEstoqueLoteParams{
+		afetados, err := e.repo.ReporEstoqueEntrada(ctx, qtx, repository.ReporEstoqueLoteParams{
 			QuantidadeAtual: c.Quantidade,
 			ID:              c.IDEntradaItem,
 			TenantID:        arg.TenantID,
 		})
-		if err != nil { return err }
+		if err != nil {
+			fmt.Printf("❌ [ESTOQUE] Falha ao repor Lote %d: %v\n", c.IDEntradaItem, err)
+			return err
+		}
+		fmt.Printf("📈 [ESTOQUE] Repostas %d un no Lote %d (Afetados: %d)\n", c.Quantidade, c.IDEntradaItem, afetados)
 	}
 	return nil
 }
@@ -281,7 +343,9 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 		Matricula: int32(matInt),
 		TenantID:  tenantId,
 	})
-	if err != nil || len(entregas) == 0 { return helper.DadosPdf{}, helper.ErrNaoEncontrado }
+	if err != nil || len(entregas) == 0 {
+		return helper.DadosPdf{}, helper.ErrNaoEncontrado
+	}
 
 	epis := make([]helper.DadosEpiPdf, 0)
 	for _, ent := range entregas {
@@ -302,14 +366,16 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 // Funções de Dashboard
 func (e *EntregaService) BuscaEntregaDash(ctx context.Context, tenantId int32) ([]model.EntregaDashbord, error) {
 	entregas, err := e.repo.BuscaEntregaDashbord(ctx, tenantId)
-	if err != nil { return []model.EntregaDashbord{}, err }
+	if err != nil {
+		return []model.EntregaDashbord{}, err
+	}
 
 	dto := make([]model.EntregaDashbord, 0, len(entregas))
 	for _, ee := range entregas {
 		dto = append(dto, model.EntregaDashbord{
-			Id:ee.ID, IdFuncionario: ee.Idfuncionario,
+			Id: ee.ID, IdFuncionario: ee.Idfuncionario,
 			Data_entrega: *configs.NewDataBrPtr(ee.DataEntrega.Time),
-			Assinatura: ee.Assinatura, TokenValidacao: ee.TokenValidacao.String,
+			Assinatura:   ee.Assinatura, TokenValidacao: ee.TokenValidacao.String,
 		})
 	}
 	return dto, nil
@@ -317,12 +383,14 @@ func (e *EntregaService) BuscaEntregaDash(ctx context.Context, tenantId int32) (
 
 func (e *EntregaService) BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error) {
 	itens, err := e.repo.BuscaEntregaItensDashbord(ctx, tenantID)
-	if err != nil { return []model.EntregaItensDashBord{}, err }
+	if err != nil {
+		return []model.EntregaItensDashBord{}, err
+	}
 
 	dto := make([]model.EntregaItensDashBord, 0, len(itens))
 	for _, i := range itens {
 		dto = append(dto, model.EntregaItensDashBord{
-			Id: i.ID, IdEntregaCabecalho:i.IDEntregaCabecalho,
+			Id: i.ID, IdEntregaCabecalho: i.IDEntregaCabecalho,
 			IdEpi: i.IDEpi, IdTamanho: i.IDTamanho, Quantidade: i.Quantidade,
 		})
 	}

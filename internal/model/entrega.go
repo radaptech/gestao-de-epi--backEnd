@@ -8,14 +8,14 @@ import (
 type ItemParaInserir struct {
 	ID_epi        int32 `json:"id_epi" binding:"required"`
 	ID_tamanho    int32 `json:"id_tamanho" binding:"required"`
-	ID_entrada_item int32 `json:"id_entrada_item" binding:"required"` // 🔑 NOVO: Precisamos saber de qual lote saiu!
+	ID_entrada_item int32 `json:"id_entrada_item"` // 🔑 NOVO: Precisamos saber de qual lote saiu!
 	Quantidade    int32 `json:"quantidade" binding:"required,gt=0"`
 }
 
 // EntregaParaInserir é o DTO que a Paloma envia do Frontend
 type EntregaParaInserir struct {
 	ID_funcionario     int32             `json:"id_funcionario" binding:"required"`
-	Id_user            int32             `json:"id_user" binding:"required"`
+	Id_user            int32             `json:"id_user"`
 	Data_entrega       configs.DataBr    `json:"data_entrega" binding:"required"`
 	IdTroca            *int32            `json:"id_troca"` // Usei ponteiro para aceitar nulo
 	Assinatura_Digital string            `json:"assinatura_digital" binding:"required"`

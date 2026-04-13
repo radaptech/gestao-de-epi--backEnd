@@ -126,7 +126,9 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 		//tamanhos disponiveis para vincular a um epi
 		api.GET("/tamanhos", c.Tamanho.ListarTodosTamanhos())
+		api.GET("/tamanhos-id-epi/:id", c.Tamanho.ListarTamanhoPorIdEpi())
 		api.GET("/tamanho/:id", c.Tamanho.ListarTamanhoPorId())
+		
 
 		//proteções dedicada a cada epi
 		api.GET("/protecoes", c.Protecao.ListarProtecoes())
