@@ -45,8 +45,10 @@ func (q *Queries) AddEpi(ctx context.Context, arg AddEpiParams) (int32, error) {
 }
 
 const addEpiTamanho = `-- name: AddEpiTamanho :exec
-INSERT INTO tamanhos_epis (tenant_id, IdEpi, IdTamanho) 
-VALUES ($1, $2, $3)
+INSERT INTO tamanhos_epis (tenant_id, IdEpi, IdTamanho, ativo, deletado_em) 
+VALUES ($1, $2, $3, TRUE, NULL)
+ON CONFLICT (IdEpi, IdTamanho, tenant_id) 
+DO UPDATE SET ativo = TRUE, deletado_em = NULL
 `
 
 type AddEpiTamanhoParams struct {
@@ -396,11 +398,9 @@ func (q *Queries) DeletarEpi(ctx context.Context, arg DeletarEpiParams) (int64, 
 }
 
 const deletarTamanhosPorEpi = `-- name: DeletarTamanhosPorEpi :execrows
-UPDATE tamanhos_epis 
-SET ativo = FALSE, deletado_em = current_date
-WHERE IdEpi = $1 
-  AND tenant_id = $2 -- SEGURANÇA
-  AND ativo = TRUE
+
+DELETE FROM tamanhos_epis 
+WHERE IdEpi = $1 AND tenant_id = $2
 `
 
 type DeletarTamanhosPorEpiParams struct {
