@@ -124,7 +124,7 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 
 	// para o layout não "encolher", você pode adicionar um loop para linhas vazias:
 	linhasRestantes := 6 - len(Dadosfuncionarios.Epi)
-	for i := 0; i < linhasRestantes; i++ {
+	for range linhasRestantes {
 		m.AddRows(
 			row.New(8).Add(
 				col.New(2).WithStyle(estiloBorda),
