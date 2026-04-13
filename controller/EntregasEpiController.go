@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -14,16 +17,18 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
-	// Imports da V2 do Maroto
+
+	storage_go "github.com/supabase-community/storage-go"
 )
 
 type EntregasService interface {
-	Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32) error
+	Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32, token string) error
 	ListaEntregas(ctx context.Context, f service.FiltroEntregas, tenantId int32) (service.EntregaPaginada, error)
 	CancelarEntrega(ctx context.Context, tenantId, id, iduser int) error
 	GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error)
 	BuscaEntregaDash(ctx context.Context, tenantId int32) ([]model.EntregaDashbord, error)
 	BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error)
+	TokenEntrega(ctx context.Context, tenantId, idFuncionario int32) (string, error)
 }
 
 type EntregaController struct {
@@ -37,16 +42,46 @@ func NewEntregaController(service EntregasService) *EntregaController {
 	}
 }
 
+func (e *EntregaController) UploadAssinaturaSupabase(base64str string, token string) (string, error) {
+
+	if strings.Contains(base64str, ",") {
+		base64str = strings.Split(base64str, ",")[1]
+	}
+
+	decodificador, err := base64.StdEncoding.DecodeString(base64str)
+	if err != nil {
+
+		return "", fmt.Errorf("erro ao decodificar string. %w", err)
+	}
+
+	supabaseUrl := os.Getenv("SUPABASE_URL")
+	secretKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
+	bucket := os.Getenv("SUPABASE_BUCKET")
+
+	cliente := storage_go.NewClient(supabaseUrl+"/storage/v1", secretKey, nil)
+
+	contentType := "image/png"
+	arquivo := fmt.Sprintf("%s_%d.png", token, time.Now().Unix())
+	opts := storage_go.FileOptions{
+		ContentType: &contentType, // 🌟 Força o formato PNG
+	}
+	_, errS := cliente.UploadFile(bucket, arquivo, bytes.NewReader(decodificador), opts)
+	if errS != nil {
+
+		return "", fmt.Errorf("erro ao enviar o arquivo para o supabase, %v", errS)
+	}
+
+	urlPublic := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", supabaseUrl, bucket, arquivo)
+
+	return urlPublic, err
+}
+
 func (e *EntregaController) Adicionar() gin.HandlerFunc {
-
 	return func(ctx *gin.Context) {
-
 		var input model.EntregaParaInserir
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
-
 			ctx.JSON(http.StatusBadRequest, gin.H{
-
 				"error":    "dados invalidos",
 				"detalhes": err.Error(),
 			})
@@ -55,41 +90,60 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 
 		tenantId, ok := middleware.GetTenantID(ctx)
 		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno de tenant"})
+			return
+		}
+
+		userId, ok := middleware.GetUserID(ctx)
+		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": "erro interno de tenant",
+				"erro": "erro au setar usuario",
 			})
 			return
 		}
 
-		err := e.Service.Salvar(ctx, input, tenantId)
+		// 1. Gera o Token de Auditoria
+		token, errToken := e.Service.TokenEntrega(ctx, tenantId, input.ID_funcionario)
+		if errToken != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao gerar token de auditoria"})
+			return
+		}
+
+		// 2. Faz o Upload da Assinatura para o Bucket
+		urlAssinatura, errA := e.UploadAssinaturaSupabase(input.Assinatura_Digital, token)
+		if errA != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error":    "falha ao salvar assinatura digital",
+				"detalhes": errA.Error(),
+			})
+			return
+		}
+
+		// 3. Atualiza o input com a URL do bucket antes de mandar para o Service
+		// Assim você economiza memória não criando uma struct nova do zero
+		input.Assinatura_Digital = urlAssinatura
+		input.Id_user = userId
+
+		// 4. Salva no Banco de Dados (Transação)
+		err := e.Service.Salvar(ctx, input, tenantId, token)
 		if err != nil {
-
+			// Tratamento de erros específicos
 			if errors.Is(err, helper.ErrNaoEncontrado) {
-				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-					"error":    "id do funcionario, usuario ou entrega, não encontrado",
-					"detalhes": err.Error(),
-				})
+				ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": "funcionario ou registro não encontrado"})
 				return
 			}
-
 			if strings.Contains(err.Error(), "estoque insuficiente") {
-
-				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-					"error": err.Error(),
-				})
+				ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 				return
-
 			}
-
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-
-				"detalhes": err.Error(),
-			})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao salvar entrega", "detalhes": err.Error()})
 			return
 		}
 
-		ctx.JSON(http.StatusOK, gin.H{"mensagem": "entrega cadastrada com sucesso"})
-
+		ctx.JSON(http.StatusOK, gin.H{
+			"mensagem": "entrega cadastrada com sucesso",
+			 // Opcional: retornar o token para o front
+		})
 	}
 }
 
