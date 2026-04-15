@@ -104,6 +104,7 @@ INNER JOIN epi e ON e.id = i.id_epi
 INNER JOIN tamanho t ON t.id = i.id_tamanho
 WHERE f.matricula = $1
 AND ee.tenant_id = $2
+and ee.id = $3
 AND ee.ativo = TRUE
 ORDER BY ee.data_entrega DESC, ee.id DESC;
 

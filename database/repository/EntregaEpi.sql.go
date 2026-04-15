@@ -474,6 +474,7 @@ INNER JOIN epi e ON e.id = i.id_epi
 INNER JOIN tamanho t ON t.id = i.id_tamanho
 WHERE f.matricula = $1
 AND ee.tenant_id = $2
+and ee.id = $3
 AND ee.ativo = TRUE
 ORDER BY ee.data_entrega DESC, ee.id DESC
 `
@@ -481,6 +482,7 @@ ORDER BY ee.data_entrega DESC, ee.id DESC
 type ListarHistoricoEntregasPorMatriculaParams struct {
 	Matricula int32
 	TenantID  int32
+	ID        int32
 }
 
 type ListarHistoricoEntregasPorMatriculaRow struct {
@@ -503,7 +505,7 @@ type ListarHistoricoEntregasPorMatriculaRow struct {
 }
 
 func (q *Queries) ListarHistoricoEntregasPorMatricula(ctx context.Context, arg ListarHistoricoEntregasPorMatriculaParams) ([]ListarHistoricoEntregasPorMatriculaRow, error) {
-	rows, err := q.db.Query(ctx, listarHistoricoEntregasPorMatricula, arg.Matricula, arg.TenantID)
+	rows, err := q.db.Query(ctx, listarHistoricoEntregasPorMatricula, arg.Matricula, arg.TenantID, arg.ID)
 	if err != nil {
 		return nil, err
 	}

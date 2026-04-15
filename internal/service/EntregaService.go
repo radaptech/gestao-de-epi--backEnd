@@ -337,11 +337,12 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 }
 
 // GerarDadosPdfService: Monta a estrutura para o gerador de PDF
-func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error) {
+func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula string, idEntrega ,tenantId int32) (helper.DadosPdf, error) {
 	matInt, _ := strconv.Atoi(matricula)
 	entregas, err := e.repo.ListasEntregasPorMatricula(ctx, repository.ListarHistoricoEntregasPorMatriculaParams{
 		Matricula: int32(matInt),
 		TenantID:  tenantId,
+		ID: idEntrega,
 	})
 	if err != nil || len(entregas) == 0 {
 		return helper.DadosPdf{}, err
