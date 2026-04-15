@@ -50,6 +50,48 @@ func (q *Queries) BuscarTamanho(ctx context.Context, arg BuscarTamanhoParams) (B
 	return i, err
 }
 
+const buscarTamanhosComEstoquePorEpi = `-- name: BuscarTamanhosComEstoquePorEpi :many
+SELECT DISTINCT t.id, t.tamanho, eei.id_epi
+FROM tamanho t
+INNER JOIN entrada_epi_item eei ON t.id = eei.id_tamanho
+WHERE eei.id_epi = $1 
+  AND eei.tenant_id = $2 
+  AND eei.quantidade_atual > 0
+  AND eei.ativo = TRUE
+ORDER BY t.tamanho ASC
+`
+
+type BuscarTamanhosComEstoquePorEpiParams struct {
+	IDEpi    int32
+	TenantID int32
+}
+
+type BuscarTamanhosComEstoquePorEpiRow struct {
+	ID      int32
+	Tamanho string
+	IDEpi   int32
+}
+
+func (q *Queries) BuscarTamanhosComEstoquePorEpi(ctx context.Context, arg BuscarTamanhosComEstoquePorEpiParams) ([]BuscarTamanhosComEstoquePorEpiRow, error) {
+	rows, err := q.db.Query(ctx, buscarTamanhosComEstoquePorEpi, arg.IDEpi, arg.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscarTamanhosComEstoquePorEpiRow
+	for rows.Next() {
+		var i BuscarTamanhosComEstoquePorEpiRow
+		if err := rows.Scan(&i.ID, &i.Tamanho, &i.IDEpi); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const buscarTamanhosPorIdEpi = `-- name: BuscarTamanhosPorIdEpi :many
 SELECT t.id, t.tamanho, te.IdEpi
 FROM tamanho t

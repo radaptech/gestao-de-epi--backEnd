@@ -70,3 +70,17 @@ func (t *TamanhosRepository) BuscarTamanhoPorIdePI(ctx context.Context, arg Busc
 
 	return Tamanhos, nil
 }
+
+
+func (t *TamanhosRepository) BuscarTamanhoPorEstoque(ctx context.Context, arg BuscarTamanhosComEstoquePorEpiParams) ([]BuscarTamanhosComEstoquePorEpiRow, error){
+
+
+	tamanhos, err:= t.q.BuscarTamanhosComEstoquePorEpi(ctx, arg)
+	if err != nil {
+
+		return []BuscarTamanhosComEstoquePorEpiRow{}, helper.TraduzErroPostgres(err)
+	}
+
+
+	return tamanhos, nil
+}

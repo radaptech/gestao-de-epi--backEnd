@@ -21,6 +21,16 @@ WHERE te.IdEpi = @id_epi
   AND t.ativo = TRUE
 ORDER BY t.tamanho ASC;
 
+
+-- name: BuscarTamanhosComEstoquePorEpi :many
+SELECT DISTINCT t.id, t.tamanho, eei.id_epi
+FROM tamanho t
+INNER JOIN entrada_epi_item eei ON t.id = eei.id_tamanho
+WHERE eei.id_epi = $1 
+  AND eei.tenant_id = $2 
+  AND eei.quantidade_atual > 0
+  AND eei.ativo = TRUE
+ORDER BY t.tamanho ASC;
 -- name: BuscarTodosTamanhos :many
 SELECT id, tamanho 
 FROM tamanho 
