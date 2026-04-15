@@ -79,3 +79,5 @@ WHERE e.tenant_id = sqlc.arg('tenant_id')
   AND (p.fabricante = sqlc.narg('fabricante') OR sqlc.narg('fabricante') IS NULL)
 GROUP BY e.id_epi, p.nome
 LIMIT $1 OFFSET $2;
+
+
