@@ -25,7 +25,7 @@ type EntregasService interface {
 	Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32, token string) error
 	ListaEntregas(ctx context.Context, f service.FiltroEntregas, tenantId int32) (service.EntregaPaginada, error)
 	CancelarEntrega(ctx context.Context, tenantId, id, iduser int) error
-	GerarDadosPdfService(ctx context.Context, matricula string, tenantId int32) (helper.DadosPdf, error)
+	GerarDadosPdfService(ctx context.Context, matricula string, idEntrega, tenantId int32) (helper.DadosPdf, error)
 	BuscaEntregaDash(ctx context.Context, tenantId int32) ([]model.EntregaDashbord, error)
 	BuscaItemDash(ctx context.Context, tenantID int32) ([]model.EntregaItensDashBord, error)
 	TokenEntrega(ctx context.Context, tenantId, idFuncionario int32) (string, error)
@@ -142,7 +142,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"mensagem": "entrega cadastrada com sucesso",
-			 // Opcional: retornar o token para o front
+			// Opcional: retornar o token para o front
 		})
 	}
 }
@@ -249,14 +249,19 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		matriculaBruta := ctx.Param("matricula")
-
 		// Remove todos os zeros à esquerda
-        matricula := strings.TrimLeft(matriculaBruta, "0")
-        
-        // Prevenção de segurança: se a matrícula era literalmente "0" ou "00", ela não ficará vazia
-        if matricula == "" {
-            matricula = "0"
-        }
+		matricula := strings.TrimLeft(matriculaBruta, "0")
+
+		idEntregaStr := ctx.Param("id")
+		idEntrega, err := strconv.Atoi(idEntregaStr)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "id da entrega inválido"})
+			return
+		}
+		// Prevenção de segurança: se a matrícula era literalmente "0" ou "00", ela não ficará vazia
+		if matricula == "" {
+			matricula = "0"
+		}
 		tenantId, ok := middleware.GetTenantID(ctx)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -274,15 +279,15 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 
 		fmt.Printf("DEBUG: Matricula do Param: '%s' | Tenant do Middleware: %d\n", matricula, tenantId)
 		fmt.Printf("🚨 DEBUG PDF -> Matrícula buscada: '%s' | TenantID: %v\n", matricula, tenantId)
-		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula, tenantId)
+		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula,int32(idEntrega) ,tenantId)
 		if err != nil {
 
-				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-					"error":    "dados nao encontrados",
-					"detalhes": err.Error(),
-				})
-				return
-			
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+				"error":    "dados nao encontrados",
+				"detalhes": err.Error(),
+			})
+			return
+
 		}
 
 		documento, err := helper.CreatePdf(entregaDadosPdf, auditoria, responsavel)

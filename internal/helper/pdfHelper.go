@@ -75,14 +75,14 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 		// Dados do Funcionário
 		row.New(6).Add(text.NewCol(12, "Empresa: "+Dadosfuncionarios.NomeEmpresa, props.Text{Size: 10, Style: fontstyle.Bold})),
 		row.New(6).Add(
-			text.NewCol(6, "Funcionário: "+Dadosfuncionarios.NomeFuncionario, props.Text{Size: 10}),
-			text.NewCol(6, "Matrícula: "+Dadosfuncionarios.Matricula, props.Text{Size: 10}),
+			text.NewCol(6, "Funcionario: "+Dadosfuncionarios.NomeFuncionario, props.Text{Size: 10}),
+			text.NewCol(6, "Matricula: "+Dadosfuncionarios.Matricula, props.Text{Size: 10}),
 		),
 		row.New(6).Add(
 			text.NewCol(6, "Setor: "+Dadosfuncionarios.Setor, props.Text{Size: 10}),
 			text.NewCol(6, "Cargo: "+Dadosfuncionarios.Cargo, props.Text{Size: 10}),
 		),
-		row.New(8).Add(text.NewCol(12, "Responsável pela impressão: "+ responsavel, props.Text{Size: 10})),
+		row.New(8).Add(text.NewCol(12, "Responsavel pela impressao: "+ responsavel, props.Text{Size: 10})),
 	)
 	// 1. Criamos a "caneta" que vai desenhar as caixas ao redor das colunas
 	estiloBorda := &props.Cell{
@@ -99,7 +99,7 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 			text.NewCol(2, "Quantidade", props.Text{Top: 2, Size: 9, Style: fontstyle.Bold, Align: align.Center}).WithStyle(estiloBorda),
 			text.NewCol(2, "CA", props.Text{Top: 2, Size: 9, Style: fontstyle.Bold, Align: align.Center}).WithStyle(estiloBorda),
 			text.NewCol(2, "EPI", props.Text{Top: 2, Size: 9, Style: fontstyle.Bold, Align: align.Center}).WithStyle(estiloBorda),
-			text.NewCol(3, "Descrição", props.Text{Top: 2, Size: 9, Style: fontstyle.Bold, Align: align.Center}).WithStyle(estiloBorda),
+			text.NewCol(3, "Descricao", props.Text{Top: 2, Size: 9, Style: fontstyle.Bold, Align: align.Center}).WithStyle(estiloBorda),
 			text.NewCol(1, "Tamanho", props.Text{Top: 2, Size: 9, Style: fontstyle.Bold, Align: align.Center}).WithStyle(estiloBorda),
 		),
 	)
@@ -147,8 +147,8 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 	m.AddRow(6, text.NewCol(12, "DECLARO QUE:", props.Text{Size: 9, Style: fontstyle.Bold}))
 
 	// Dividimos o texto gigante em 3 variáveis limpas (sem "Enters" no meio do código)
-	textoA := "a) Recebi nesta data, da EMPRESA acima identificada, minha empregadora, os equipamentos e materiais supra discriminados, os quais desde já comprometo-me sempre a usar na execução das minhas tarefas, zelando pela sua perfeita guarda, conservação, uso e funcionamento como ora os estou recebendo."
-	textoB := "b) Estou ciente e de pleno acordo que o descumprimento das condições estabelecidas na letra A supra, acarretará, além da aplicação de penas disciplinares, inclusive do meu contrato laboral, outras sanções previstas em lei."
+	textoA := "a) Recebi nesta data, da EMPRESA acima identificada, minha empregadora, os equipamentos e materiais supra discriminados, os quais desde ja comprometo-me sempre a usar na execucao das minhas tarefas, zelando pela sua perfeita guarda, conservacao, uso e funcionamento como ora os estou recebendo."
+	textoB := "b) Estou ciente e de pleno acordo que o descumprimento das condicoes estabelecidas na letra A supra, acarretara, alem da aplicacao de penas disciplinares, inclusive do meu contrato laboral, outras sancoes previstas em lei."
 	textoC := "c) No caso da perda, dano, extravio ou avaria dos equipamentos e/ou materiais referidos na letra \"A\" favor comunicar imediatamente o departamento de Recursos Humanos."
 
 	// Agora adicionamos uma Linha (Row) para CADA parágrafo.
@@ -205,10 +205,10 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 	// 3. Textos da Assinatura (Sempre aparecem, independente de ter imagem ou não)
 	m.AddRows(
 		row.New(6).Add(
-			text.NewCol(12, "Assinatura do Funcionário", props.Text{Size: 9, Align: align.Center, Style: fontstyle.Bold}),
+			text.NewCol(12, "Assinatura do Funcionario", props.Text{Size: 9, Align: align.Center, Style: fontstyle.Bold}),
 		),
 		row.New(5).Add(
-			text.NewCol(12, Dadosfuncionarios.NomeFuncionario+" - Matrícula: "+Dadosfuncionarios.Matricula, props.Text{Size: 9, Align: align.Center}),
+			text.NewCol(12, Dadosfuncionarios.NomeFuncionario+" - Matricula: "+Dadosfuncionarios.Matricula, props.Text{Size: 9, Align: align.Center}),
 		),
 	)
 
@@ -231,11 +231,11 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 	m.AddRows(
 		// Título da Legenda (em negrito)
 		row.New(5).Add(
-			text.NewCol(12, "Autenticação Digital", props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center}),
+			text.NewCol(12, "Autenticao Digital", props.Text{Size: 9, Style: fontstyle.Bold, Align: align.Center}),
 		),
 		// Subtítulo explicativo
 		row.New(5).Add(
-			text.NewCol(12, "Aponte a câmera do celular para validar a assinatura e a integridade deste documento.", props.Text{Size: 8, Align: align.Center}),
+			text.NewCol(12, "Aponte a camera do celular para validar a assinatura e a integridade deste documento.", props.Text{Size: 8, Align: align.Center}),
 		),
 	)
 

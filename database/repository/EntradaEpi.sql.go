@@ -204,7 +204,6 @@ INNER JOIN epi e ON ei.id_epi = e.id
 INNER JOIN tipo_protecao tp ON e.idtipoprotecao = tp.id
 WHERE ei.tenant_id = $1
   AND ei.ativo = TRUE
-  AND ei.quantidade_atual > 0
 ORDER BY nf.data_emissao ASC
 `
 
