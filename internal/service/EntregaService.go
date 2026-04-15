@@ -344,7 +344,7 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 		TenantID:  tenantId,
 	})
 	if err != nil || len(entregas) == 0 {
-		return helper.DadosPdf{}, helper.ErrNaoEncontrado
+		return helper.DadosPdf{}, err
 	}
 
 	epis := make([]helper.DadosEpiPdf, 0)

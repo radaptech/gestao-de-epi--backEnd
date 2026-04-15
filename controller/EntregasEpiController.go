@@ -248,7 +248,15 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		matricula := ctx.Param("matricula")
+		matriculaBruta := ctx.Param("matricula")
+
+		// Remove todos os zeros à esquerda
+        matricula := strings.TrimLeft(matriculaBruta, "0")
+        
+        // Prevenção de segurança: se a matrícula era literalmente "0" ou "00", ela não ficará vazia
+        if matricula == "" {
+            matricula = "0"
+        }
 		tenantId, ok := middleware.GetTenantID(ctx)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -265,23 +273,16 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 		}
 
 		fmt.Printf("DEBUG: Matricula do Param: '%s' | Tenant do Middleware: %d\n", matricula, tenantId)
+		fmt.Printf("🚨 DEBUG PDF -> Matrícula buscada: '%s' | TenantID: %v\n", matricula, tenantId)
 		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula, tenantId)
 		if err != nil {
 
-			if errors.Is(err, helper.ErrNaoEncontrado) {
 				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 					"error":    "dados nao encontrados",
 					"detalhes": err.Error(),
 				})
 				return
-			}
-
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-
-				"error":    err.Error(),
-				"detalhes": "dados não obtidos para gerar o pdf",
-			})
-			return
+			
 		}
 
 		documento, err := helper.CreatePdf(entregaDadosPdf, auditoria, responsavel)

@@ -466,9 +466,9 @@ SELECT
     i.id_tamanho, t.tamanho, ee.assinatura
 FROM entrega_epi ee
 INNER JOIN empresas emp ON ee.tenant_id = emp.id
-INNER JOIN funcionario f ON ee.id_funcionario = f.id
-INNER JOIN departamento d ON f.id_departamento = d.id
-INNER JOIN funcao ff ON f.id_funcao = ff.id
+INNER JOIN funcionario f ON ee.IdFuncionario = f.id
+INNER JOIN departamento d ON f.IdDepartamento = d.id
+INNER JOIN funcao ff ON f.IdFuncao = ff.id
 INNER JOIN epis_entregues i ON i.id_entrega_cabecalho = ee.id
 INNER JOIN epi e ON e.id = i.id_epi
 INNER JOIN tamanho t ON t.id = i.id_tamanho
