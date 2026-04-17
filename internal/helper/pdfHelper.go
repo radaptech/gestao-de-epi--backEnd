@@ -2,10 +2,14 @@ package helper
 
 import (
 	"fmt"
+	"image/png"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"bytes"
+	i90 "image"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/johnfercher/maroto/v2"
@@ -48,6 +52,34 @@ type Auditoria struct {
 	Ip            string
 }
 
+func rotacionar90Graus(imgBytes []byte) ([]byte, error) {
+	// Decodifica os bytes para uma imagem
+	img, _, err := i90.Decode(bytes.NewReader(imgBytes))
+	if err != nil {
+		return nil, err
+	}
+
+	// Cria uma nova imagem com dimensões invertidas (Largura vira Altura)
+	b := img.Bounds()
+	newImg := i90.NewRGBA(i90.Rect(0, 0, b.Dy(), b.Dx()))
+
+	// Rotaciona pixel a pixel (90 graus sentido horário)
+	for x := b.Min.X; x < b.Max.X; x++ {
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			newImg.Set(b.Max.Y-y-1, x, img.At(x, y))
+		}
+	}
+
+	// Codifica de volta para PNG
+	var buf bytes.Buffer
+	err = png.Encode(&buf, newImg)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel string) (core.Document, error) {
 
 	// ==========================================
@@ -82,7 +114,7 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 			text.NewCol(6, "Setor: "+Dadosfuncionarios.Setor, props.Text{Size: 10}),
 			text.NewCol(6, "Cargo: "+Dadosfuncionarios.Cargo, props.Text{Size: 10}),
 		),
-		row.New(8).Add(text.NewCol(12, "Responsavel pela impressao: "+ responsavel, props.Text{Size: 10})),
+		row.New(8).Add(text.NewCol(12, "Responsavel pela impressao: "+responsavel, props.Text{Size: 10})),
 	)
 	// 1. Criamos a "caneta" que vai desenhar as caixas ao redor das colunas
 	estiloBorda := &props.Cell{
@@ -168,10 +200,10 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 	var assinaturaBytes []byte
 	assinaturaValida := false
 	//caso estiver uma urt com o prefixo "http"
-	if Dadosfuncionarios.Assinatura != "" && strings.HasPrefix(Dadosfuncionarios.Assinatura, "https"){
+	if Dadosfuncionarios.Assinatura != "" && strings.HasPrefix(Dadosfuncionarios.Assinatura, "https") {
 
-		res, err:= http.Get(Dadosfuncionarios.Assinatura) //baixa a imagem no supabase
-		if err == nil  && res.StatusCode == http.StatusOK {
+		res, err := http.Get(Dadosfuncionarios.Assinatura) //baixa a imagem no supabase
+		if err == nil && res.StatusCode == http.StatusOK {
 
 			defer res.Body.Close()
 
@@ -179,14 +211,20 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 			donwload, errResp := io.ReadAll(res.Body)
 			if errResp == nil && len(donwload) > 0 {
 
-				assinaturaBytes = donwload
+				bytesRotacionados, errRot := rotacionar90Graus(donwload)
+				if errRot == nil {
+					assinaturaBytes = bytesRotacionados
+				} else {
+					// Se der erro na rotação, usa a original como fallback
+					assinaturaBytes = donwload
+				}
 				assinaturaValida = true
 			}
 		}
 	}
 
 	// 2. Linha da Assinatura (Dinâmica)
-	if !assinaturaValida{
+	if !assinaturaValida {
 		// Caso não tenha assinatura: Desenha apenas a linha sólida para assinar à mão
 		m.AddRow(20,
 			col.New(4),
