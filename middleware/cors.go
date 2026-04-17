@@ -39,7 +39,7 @@ func CorsConfig() gin.HandlerFunc {
             "X-Tenant-ID", 
             "X-tenant-id", 
             "X-tenant-ID",
-			"responsetype",
+            
         },
 
         // 👇 ADICIONE Content-Disposition PARA DOWNLOADS DE ARQUIVO
