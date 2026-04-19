@@ -11,7 +11,7 @@ WHERE id = $1
 LIMIT 1;
 
 -- name: BuscarTodosUsuarios :many
-SELECT id, nome, email, ativo, role
+SELECT id, nome, email, role as cargo
 FROM usuarios
 WHERE tenant_id = $1 -- SEGURANÇA: Lista apenas usuários desta empresa
   AND ativo = TRUE;

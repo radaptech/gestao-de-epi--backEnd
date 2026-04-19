@@ -120,3 +120,28 @@ func (u *UsuarioService) BuscarPorId(ctx context.Context, id uint, tenantId int3
 
 	}, nil
 }
+
+func (u *UsuarioService) ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error) {
+
+	usuarios, err:= u.repo.Listar(ctx, tenantId)
+	if err != nil {
+		return  []model.UsuarioResponse{}, err
+	}
+
+	dto := make([]model.UsuarioResponse, 0, len(usuarios))
+
+	for _, usuario := range usuarios {
+
+		uu:= model.UsuarioResponse{
+			ID: int(usuario.ID),
+			Nome: usuario.Nome,
+			Email: usuario.Email,
+			Cargo: usuario.Cargo.String,
+		}
+
+		dto = append(dto, uu)
+	}
+
+
+	return dto, nil
+}

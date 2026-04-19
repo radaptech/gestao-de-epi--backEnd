@@ -17,6 +17,7 @@ type LoginService interface {
 	Registrar(ctx context.Context, model model.Usuario, tenantId int32) error
 	FazerLogin(ctx context.Context, email, senha string, tenantId int32) (string, repository.BuscarUsuarioPorEmailRow, error)
 	BuscarPorId(ctx context.Context, id uint, tenantId int32) (model.RecuperaUser, error)
+	ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error)
 }
 
 type LoginController struct {
@@ -167,5 +168,33 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 			"email": usuario.Email,
 			"role":  usuario.Role,
 		})
+	}
+}
+
+func (l *LoginController) ListarUsuario() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantID, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+
+		users, err:= l.service.ListarUsuario(ctx,tenantID )
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error": "erro interno do servidor",
+				"detalhes": err.Error(),
+			})
+			return 
+		}
+
+
+		ctx.JSON(http.StatusOK, users)
+
 	}
 }

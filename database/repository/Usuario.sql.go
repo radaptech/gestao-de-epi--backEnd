@@ -47,7 +47,7 @@ func (q *Queries) BuscarPorIdUsuario(ctx context.Context, arg BuscarPorIdUsuario
 }
 
 const buscarTodosUsuarios = `-- name: BuscarTodosUsuarios :many
-SELECT id, nome, email, ativo, role
+SELECT id, nome, email, role as cargo
 FROM usuarios
 WHERE tenant_id = $1 -- SEGURANÇA: Lista apenas usuários desta empresa
   AND ativo = TRUE
@@ -57,8 +57,7 @@ type BuscarTodosUsuariosRow struct {
 	ID    int32
 	Nome  string
 	Email string
-	Ativo pgtype.Bool
-	Role  pgtype.Text
+	Cargo pgtype.Text
 }
 
 func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]BuscarTodosUsuariosRow, error) {
@@ -74,8 +73,7 @@ func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]Bu
 			&i.ID,
 			&i.Nome,
 			&i.Email,
-			&i.Ativo,
-			&i.Role,
+			&i.Cargo,
 		); err != nil {
 			return nil, err
 		}

@@ -31,3 +31,10 @@ type RecuperaUserEntrada struct {
 	Id   int    `json:"id"`
 	Nome string `json:"nome"`
 }
+
+type UsuarioResponse struct {
+    ID    int    `json:"id"`
+    Nome  string `json:"nome"`
+    Email string `json:"email"`
+    Cargo string `json:"cargo"`
+}
