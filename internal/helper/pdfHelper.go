@@ -26,6 +26,7 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/core"
 	"github.com/johnfercher/maroto/v2/pkg/props"
+	"github.com/disintegration/imaging"
 )
 
 type DadosPdf struct {
@@ -59,25 +60,13 @@ func rotacionar90Graus(imgBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Cria uma nova imagem com dimensões invertidas (Largura vira Altura)
-	b := img.Bounds()
-	newImg := i90.NewRGBA(i90.Rect(0, 0, b.Dy(), b.Dx()))
+	// Rotaciona 90 graus no sentido horário
+	// Se continuar "errado", você pode tentar imaging.Rotate270 ou imaging.Rotate180
+	dstImage := imaging.Rotate90(img)
 
-	// Rotaciona pixel a pixel (90 graus sentido horário)
-	for x := b.Min.X; x < b.Max.X; x++ {
-		for y := b.Min.Y; y < b.Max.Y; y++ {
-			newImg.Set(b.Max.Y-y-1, x, img.At(x, y))
-		}
-	}
-
-	// Codifica de volta para PNG
 	var buf bytes.Buffer
-	err = png.Encode(&buf, newImg)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	err = png.Encode(&buf, dstImage)
+	return buf.Bytes(), err
 }
 
 func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel string) (core.Document, error) {
