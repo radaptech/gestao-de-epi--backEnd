@@ -69,6 +69,14 @@ func rotacionar90Graus(imgBytes []byte) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+func truncarTexto(s string, maxLen int) string {
+    if len(s) <= maxLen {
+        return s
+    }
+    // Retorna o pedaço da string + reticências
+    return s[:maxLen] + "..."
+}
+
 func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel string) (core.Document, error) {
 
 	// ==========================================
@@ -128,6 +136,7 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 	// 3. Os 15 espaços em branco (Agora são caixas reais do grid!)
 	for _, epi := range Dadosfuncionarios.Epi {
 
+		descricaoCurta := truncarTexto(epi.Descricao, 25)
 		dataFormatada := epi.Data.Time().Format("02/01/2006")
 		quantidadaFormatada := strconv.Itoa(int(epi.Quantidade))
 		m.AddRows(
@@ -137,7 +146,7 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 				text.NewCol(2, quantidadaFormatada, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 				text.NewCol(2, epi.Ca, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 				text.NewCol(2, epi.NomeEpi, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
-				text.NewCol(3, epi.Descricao, props.Text{Size: 8, Align: align.Left, Top: 2}).WithStyle(estiloBorda),
+				text.NewCol(3, descricaoCurta, props.Text{Size: 8, Align: align.Left, Top: 2}).WithStyle(estiloBorda),
 				text.NewCol(1, epi.Tamanho, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 			),
 		)
