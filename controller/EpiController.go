@@ -100,6 +100,7 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
+				
 			})
 			return
 		}
