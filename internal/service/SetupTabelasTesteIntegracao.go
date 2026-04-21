@@ -327,6 +327,123 @@ func criarTabelasPostgres(t *testing.T, pool *pgxpool.Pool) {
 	-- Só executa se o Go não enviar uma matrícula manualmente
 	WHEN (NEW.matricula IS NULL) 
 	EXECUTE FUNCTION gerar_matricula_por_tenant();
+
+
+	DROP table IF EXISTS epis_entregues CASCADE;
+	DROP TABLE entrada_epi CASCADE;
+
+
+CREATE TABLE entrada_nf (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    fornecedor VARCHAR(100) NOT NULL,
+    nota_fiscal_numero VARCHAR(50) NOT NULL,
+    nota_fiscal_serie VARCHAR(10) DEFAULT '1',
+    data_emissao DATE NOT NULL,
+    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    FOREIGN KEY (tenant_id) REFERENCES empresas(id),
+    
+    -- A regra de ouro: Mesma NF + Série + Fornecedor não entra duas vezes para o mesmo cliente
+    CONSTRAINT uk_entrada_nf_fornecedor_tenant 
+    UNIQUE (tenant_id, nota_fiscal_numero, nota_fiscal_serie, fornecedor)
+);
+
+CREATE TABLE entrada_epi_item (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    entrada_nf_id INT NOT NULL, -- Link com o cabeçalho acima
+    id_epi INT NOT NULL,
+    id_tamanho INT NOT NULL,
+    quantidade INT NOT NULL,
+    quantidade_atual INT NOT NULL, -- Importante para o controle de saldo do lote
+    data_fabricacao DATE NOT NULL,
+    data_validade DATE NOT NULL,
+    lote VARCHAR(50) NOT NULL,
+    valor_unitario DECIMAL(10,2) NOT NULL,
+    cancelada_em TIMESTAMP NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    FOREIGN KEY (tenant_id) REFERENCES empresas(id),
+    FOREIGN KEY (entrada_nf_id) REFERENCES entrada_nf(id) ON DELETE CASCADE,
+    FOREIGN KEY (id_epi) REFERENCES epi(id),
+    FOREIGN KEY (id_tamanho) REFERENCES tamanho(id)
+);
+
+
+
+CREATE TABLE epis_entregues (
+    id SERIAL PRIMARY KEY,
+    tenant_id INT NOT NULL,
+    id_entrega_cabecalho INT NOT NULL, -- FK para a tabela que diz QUEM recebeu e QUANDO
+    id_entrada_item INT NOT NULL,      -- FK para entrada_epi_item (O lote de onde saiu)
+    id_epi INT NOT NULL,
+    id_tamanho INT NOT NULL,
+    quantidade INT NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    deletado_em TIMESTAMP NULL,
+
+    FOREIGN KEY (tenant_id) REFERENCES empresas(id),
+    FOREIGN KEY (id_entrega_cabecalho) REFERENCES entrada_nf(id),
+    FOREIGN KEY (id_epi) REFERENCES epi(id),
+    FOREIGN KEY (id_entrada_item) REFERENCES entrada_epi_item(id) -- AQUI A MUDANÇA
+);
+
+-- 1. Adicionando campos de auditoria na tabela de ITENS
+ALTER TABLE entrada_epi_item 
+ADD COLUMN id_usuario_criacao INT NOT NULL,
+ADD COLUMN id_usuario_cancelamento INT NULL;
+
+-- 2. Adicionando as Foreign Keys para garantir a integridade (opcional, mas recomendado)
+ALTER TABLE entrada_epi_item 
+ADD CONSTRAINT fk_usuario_criacao_item FOREIGN KEY (id_usuario_criacao) REFERENCES usuarios(id),
+ADD CONSTRAINT fk_usuario_cancelamento_item FOREIGN KEY (id_usuario_cancelamento) REFERENCES usuarios(id);
+
+-- 3. Adicionando campos de auditoria na tabela de NF (Cabeçalho)
+-- É bom saber quem registrou a nota como um todo
+ALTER TABLE entrada_nf 
+ADD COLUMN id_usuario_criacao INT NOT NULL,
+ADD COLUMN id_usuario_cancelamento INT NULL,
+ADD COLUMN cancelada_em TIMESTAMP NULL;
+
+ALTER TABLE entrada_nf 
+ADD CONSTRAINT fk_usuario_criacao_nf FOREIGN KEY (id_usuario_criacao) REFERENCES usuarios(id),
+ADD CONSTRAINT fk_usuario_cancelamento_nf FOREIGN KEY (id_usuario_cancelamento) REFERENCES usuarios(id);
+
+-- 1. Adiciona a nova coluna de ID (permitindo nulo temporariamente para não travar se houver dados)
+ALTER TABLE entrada_nf ADD COLUMN Idfornecedor INT;
+
+-- 2. Adiciona a Constraint de Chave Estrangeira
+ALTER TABLE entrada_nf 
+ADD CONSTRAINT fk_entrada_nf_fornecedor 
+FOREIGN KEY (Idfornecedor) REFERENCES fornecedores(id);
+
+-- 3. (OPCIONAL) Se você já tem nomes de fornecedores na coluna antiga, 
+-- você precisaria fazer um UPDATE relacionando os nomes aos IDs da tabela de fornecedores aqui.
+
+-- 4. Remove a "Regra de Ouro" antiga (Unique Constraint) que usava o nome em texto
+ALTER TABLE entrada_nf DROP CONSTRAINT uk_entrada_nf_fornecedor_tenant;
+
+-- 5. Remove a coluna de texto antiga
+ALTER TABLE entrada_nf DROP COLUMN fornecedor;
+
+-- 6. Torna a nova coluna obrigatória (NOT NULL) após a limpeza
+ALTER TABLE entrada_nf ALTER COLUMN Idfornecedor SET NOT NULL;
+
+-- 7. Cria a nova "Regra de Ouro" usando o ID do fornecedor
+ALTER TABLE entrada_nf 
+ADD CONSTRAINT uk_entrada_nf_fornecedor_tenant 
+UNIQUE (tenant_id, Idfornecedor, nota_fiscal_numero, nota_fiscal_serie);
+
+
+    -- 1. Remove a constraint que aponta para a tabela errada (entrada_nf)
+ALTER TABLE epis_entregues DROP CONSTRAINT IF EXISTS epis_entregues_id_entrega_cabecalho_fkey;
+
+-- 2. Cria a constraint apontando para a tabela correta (entrega_epi)
+	ALTER TABLE epis_entregues 
+	ADD CONSTRAINT fk_epis_entregues_cabecalho 
+	FOREIGN KEY (id_entrega_cabecalho) REFERENCES entrega_epi(id);
 	`
 
 	_, err := pool.Exec(context.Background(), schema)

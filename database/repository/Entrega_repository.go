@@ -154,7 +154,7 @@ func (e *EntregaRepository) BuscaTodasEntregasDoTenant(ctx context.Context, tena
 // ListarEntregasDisponiveis implements [service.EntregaRepository].
 func (e *EntregaRepository) ListarEntregasDisponiveis(ctx context.Context, qtx *Queries, args ListarLotesParaConsumoParams) ([]ListarLotesParaConsumoRow, error) {
 	
-	listaLotes, err:= e.q.ListarLotesParaConsumo(ctx, args)
+	listaLotes, err:= qtx.ListarLotesParaConsumo(ctx, args)
 	if err != nil {
 
 		return  []ListarLotesParaConsumoRow{}, helper.TraduzErroPostgres(err)
@@ -166,7 +166,7 @@ func (e *EntregaRepository) ListarEntregasDisponiveis(ctx context.Context, qtx *
 // ListarEpisEntreguesCancelados implements [service.EntregaRepository].
 func (e *EntregaRepository) ListarEpisEntreguesCancelados(ctx context.Context, qtx *Queries, arg ListarItensEntregueCanceladosParams) ([]ListarItensEntregueCanceladosRow, error) {
 	
-	episEntreguesCanc, err:= e.q.ListarItensEntregueCancelados(ctx, arg)
+	episEntreguesCanc, err:= qtx.ListarItensEntregueCancelados(ctx, arg)
 	if err != nil {
 		return []ListarItensEntregueCanceladosRow{}, helper.TraduzErroPostgres(err)
 	}
