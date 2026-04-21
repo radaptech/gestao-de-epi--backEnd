@@ -146,7 +146,7 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
 				text.NewCol(2, quantidadaFormatada, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 				text.NewCol(2, epi.Ca, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 				text.NewCol(2, epi.NomeEpi, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
-				text.NewCol(3, descricaoCurta, props.Text{Size: 8, Align: align.Left, Top: 2}).WithStyle(estiloBorda),
+				text.NewCol(3, descricaoCurta, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 				text.NewCol(1, epi.Tamanho, props.Text{Size: 8, Align: align.Center, Top: 2}).WithStyle(estiloBorda),
 			),
 		)
