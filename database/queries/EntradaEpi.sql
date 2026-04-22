@@ -54,18 +54,37 @@ WHERE
     AND (sqlc.narg('data_inicio')::date IS NULL OR nf.data_emissao >= sqlc.narg('data_inicio'))
     AND (sqlc.narg('data_fim')::date IS NULL OR nf.data_emissao <= sqlc.narg('data_fim'))
     AND (sqlc.narg('nota_fiscal')::text IS NULL OR nf.nota_fiscal_numero ILIKE '%' || sqlc.narg('nota_fiscal') || '%')
-ORDER BY nf.data_emissao DESC
+ORDER BY nf.data_emissao ASC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
--- name: CancelarEntrada :execrows
+-- name: CancelarEntrada :one
 UPDATE entrada_epi_item 
 SET 
     cancelada_em = CURRENT_TIMESTAMP, 
     ativo = FALSE,
-    id_usuario_cancelamento = $2 -- <-- O sqlc vai gerar IDUsuarioCancelamento
+    id_usuario_cancelamento = $2 
+WHERE id = $1 
+  AND tenant_id = $3
+  AND cancelada_em IS NULL
+ReTURNING entrada_nf_id;
+
+-- name: CancelarEntradaNF :execrows
+UPDATE entrada_nf 
+SET 
+    cancelada_em = CURRENT_TIMESTAMP, 
+    ativo = FALSE,
+    id_usuario_cancelamento = $2 
 WHERE id = $1 
   AND tenant_id = $3
   AND cancelada_em IS NULL;
+
+
+-- name: ContarItensAtivosNF :one
+SELECT COUNT(*) 
+FROM entrada_epi_item 
+WHERE entrada_nf_id = $1 
+  AND ativo = TRUE
+  AND tenant_id = $2;
 
 -- name: ContarEntradasFiltradas :one
 SELECT COUNT(*) 

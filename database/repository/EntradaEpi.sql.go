@@ -11,15 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const cancelarEntrada = `-- name: CancelarEntrada :execrows
+const cancelarEntrada = `-- name: CancelarEntrada :one
 UPDATE entrada_epi_item 
 SET 
     cancelada_em = CURRENT_TIMESTAMP, 
     ativo = FALSE,
-    id_usuario_cancelamento = $2 -- <-- O sqlc vai gerar IDUsuarioCancelamento
+    id_usuario_cancelamento = $2 
 WHERE id = $1 
   AND tenant_id = $3
   AND cancelada_em IS NULL
+ReTURNING entrada_nf_id
 `
 
 type CancelarEntradaParams struct {
@@ -28,8 +29,32 @@ type CancelarEntradaParams struct {
 	TenantID              int32
 }
 
-func (q *Queries) CancelarEntrada(ctx context.Context, arg CancelarEntradaParams) (int64, error) {
-	result, err := q.db.Exec(ctx, cancelarEntrada, arg.ID, arg.IDUsuarioCancelamento, arg.TenantID)
+func (q *Queries) CancelarEntrada(ctx context.Context, arg CancelarEntradaParams) (int32, error) {
+	row := q.db.QueryRow(ctx, cancelarEntrada, arg.ID, arg.IDUsuarioCancelamento, arg.TenantID)
+	var entrada_nf_id int32
+	err := row.Scan(&entrada_nf_id)
+	return entrada_nf_id, err
+}
+
+const cancelarEntradaNF = `-- name: CancelarEntradaNF :execrows
+UPDATE entrada_nf 
+SET 
+    cancelada_em = CURRENT_TIMESTAMP, 
+    ativo = FALSE,
+    id_usuario_cancelamento = $2 
+WHERE id = $1 
+  AND tenant_id = $3
+  AND cancelada_em IS NULL
+`
+
+type CancelarEntradaNFParams struct {
+	ID                    int32
+	IDUsuarioCancelamento pgtype.Int4
+	TenantID              int32
+}
+
+func (q *Queries) CancelarEntradaNF(ctx context.Context, arg CancelarEntradaNFParams) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelarEntradaNF, arg.ID, arg.IDUsuarioCancelamento, arg.TenantID)
 	if err != nil {
 		return 0, err
 	}
@@ -67,6 +92,26 @@ func (q *Queries) ContarEntradasFiltradas(ctx context.Context, arg ContarEntrada
 		arg.DataInicio,
 		arg.NotaFiscal,
 	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const contarItensAtivosNF = `-- name: ContarItensAtivosNF :one
+SELECT COUNT(*) 
+FROM entrada_epi_item 
+WHERE entrada_nf_id = $1 
+  AND ativo = TRUE
+  AND tenant_id = $2
+`
+
+type ContarItensAtivosNFParams struct {
+	EntradaNfID int32
+	TenantID    int32
+}
+
+func (q *Queries) ContarItensAtivosNF(ctx context.Context, arg ContarItensAtivosNFParams) (int64, error) {
+	row := q.db.QueryRow(ctx, contarItensAtivosNF, arg.EntradaNfID, arg.TenantID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -312,7 +357,7 @@ WHERE
     AND ($5::date IS NULL OR nf.data_emissao >= $5)
     AND ($6::date IS NULL OR nf.data_emissao <= $6)
     AND ($7::text IS NULL OR nf.nota_fiscal_numero ILIKE '%' || $7 || '%')
-ORDER BY nf.data_emissao DESC
+ORDER BY nf.data_emissao ASC
 LIMIT $9 OFFSET $8
 `
 

@@ -17,7 +17,7 @@ import (
 type EntradaService interface {
 	Adicionar(ctx context.Context, model model.EntradaEpiInserir, tenantID int32) error
 	ListarEntradas(ctx context.Context, f service.FiltroEntradas, tenatId int32) (service.EntradaPaginada, error)
-	CancelarEntrada(ctx context.Context, id, idUser, tenantid int) (int64, error)
+	CancelarEntrada(ctx context.Context, id, idUser, tenantid int) error
 	EntradaDashbordBusca(ctx context.Context, tenantId int32) ([]model.EntradaDashbord, error)
 	BuscaEntradaEstoque(ctx context.Context, tenantId int32) ([]model.EntradaEstoqueDto, error)
 }
@@ -200,7 +200,16 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 			return
 		}
 
-		_, err = e.service.CancelarEntrada(ctx, id, int(idUser.(uint)), int(tenantId))
+		idUserInt32, ok := idUser.(int32)
+		if !ok {
+			// Se por acaso um dia o token vier diferente, o servidor não cai, apenas retorna erro 500 limpo
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "Erro interno: formato do ID do usuário inválido no token",
+			})
+			return
+		}
+
+		err = e.service.CancelarEntrada(ctx, id, int(idUserInt32), int(tenantId))
 		if err != nil {
 
 			if errors.Is(err, helper.ErrNaoEncontrado) {
@@ -215,7 +224,8 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-				"error": err.Error(),
+				"error":    err.Error(),
+				"detalhes": "erro ao tentar cancelar uma entrada",
 			})
 			return
 		}

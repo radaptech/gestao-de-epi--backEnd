@@ -64,15 +64,34 @@ func (e *EntradaRepository) ListarEntradas(ctx context.Context, args ListarEntra
 	return entradas, nil
 }
 
-func (e *EntradaRepository) CancelarEntrada(ctx context.Context, args CancelarEntradaParams) (int64, error) {
-	linhasAfetadas, err := e.q.CancelarEntrada(ctx, args)
+func (e *EntradaRepository) CancelarEntrada(ctx context.Context, qtx *Queries,args CancelarEntradaParams) (int32, error) {
+	idNfEntrada, err := qtx.CancelarEntrada(ctx, args)
 	if err != nil {
 		return 0, helper.TraduzErroPostgres(err)
 	}
-	return linhasAfetadas, nil
+	return idNfEntrada, nil
 }
 
-func (e *EntradaRepository) TotalEntradas(ctx context.Context, args ContarEntradasFiltradasParams) (int64, error) {
+func (e *EntradaRepository) CancelarEntradaNf(ctx context.Context, qtx *Queries ,args CancelarEntradaNFParams) (error){
+
+	_, err := qtx.CancelarEntradaNF(ctx, args)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
+}
+
+func (e *EntradaRepository) ContarItensAtivosNF(ctx context.Context, qtx *Queries ,args ContarItensAtivosNFParams) (int64, error) {
+    qtd, err := qtx.ContarItensAtivosNF(ctx, args)
+    if err != nil {
+        return 0, helper.TraduzErroPostgres(err)
+    }
+    return qtd, nil
+}
+
+func (e *EntradaRepository) TotalEntradas(ctx context.Context,args ContarEntradasFiltradasParams) (int64, error) {
 	total, err := e.q.ContarEntradasFiltradas(ctx, args)
 	if err != nil {
 		return 0, helper.TraduzErroPostgres(err)

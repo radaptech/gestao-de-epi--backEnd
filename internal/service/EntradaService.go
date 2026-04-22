@@ -21,19 +21,22 @@ type EntradaRepository interface {
 	// Agora precisamos de uma função que lide com a transação para NF + Itens
 	AdicionarCompleta(ctx context.Context, nfArgs repository.CreateEntradaNFParams, itens []repository.CreateEntradaEpiItemParams) error
 	ListarEntradas(ctx context.Context, args repository.ListarEntradasParams) ([]repository.ListarEntradasRow, error)
-	CancelarEntrada(ctx context.Context, args repository.CancelarEntradaParams) (int64, error)
+	CancelarEntrada(ctx context.Context, qtx *repository.Queries, args repository.CancelarEntradaParams) (int32, error)
 	TotalEntradas(ctx context.Context, args repository.ContarEntradasFiltradasParams) (int64, error)
 	BuscaEntradaDashbord(ctx context.Context, tenant int32) ([]repository.EntradaDashbordRow, error)
 	EntradaEstoque(ctx context.Context, tenant int32) ([]repository.EntradaEpiEstoqueRow, error)
+	CancelarEntradaNf(ctx context.Context, qtx *repository.Queries, args repository.CancelarEntradaNFParams) error
+	ContarItensAtivosNF(ctx context.Context, qtx *repository.Queries, args repository.ContarItensAtivosNFParams) (int64, error)
 }
 
 type EntradaService struct {
-	repo EntradaRepository
-	db   *pgxpool.Pool
+	repo    EntradaRepository
+	db      *pgxpool.Pool
+	queries *repository.Queries
 }
 
 func NewEntradaService(e EntradaRepository, db *pgxpool.Pool) *EntradaService {
-	return &EntradaService{repo: e, db: db}
+	return &EntradaService{repo: e, db: db, queries: repository.New(db)}
 }
 
 // Adicionar: Processa a entrada de uma Nota Fiscal e todos os seus EPIs vinculados
@@ -47,7 +50,7 @@ func (e *EntradaService) Adicionar(ctx context.Context, input model.EntradaEpiIn
 	// 2. Prepara os parâmetros da Nota Fiscal (Cabeçalho)
 	nfArgs := repository.CreateEntradaNFParams{
 		TenantID:         tenantID,
-		Idfornecedor:       input.Idfornecedor,
+		Idfornecedor:     input.Idfornecedor,
 		NotaFiscalNumero: strings.TrimSpace(input.Nota_fiscal_numero),
 		NotaFiscalSerie:  pgtype.Text{String: strings.TrimSpace(input.Nota_fiscal_serie), Valid: true},
 		DataEmissao:      pgtype.Date{Time: input.Data_emissao.Time(), Valid: true},
@@ -139,34 +142,33 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 		}
 
 		dto = append(dto, model.EntradaEpiDto{
-			ID: int(ent.ID),
-			IDEpi: int(ent.ID),
-			IDTamanho: int(ent.IDTamanho),
-			IDFornecedor: int(ent.Idfornecedor),
-			DataEntrada: *configs.NewDataBrPtr(ent.DataEntrada.Time),
-			Quantidade: int(ent.Quantidade),
-			QuantidadeAtual: int(ent.QuantidadeAtual),
-			ValorUnitario: valorDecimal,
-			Lote: ent.Lote,
+			ID:               int(ent.ID),
+			IDEpi:            int(ent.ID),
+			IDTamanho:        int(ent.IDTamanho),
+			IDFornecedor:     int(ent.Idfornecedor),
+			DataEntrada:      *configs.NewDataBrPtr(ent.DataEntrada.Time),
+			Quantidade:       int(ent.Quantidade),
+			QuantidadeAtual:  int(ent.QuantidadeAtual),
+			ValorUnitario:    valorDecimal,
+			Lote:             ent.Lote,
 			NotaFiscalNumero: ent.NotaFiscalNumero,
-			NotaFiscalSerie: ent.NotaFiscalSerie.String,
-			UsuarioCriacao: ent.UsuarioCriacao,
+			NotaFiscalSerie:  ent.NotaFiscalSerie.String,
+			UsuarioCriacao:   ent.UsuarioCriacao,
 			Epi: model.EpiSimples{
-				ID: int(ent.IDEpi),
-				Nome: ent.EpiNome,
+				ID:         int(ent.IDEpi),
+				Nome:       ent.EpiNome,
 				Fabricante: ent.Fabricante,
-				CA: ent.Ca,
+				CA:         ent.Ca,
 			},
 			Tamanho: model.TamanhoSimples{
-				ID: int(ent.IDTamanho),
+				ID:      int(ent.IDTamanho),
 				Tamanho: ent.TamanhoNome,
 			},
 			Fornecedor: model.FornecedorSimples{
-				ID: int(ent.Idfornecedor),
+				ID:           int(ent.Idfornecedor),
 				NomeFantasia: ent.NomeFantasia,
-				RazaoSocial: ent.RazaoSocial,
+				RazaoSocial:  ent.RazaoSocial,
 			},
-
 		})
 	}
 
@@ -187,10 +189,19 @@ func (e *EntradaService) ListarEntradas(ctx context.Context, f FiltroEntradas, t
 }
 
 // CancelarEntrada: Soft delete que registra quem cancelou
-func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenantId int) (int64, error) {
+func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenantId int) error {
 	if id <= 0 {
-		return 0, helper.ErrId
+		return helper.ErrId
 	}
+
+	tx, err := e.db.Begin(ctx)
+	if err != nil {
+		fmt.Printf("❌ [TX] Falha ao iniciar transação: %v\n", err)
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := e.queries.WithTx(tx)
 
 	arg := repository.CancelarEntradaParams{
 		ID:                    int32(id),
@@ -198,7 +209,38 @@ func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenant
 		TenantID:              int32(tenantId),
 	}
 
-	return e.repo.CancelarEntrada(ctx, arg)
+	idNFEntrada, err := e.repo.CancelarEntrada(ctx, qtx, arg)
+	if err != nil {
+
+		return err
+	}
+
+	qtdAtivos, err := e.repo.ContarItensAtivosNF(ctx, qtx, repository.ContarItensAtivosNFParams{
+		EntradaNfID: idNFEntrada,
+		TenantID:    int32(tenantId),
+	})
+	if err != nil {
+		return err
+	}
+
+	if qtdAtivos == 0 {
+
+		err = e.repo.CancelarEntradaNf(ctx, qtx, repository.CancelarEntradaNFParams{
+			ID:                    idNFEntrada,
+			IDUsuarioCancelamento: arg.IDUsuarioCancelamento,
+			TenantID:              int32(tenantId),
+		})
+		if err != nil {
+
+			return err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+        fmt.Printf("❌ [TX] Falha ao realizar o commit: %v\n", err)
+        return err
+    }
+	return nil
 }
 
 // BuscaEntradaEstoque: Usado para o almoxarife selecionar o lote na hora da entrega
