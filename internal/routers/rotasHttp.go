@@ -15,17 +15,18 @@ import (
 )
 
 type Container struct {
-	Usuario      controller.LoginController
-	Departamento controller.DepartamentoController
-	Funcao       controller.FuncaoController
-	Funcionario  controller.FuncionarioController
-	Tamanho      controller.TamanhoController
-	Protecao     controller.TipoProtecaoController
-	Epi          controller.EpiController
-	Entrada      controller.EntradaController
-	Fornecedor   controller.FornecedorController
-	Entrega      controller.EntregaController
-	Estoque      controller.EstoqueController
+	Usuario         controller.LoginController
+	Departamento    controller.DepartamentoController
+	Funcao          controller.FuncaoController
+	Funcionario     controller.FuncionarioController
+	Tamanho         controller.TamanhoController
+	Protecao        controller.TipoProtecaoController
+	Epi             controller.EpiController
+	Entrada         controller.EntradaController
+	Fornecedor      controller.FornecedorController
+	Entrega         controller.EntregaController
+	Estoque         controller.EstoqueController
+	MotivoDevolucao controller.MotivoController
 }
 
 func NewContainer(db *pgxpool.Pool) *Container {
@@ -41,31 +42,34 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoFornecedor := repository.NewFornecedorRepository(db)
 	repoEntrega := repository.NewEntregaRepository(db)
 	repoEstoque := repository.NewEstoqueRepository(db)
+	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
 
 	serviceUsuario := service.NewUsuarioService(repoUsuario)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
 	funcaoService := service.NewFuncaoService(repoFuncao)
 	FornecedorService := service.NewFornecedorService(repoFornecedor)
-	funcionarioService := service.NewFuncionarioService(repoFuncionario,repoEntrega ,repoEpi,db)
+	funcionarioService := service.NewFuncionarioService(repoFuncionario, repoEntrega, repoEpi, db)
 	tamanhoService := service.NewTamanhoService(repoTamanho)
 	TipoProtecaoService := service.NewProtecaoService(repoTipoProtecao)
 	epiService := service.NewEpiService(repoEpi, db)
 	entradaService := service.NewEntradaService(repoEntrada, db)
 	entregaService := service.NewEntregaService(repoEntrega, db)
 	estoqueService := service.NewEstoqueService(repoEstoque)
+	motivoService := service.NewMotivoDevolucaoRepositoryServe(repoMotivo)
 
 	return &Container{
-		Usuario:      *controller.NewLoginController(serviceUsuario),
-		Departamento: *controller.NewDepartamentoController(departamentoService),
-		Funcao:       *controller.NewFuncaoController(funcaoService),
-		Funcionario:  *controller.NewFuncionarioController(funcionarioService),
-		Tamanho:      *controller.NewTamanhoControle(tamanhoService),
-		Protecao:     *controller.NewTipoProtecaoController(TipoProtecaoService),
-		Epi:          *controller.NewEpiController(epiService),
-		Entrada:      *controller.NewEntradaController(entradaService),
-		Fornecedor:   *controller.NewFornecedorController(FornecedorService),
-		Entrega:      *controller.NewEntregaController(entregaService),
-		Estoque:      *controller.NewEstoqueController(estoqueService),
+		Usuario:         *controller.NewLoginController(serviceUsuario),
+		Departamento:    *controller.NewDepartamentoController(departamentoService),
+		Funcao:          *controller.NewFuncaoController(funcaoService),
+		Funcionario:     *controller.NewFuncionarioController(funcionarioService),
+		Tamanho:         *controller.NewTamanhoControle(tamanhoService),
+		Protecao:        *controller.NewTipoProtecaoController(TipoProtecaoService),
+		Epi:             *controller.NewEpiController(epiService),
+		Entrada:         *controller.NewEntradaController(entradaService),
+		Fornecedor:      *controller.NewFornecedorController(FornecedorService),
+		Entrega:         *controller.NewEntregaController(entregaService),
+		Estoque:         *controller.NewEstoqueController(estoqueService),
+		MotivoDevolucao: *controller.NewMotivoController(motivoService),
 	}
 }
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
@@ -94,7 +98,6 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	api.Use(middleware.TenantMiddleware(queries))
 	{
 
-		
 		api.POST("/login", c.Usuario.Login())
 		api.POST("/cadastro", c.Usuario.Registrar())
 	}
@@ -128,7 +131,6 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/tamanhos", c.Tamanho.ListarTodosTamanhos())
 		api.GET("/tamanhos-id-epi/:id", c.Tamanho.ListarTamanhoPorIdEpi())
 		api.GET("/tamanho/:id", c.Tamanho.ListarTamanhoPorId())
-		
 
 		//proteções dedicada a cada epi
 		api.GET("/protecoes", c.Protecao.ListarProtecoes())
@@ -138,6 +140,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/epis", c.Epi.ListarEpis())
 		api.GET("/epi/:id", c.Epi.ListarEpiPorId())
 		api.GET("/epis-dashbord", c.Epi.ListarEpiDashborController())
+		api.GET("/funcionarios/:id/epis", c.Epi.ListarEpiFuncionario())
 
 		//entradas
 		api.GET("/entradas", c.Entrada.ListarEntradas())
@@ -152,6 +155,15 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.POST("/cadastro-entregas", c.Entrega.Adicionar())
 		api.GET("/entregas-dashbord", c.Entrega.BuscarEntregaDashbord())
 		api.GET("/entrega-itens-dashbord", c.Entrega.BuscarEntregaItenDashbord())
+
+
+		//devolucao
+
+		//motivo da Motivo da Devolucao
+		api.POST("/cadastrar-motivo-devolucao", c.MotivoDevolucao.Salvar())
+		api.GET("/motivos", c.MotivoDevolucao.ListarMotivo())
+
+
 
 		//rotas que apenas o "admin" tem acesso
 		rotasAdm := api.Group("/gerencial")
@@ -201,7 +213,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 			//usuarios
 			rotasAdm.GET("/usuarios", c.Usuario.ListarUsuario())
-			
+
 		}
 	}
 
