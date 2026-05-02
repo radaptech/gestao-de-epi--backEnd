@@ -7,8 +7,8 @@ INSERT INTO devolucao (
 -- name: AddTrocaEpi :one
 INSERT INTO devolucao (
     tenant_id, IdFuncionario, IdEpi, IdMotivo, data_devolucao, IdTamanho, 
-    quantidadeAdevolver, IdEpiNovo, IdTamanhoNovo, quantidadeNova, assinatura_digital, id_usuario_cancelamento, token_validacao
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    quantidadeAdevolver, IdEpiNovo, IdTamanhoNovo, quantidadeNova, assinatura_digital, token_validacao
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id;
 
 -- name: AddEntregaVinculada :one

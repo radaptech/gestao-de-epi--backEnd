@@ -100,7 +100,6 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 		Idtamanhonovo:         idTamanhoNovo,
 		Quantidadenova:        idQuantidadeNova,
 		AssinaturaDigital:     modelDevolucao.AssinaturaDigital,
-		IDUsuarioCancelamento: pgtype.Int4{Int32: int32(modelDevolucao.IdUser), Valid: true},
 		TokenValidacao:        pgtype.Text{String: token, Valid: true},
 	}
 
@@ -114,7 +113,6 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 		idTrocaInt := int32(idDevolucao)
 		modelEntrega := model.EntregaParaInserir{
 			ID_funcionario:     int32(arg.Idfuncionario),
-			Id_user:            int32(modelDevolucao.IdUser),
 			Data_entrega:       modelDevolucao.DataDevolucao,
 			IdTroca:            &idTrocaInt,
 			Assinatura_Digital: arg.AssinaturaDigital,
@@ -251,7 +249,7 @@ func (d *DevolucaoService) ListarDevolucoes(ctx context.Context, f FiltroDevoluc
 		// Mapeamento de dados do banco para o DTO do Frontend
 		item := model.DevolucaoDto{
 			Id: int(dev.ID),
-			IdFuncionario: model.Funcionario_Dto{
+			Funcionario: model.Funcionario_Dto{
 				ID:        int32(dev.Idfuncionario),
 				Nome:      dev.FuncNome,
 				Matricula: matriculaStr,
@@ -264,7 +262,7 @@ func (d *DevolucaoService) ListarDevolucoes(ctx context.Context, f FiltroDevoluc
 					},
 				},
 			},
-			IdEpi: model.EpiDto{
+			Epi: model.EpiDto{
 				Id:         int32(dev.Idepi),
 				Nome:       dev.EpiAntigoNome,
 				Fabricante: dev.EpiAntigoFab,
@@ -280,7 +278,7 @@ func (d *DevolucaoService) ListarDevolucoes(ctx context.Context, f FiltroDevoluc
 					Nome: dev.TipoProtecaoNomeantigo,
 				},
 			},
-			MotivoDevolucao: model.MotivoDevolucaoEpiDto{
+			Motivo: model.MotivoDevolucaoEpiDto{
 				Id:     int(dev.Idmotivo),
 				Motivo: dev.MotivoNome,
 			},
@@ -291,7 +289,7 @@ func (d *DevolucaoService) ListarDevolucoes(ctx context.Context, f FiltroDevoluc
 
 		// Se a devolução incluiu uma troca, mapeia os dados do novo EPI
 		if dev.Idepinovo.Valid {
-			item.IdEpiNovo = &model.EpiDto{
+			item.EpiNovo = &model.EpiDto{
 				Id:         dev.Idepinovo.Int32,
 				Nome:       dev.EpiNovoNome.String,
 				Fabricante: dev.EpiNovoFab.String,

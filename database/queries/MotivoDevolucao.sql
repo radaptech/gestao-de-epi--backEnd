@@ -1,6 +1,7 @@
--- name: AddMotivoDevolucao :exec
+-- name: AddMotivoDevolucao :one
 INSERT INTO motivo_devolucao (tenant_id, motivo) 
-VALUES ($1, $2);
+VALUES ($1, $2)
+returning id, motivo;
 
 -- name: BuscaMotivoDevolucao :one
 SELECT id, motivo 

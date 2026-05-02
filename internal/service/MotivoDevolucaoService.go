@@ -11,7 +11,7 @@ import (
 )
 
 type MotivoDevolucaoRepository interface {
-	Adicionar(ctx context.Context, motivo repository.AddMotivoDevolucaoParams) error 
+	Adicionar(ctx context.Context, arg repository.AddMotivoDevolucaoParams) (repository.AddMotivoDevolucaoRow, error)
 	ListarMotivo(ctx context.Context, arg repository.BuscaMotivoDevolucaoParams) (repository.BuscaMotivoDevolucaoRow, error)
 	ListarMotivos(ctx context.Context, tenantId int32) ([]repository.BuscaTodosMotivosDevolucaoRow, error)
 	CancelarMotivoDevolucao(ctx context.Context, arg repository.DeleteMotivoDevolucaoParams) (int64, error)
@@ -26,20 +26,23 @@ func NewMotivoDevolucaoRepositoryServe(m MotivoDevolucaoRepository) *MotivoDevol
 	return &MotivoDevolucaoService{repo: m}
 }
 
-func (m *MotivoDevolucaoService) Salvar(ctx context.Context, model model.MotivoDevolucao, tenantId int32) error {
+func (m *MotivoDevolucaoService) Salvar(ctx context.Context, modelM model.MotivoDevolucao, tenantId int32) (model.MotivoDevolucaoEpiDto, error) {
 
-	model.Motivo = strings.TrimSpace(model.Motivo)
+	modelM.Motivo = strings.TrimSpace(modelM.Motivo)
 
-	err := m.repo.Adicionar(ctx, repository.AddMotivoDevolucaoParams{
-		Motivo: model.Motivo,
+	motivo, err:= m.repo.Adicionar(ctx,repository.AddMotivoDevolucaoParams{
 		TenantID: tenantId,
+		Motivo: modelM.Motivo,
 	})
 	if err != nil {
 
-		return err
+		return model.MotivoDevolucaoEpiDto{}, err
 	}
 
-	return nil
+	return model.MotivoDevolucaoEpiDto{
+		Id: int(motivo.ID),
+		Motivo: motivo.Motivo,
+	}, nil
 }
 
 func (m *MotivoDevolucaoService) ListarMotivo(ctx context.Context, id int, tenantid int32) (model.MotivoDevolucaoEpiDto, error) {

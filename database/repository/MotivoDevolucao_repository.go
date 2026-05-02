@@ -22,15 +22,14 @@ func NewMotivoDevolucaoRepository(pool *pgxpool.Pool) *MotivoDevolucaoRepository
 	}
 }
 
-func (m *MotivoDevolucaoRepository) Adicionar(ctx context.Context, motivo AddMotivoDevolucaoParams) error {
+func (m *MotivoDevolucaoRepository) Adicionar(ctx context.Context, arg AddMotivoDevolucaoParams) (AddMotivoDevolucaoRow, error) {
 
-	err := m.q.AddMotivoDevolucao(ctx, motivo)
+	motivo, err:= m.q.AddMotivoDevolucao(ctx,arg )
 	if err != nil {
-
-		return helper.TraduzErroPostgres(err)
+		return AddMotivoDevolucaoRow{}, helper.TraduzErroPostgres(err)
 	}
 
-	return nil
+	return motivo, nil
 }
 
 func (m *MotivoDevolucaoRepository) ListarMotivo(ctx context.Context, arg BuscaMotivoDevolucaoParams) (BuscaMotivoDevolucaoRow, error){
