@@ -80,8 +80,8 @@ func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, te
 	}
 
 	//verificando se a senha bate com o hash salvo no banco de dados
-	_, err = auth.HashCompare([]byte(usuario.SenhaHash), senha)
-	if err != nil {
+	senhaCorreta, err := auth.HashCompare([]byte(usuario.SenhaHash), senha)
+	if err != nil || !senhaCorreta {
 
 		return "", repository.BuscarUsuarioPorEmailRow{}, errors.New("email ou senha inválidos")
 	}
