@@ -112,3 +112,29 @@ INNER JOIN epi ep ON ep.id = ee.id_epi
 INNER JOIN tamanho t ON t.id = ee.id_tamanho
 INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
 WHERE e.tenant_id = $1;
+
+
+-- name: BuscaItensEntreguesPorFuncionario :many
+SELECT
+    ee.id,
+    ee.id_entrega_cabecalho, 
+    ee.quantidade,
+    ee.id_tamanho,
+    t.tamanho as tamanho_nome,
+    ee.id_epi,
+    ep.nome as epi_nome,
+    ep.fabricante,
+    ep.ca,
+    ep.descricao,
+    ep.validade_ca,
+    ep.alerta_minimo,
+    ep.idtipoprotecao,
+    tp.nome as tipo_protecao_nome
+FROM epis_entregues ee
+INNER JOIN entrega_epi e ON e.id = ee.id_entrega_cabecalho
+INNER JOIN epi ep ON ep.id = ee.id_epi
+INNER JOIN tamanho t ON t.id = ee.id_tamanho
+INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
+WHERE e.tenant_id = $1 
+  AND e.IdFuncionario = $2 -- O Filtro que faltava!
+  AND e.cancelada_em IS NULL; -- Segurança extra: Garante que só traga itens de entregas ativas

@@ -21,6 +21,7 @@ type EpiService interface {
 	CancelarEpi(ctx context.Context, id int, tenantid int32) (int64, error)
 	AtualizaEpi(ctx context.Context, model model.UpdateEpiInput, id, tenantId int32) error
 	ListarEpiDashbord(ctx context.Context, tenantId int32) ([]model.EpiDashBord, error)
+	BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFuncionario int32) ([]model.EpiDto, error)
 }
 
 type EpiController struct {
@@ -100,7 +101,6 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
-				
 			})
 			return
 		}
@@ -348,4 +348,38 @@ func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, epis)
 
 	}
+}
+
+func (e *EpiController) ListarEpiFuncionario() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		idString := ctx.Param("id")
+		IdFuncionario, err := strconv.Atoi(idString)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "id deve ser um numero",
+			})
+		}
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+		epis, err := e.service.BuscarEpiDoFuncionario(ctx, tenantId, int32(IdFuncionario))
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, epis)
+	}
+
+	
+
 }

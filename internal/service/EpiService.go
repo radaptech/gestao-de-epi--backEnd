@@ -26,6 +26,7 @@ type EpiRepository interface {
 	AtualizaEpi(ctx context.Context, epi repository.UpdateEpiCampoParams) (int64, error)
 	BuscaEpiDashbord(ctx context.Context, tenant int32) ([]repository.BuscaEpiDashbordRow, error)
 	BuscaEpiTenant(ctx context.Context, tenant int32) ([]repository.BuscaTodosItensEntreguesDoTenantRow, error)
+	BuscaEpiFuncinario(ctx context.Context, idfuncionario, tenantId int32)([]repository.BuscaItensEntreguesPorFuncionarioRow, error)
 }
 
 type EpiService struct {
@@ -435,4 +436,46 @@ func (e *EpiService) ListarEpiDashbord(ctx context.Context, tenantId int32) ([]m
 	}
 
 	return dto, err
+}
+
+
+func (e *EpiService) BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFuncionario int32) ([]model.EpiDto, error){
+
+
+	epis, err:= e.repo.BuscaEpiFuncinario(ctx, IdFuncionario, tenantId)
+	if err != nil {
+		return []model.EpiDto{}, err
+	}
+
+	dto:= make(map[int32]*model.EpiDto)
+
+	for _, i:= range epis {
+
+		if _, ok := dto[i.IDEpi]; !ok{
+			dto[i.IDEpi] = &model.EpiDto{
+				Id: i.IDEpi,
+				Nome: i.EpiNome,
+				Fabricante: i.Fabricante,
+				CA: i.Ca,
+				Tamanhos: []model.TamanhoDto{},
+				Descricao: i.Descricao,
+				DataValidadeCa: configs.DataBr(i.ValidadeCa.Time),
+				Protecao: model.TipoProtecaoDto{ID: int64(i.Idtipoprotecao), Nome: i.TipoProtecaoNome},
+				AlertaMinimo: i.AlertaMinimo,				
+			}
+		}
+
+		dto[i.IDEpi].Tamanhos = append(dto[i.IDEpi].Tamanhos, model.TamanhoDto{
+			ID: int(i.IDTamanho),
+			Tamanho: i.TamanhoNome,
+		} )
+	}
+
+	dtoSlice:= make([]model.EpiDto, 0, len(dto))
+	for _, v:= range dto {
+
+		dtoSlice = append(dtoSlice, *v)
+	}
+
+	return dtoSlice, nil
 }
