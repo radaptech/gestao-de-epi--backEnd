@@ -22,10 +22,10 @@ func HashPassword(senha string) ([]byte, error) {
 // funcao que ira servir para comparar a senha que o usuario digitar, com a que esta salva no banco de dados
 func HashCompare(hash []byte, senha string) (bool, error) {
 
-	_, err := argon2id.ComparePasswordAndHash(senha, string(hash))
+	ok, err := argon2id.ComparePasswordAndHash(senha, string(hash))
 	if err != nil {
 		return false, err
 	}
 
-	return true, nil
+	return ok, nil
 }
