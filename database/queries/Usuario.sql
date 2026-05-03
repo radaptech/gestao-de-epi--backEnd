@@ -31,3 +31,20 @@ WHERE email = $1
   AND tenant_id = $2 
   AND ativo = TRUE
 LIMIT 1;
+
+
+-- name: RecuperaLogin :one
+select id from usuarios 
+where email = $1 and tenant_id = $2 limit 1;
+
+-- name: SalvarTokenRecuperacao :execrows
+update usuarios
+set token_recuperacao_senha = $1, token_expiracao = $2
+where id = $3 and tenant_id = $4;   
+
+-- name: UpdateSenha :execrows
+update usuarios
+set senha_hash = $1,
+    token_recuperacao_senha = null,
+    token_expiracao = null
+where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now();
