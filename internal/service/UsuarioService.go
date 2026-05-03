@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/auth"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -18,15 +21,19 @@ type UsuarioRepository interface {
 	Listar(ctx context.Context, tenantId int32) ([]repository.BuscarTodosUsuariosRow, error)
 	BuscarPorEmail(ctx context.Context, email repository.BuscarUsuarioPorEmailParams) (repository.BuscarUsuarioPorEmailRow, error)
 	BuscarPoId(ctx context.Context, arg repository.BuscarPorIdUsuarioParams) (repository.BuscarPorIdUsuarioRow, error)
+	RecuperaLogin(ctx context.Context, arg repository.RecuperaLoginParams) (int32, error)
+	SalvarToken(ctx context.Context, agr repository.SalvarTokenRecuperacaoParams) (int64, error)
+	AtualizarSenha(ctx context.Context, arg repository.UpdateSenhaParams) (int64, error)
 }
 
 type UsuarioService struct {
-	repo UsuarioRepository
+	repo         UsuarioRepository
+	emailService EmailService
 }
 
-func NewUsuarioService(repo UsuarioRepository) *UsuarioService {
+func NewUsuarioService(repo UsuarioRepository, emailSrv EmailService) *UsuarioService {
 
-	return &UsuarioService{repo: repo}
+	return &UsuarioService{repo: repo, emailService: emailSrv}
 }
 
 func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario, tenantId int32) error {
@@ -46,7 +53,7 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario, ten
 		Email:     model.Email,
 		SenhaHash: string(novasenha),
 		TenantID:  tenantId,
-		Role: pgtype.Text{String: model.Role, Valid: model.Role != ""},
+		Role:      pgtype.Text{String: model.Role, Valid: model.Role != ""},
 	}
 
 	err = u.repo.Cadastrar(ctx, arg)
@@ -67,7 +74,7 @@ func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, te
 
 	//buscando o usuario pelo email
 	usuario, err := u.repo.BuscarPorEmail(ctx, repository.BuscarUsuarioPorEmailParams{
-		Email: email,
+		Email:    email,
 		TenantID: tenantId,
 	})
 	if err != nil {
@@ -86,9 +93,8 @@ func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, te
 		return "", repository.BuscarUsuarioPorEmailRow{}, errors.New("email ou senha inválidos")
 	}
 
-	
 	//gerando o token
-	token, err := auth.GerarJWT(usuario.ID, usuario.Role.String, usuario.Nome ,tenantId)
+	token, err := auth.GerarJWT(usuario.ID, usuario.Role.String, usuario.Nome, tenantId)
 	if err != nil {
 		return "", repository.BuscarUsuarioPorEmailRow{}, errors.New("erro ao gerar token de acesso")
 	}
@@ -103,8 +109,8 @@ func (u *UsuarioService) BuscarPorId(ctx context.Context, id uint, tenantId int3
 		return model.RecuperaUser{}, helper.ErrId
 	}
 
-	usuario, err := u.repo.BuscarPoId(ctx,repository.BuscarPorIdUsuarioParams{
-		ID: int32(id),
+	usuario, err := u.repo.BuscarPoId(ctx, repository.BuscarPorIdUsuarioParams{
+		ID:       int32(id),
 		TenantID: tenantId,
 	})
 	if err != nil {
@@ -116,25 +122,24 @@ func (u *UsuarioService) BuscarPorId(ctx context.Context, id uint, tenantId int3
 		Id:    int(usuario.ID),
 		Nome:  usuario.Nome,
 		Email: usuario.Email,
-		Role: usuario.Role.String,
-
+		Role:  usuario.Role.String,
 	}, nil
 }
 
 func (u *UsuarioService) ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error) {
 
-	usuarios, err:= u.repo.Listar(ctx, tenantId)
+	usuarios, err := u.repo.Listar(ctx, tenantId)
 	if err != nil {
-		return  []model.UsuarioResponse{}, err
+		return []model.UsuarioResponse{}, err
 	}
 
 	dto := make([]model.UsuarioResponse, 0, len(usuarios))
 
 	for _, usuario := range usuarios {
 
-		uu:= model.UsuarioResponse{
-			ID: int(usuario.ID),
-			Nome: usuario.Nome,
+		uu := model.UsuarioResponse{
+			ID:    int(usuario.ID),
+			Nome:  usuario.Nome,
 			Email: usuario.Email,
 			Cargo: usuario.Cargo.String,
 		}
@@ -142,6 +147,43 @@ func (u *UsuarioService) ListarUsuario(ctx context.Context, tenantId int32) ([]m
 		dto = append(dto, uu)
 	}
 
-
 	return dto, nil
+}
+
+
+
+func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.RecuperaLogin) error {
+
+	//verifica se o email existe
+	id, err := u.repo.RecuperaLogin(ctx, repository.RecuperaLoginParams{
+		Email:    rl.Email,
+		TenantID: int32(rl.TenantId),
+	})
+	if err != nil {
+
+		return err
+	}
+
+	//apos isso, gera o token
+	token := uuid.New().String()
+	tempoExpiracao := time.Now().Add(10 * time.Minute)
+
+	_, err = u.repo.SalvarToken(ctx, repository.SalvarTokenRecuperacaoParams{
+		TokenRecuperacaoSenha: pgtype.Text{String: token, Valid: token != ""},
+		TokenExpiracao:        pgtype.Timestamp{Time: tempoExpiracao, Valid: true},
+		ID:                    id,
+		TenantID:              int32(rl.TenantId),
+	})
+	if err != nil {
+
+		return err
+	}
+
+	err = u.emailService.EnviarEmailRecuperacao(rl.Email, token, rl.Empresa)
+	if err != nil {
+
+		return fmt.Errorf("erro ao enviar email: %w", err)
+	}
+	return nil
+
 }

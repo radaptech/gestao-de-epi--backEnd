@@ -183,11 +183,13 @@ type TipoProtecao struct {
 }
 
 type Usuario struct {
-	ID        int32
-	TenantID  int32
-	Nome      string
-	Email     string
-	SenhaHash string
-	Ativo     pgtype.Bool
-	Role      pgtype.Text
+	ID                    int32
+	TenantID              int32
+	Nome                  string
+	Email                 string
+	SenhaHash             string
+	Ativo                 pgtype.Bool
+	Role                  pgtype.Text
+	TokenRecuperacaoSenha pgtype.Text
+	TokenExpiracao        pgtype.Timestamp
 }

@@ -2,6 +2,7 @@ package routers
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/controller"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -31,6 +32,16 @@ type Container struct {
 
 func NewContainer(db *pgxpool.Pool) *Container {
 
+	hostEmail := os.Getenv("SMTP_HOST")
+	if hostEmail == "" {
+		hostEmail = "localhost" // Fallback se rodar fora do docker
+	}
+
+	portEmail := os.Getenv("SMTP_PORT")
+	if portEmail == "" {
+		portEmail = "1025"
+	}
+
 	repoUsuario := repository.NewUsuarioRepository(db)
 	repoDepartamento := repository.NewDepartamentoRepository(db)
 	repoFuncao := repository.NewFuncaoRepository(db)
@@ -44,7 +55,8 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEstoque := repository.NewEstoqueRepository(db)
 	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
 
-	serviceUsuario := service.NewUsuarioService(repoUsuario)
+	ServiceEmail := service.NewEmail(hostEmail, portEmail)
+	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
 	funcaoService := service.NewFuncaoService(repoFuncao)
 	FornecedorService := service.NewFornecedorService(repoFornecedor)
@@ -100,6 +112,8 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 		api.POST("/login", c.Usuario.Login())
 		api.POST("/cadastro", c.Usuario.Registrar())
+
+		api.POST("/esqueci-minha-senha", c.Usuario.SalvarToken())
 	}
 
 	// --- GRUPO 3: Rotas Protegidas (SaaS) ---
@@ -156,14 +170,11 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/entregas-dashbord", c.Entrega.BuscarEntregaDashbord())
 		api.GET("/entrega-itens-dashbord", c.Entrega.BuscarEntregaItenDashbord())
 
-
 		//devolucao
 
 		//motivo da Motivo da Devolucao
 		api.POST("/cadastrar-motivo-devolucao", c.MotivoDevolucao.Salvar())
 		api.GET("/motivos", c.MotivoDevolucao.ListarMotivo())
-
-
 
 		//rotas que apenas o "admin" tem acesso
 		rotasAdm := api.Group("/gerencial")

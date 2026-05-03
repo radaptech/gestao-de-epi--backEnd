@@ -167,3 +167,68 @@ func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) 
 	}
 	return result.RowsAffected(), nil
 }
+
+const recuperaLogin = `-- name: RecuperaLogin :one
+select id from usuarios 
+where email = $1 and tenant_id = $2 limit 1
+`
+
+type RecuperaLoginParams struct {
+	Email    string
+	TenantID int32
+}
+
+func (q *Queries) RecuperaLogin(ctx context.Context, arg RecuperaLoginParams) (int32, error) {
+	row := q.db.QueryRow(ctx, recuperaLogin, arg.Email, arg.TenantID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const salvarTokenRecuperacao = `-- name: SalvarTokenRecuperacao :execrows
+update usuarios
+set token_recuperacao_senha = $1, token_expiracao = $2
+where id = $3 and tenant_id = $4
+`
+
+type SalvarTokenRecuperacaoParams struct {
+	TokenRecuperacaoSenha pgtype.Text
+	TokenExpiracao        pgtype.Timestamp
+	ID                    int32
+	TenantID              int32
+}
+
+func (q *Queries) SalvarTokenRecuperacao(ctx context.Context, arg SalvarTokenRecuperacaoParams) (int64, error) {
+	result, err := q.db.Exec(ctx, salvarTokenRecuperacao,
+		arg.TokenRecuperacaoSenha,
+		arg.TokenExpiracao,
+		arg.ID,
+		arg.TenantID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateSenha = `-- name: UpdateSenha :execrows
+update usuarios
+set senha_hash = $1,
+    token_recuperacao_senha = null,
+    token_expiracao = null
+where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now()
+`
+
+type UpdateSenhaParams struct {
+	SenhaHash             string
+	TokenRecuperacaoSenha pgtype.Text
+	TenantID              int32
+}
+
+func (q *Queries) UpdateSenha(ctx context.Context, arg UpdateSenhaParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateSenha, arg.SenhaHash, arg.TokenRecuperacaoSenha, arg.TenantID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

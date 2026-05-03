@@ -60,3 +60,39 @@ func (u *UsuarioRepository) BuscarPoId(ctx context.Context, arg BuscarPorIdUsuar
 
 	return usuario, nil
 }
+
+func(u *UsuarioRepository) RecuperaLogin(ctx context.Context, arg RecuperaLoginParams)(int32, error){
+
+	id,err:= u.q.RecuperaLogin(ctx, arg)
+	if err != nil {
+
+		return 0, helper.TraduzErroPostgres(err)
+
+	}
+
+	return id, nil
+}
+
+func (u *UsuarioRepository) SalvarToken(ctx context.Context, agr SalvarTokenRecuperacaoParams)(int64, error){
+
+	result,err:= u.q.SalvarTokenRecuperacao(ctx, agr)
+	if err != nil {
+
+		return 0, helper.TraduzErroPostgres(err)
+	}
+
+	return result, nil
+}
+
+
+func (u *UsuarioRepository) AtualizarSenha(ctx context.Context, arg UpdateSenhaParams)(int64, error){
+
+	result, err:= u.q.UpdateSenha(ctx, arg)
+	if err != nil {
+
+		return 0, helper.TraduzErroPostgres(err)
+	}
+ 
+
+	return result, nil
+}

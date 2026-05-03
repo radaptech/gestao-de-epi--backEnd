@@ -33,8 +33,14 @@ type RecuperaUserEntrada struct {
 }
 
 type UsuarioResponse struct {
-    ID    int    `json:"id"`
-    Nome  string `json:"nome"`
-    Email string `json:"email"`
-    Cargo string `json:"cargo"`
+	ID    int    `json:"id"`
+	Nome  string `json:"nome"`
+	Email string `json:"email"`
+	Cargo string `json:"cargo"`
+}
+
+type RecuperaLogin struct {
+	Empresa  string `json:"empresa" binding:"required"`
+	TenantId int    `json:"tenatId" binding:"required"`
+	Email    string `json:"email" binding:"required"`
 }
