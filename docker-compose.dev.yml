@@ -33,6 +33,19 @@ services:
       - postgres
 
   # -----------------------------------------------------------------
+  # MAILPIT (Servidor Falso de E-mail)
+  # -----------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit_container
+    restart: always
+    ports:
+      - "8025:8025" # Interface Web (A "caixa de entrada" no navegador)
+      - "1025:1025" # Porta SMTP (Para testar via código externo, se precisar)
+    environment:
+      MP_MAX_MESSAGES: 500
+
+  # -----------------------------------------------------------------
   # API (Sua Aplicação Go)
   # -----------------------------------------------------------------
   api:
@@ -43,6 +56,7 @@ services:
       dockerfile: Dockerfile # Aponta onde está o arquivo de build
     depends_on:
       - postgres
+      - mailpit # <-- Adicionado para a API esperar o Mailpit subir
     env_file:
       -  .env
     environment:
@@ -53,9 +67,10 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DATABASE}
       - JWT_SECRET=${JWT_SECRET}
-     # Otimiza o Gin para produção
-
-  # O Nginx (Seu Proxy Reverso e Escudo contra bots)
+      # --- Configurações do Servidor de Email ---
+      - SMTP_HOST=mailpit # <-- O Pulo do Gato do Docker!
+      - SMTP_PORT=1025
+       
   nginx:
     image: nginx:alpine
     ports:
@@ -64,7 +79,6 @@ services:
       - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api
-
 
 volumes:
   postgres_data:

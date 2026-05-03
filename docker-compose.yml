@@ -7,7 +7,7 @@ services:
     container_name: api_epi
     restart: always
     build:
-      context: .           # <--- O PULO DO GATO: Define a raiz do projeto como contexto
+      context: .          
       dockerfile: Dockerfile # Aponta onde está o arquivo de build
     environment:
       - GIN_MODE=release # Otimiza o Gin para produção
