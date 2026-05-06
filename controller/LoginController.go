@@ -20,6 +20,7 @@ type LoginService interface {
 	BuscarPorId(ctx context.Context, id uint, tenantId int32) (model.RecuperaUser, error)
 	ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error)
 	RecuperacaoSenha(ctx context.Context, rl model.RecuperaLogin) error
+	RedefinirSenha(ctx context.Context, rs model.RedefinirSenha) error
 }
 
 type LoginController struct {
@@ -219,7 +220,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
-
+ 
 		input.TenantId = int(tenantID)
 
 		err := l.service.RecuperacaoSenha(ctx, input)
@@ -234,5 +235,44 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 		}
 
 		ctx.Status(http.StatusOK)
+	}
+}
+
+func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		var input model.RedefinirSenha
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":    "dados invalidos",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		tenantID, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
+			return
+		}
+
+		input.TenantId = int(tenantID)
+
+		err := l.service.RedefinirSenha(ctx, input)
+		if err != nil {
+			if err.Error() == "link inválido, expirado ou não pertence a esta empresa" {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erro interno ao redefinir senha."})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"mensagem": "Senha redefinida com sucesso! Você já pode fazer login.",
+		})
 	}
 }

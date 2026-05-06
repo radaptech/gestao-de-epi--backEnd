@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/smtp"
+	"os"
 )
 
 // Estrutura do seu serviço de e-mail
@@ -22,12 +23,18 @@ func NewEmail(host, port string) *EmailService{
 }
 // Função responsável por montar e enviar o e-mail de recuperação
 func (e *EmailService) EnviarEmailRecuperacao(emailDestino string, token string, slugEmpresa string) error {
-	// 1. Monta o link dinâmico apontando para o frontend da Paloma
-	// Obs: Se estiverem testando local, pode ser localhost:3000 em vez do domínio
-	link := fmt.Sprintf("http://%s:80/redefinir-senha?token=%s", slugEmpresa,token)
+	// 1. Monta o link dinâmico
+	
+	URL:= os.Getenv("URL_FRONTEND_FORMATO")
+
+	if URL == "" {
+		URL = "http://%s:3000"
+	}
+	linkBase := fmt.Sprintf(URL, slugEmpresa)
+	link:= fmt.Sprintf("%s/redefinir-senha?token=%s", linkBase, token)
 
 	// 2. Configura os cabeçalhos do e-mail (Assunto e tipo HTML)
-	remetente := "nao-responda@seusaas.com.br"
+	remetente := "nao-responda@radaptech.com.br"
 	assunto := "Subject: Recuperação de Senha - SGE\n"
 	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 
