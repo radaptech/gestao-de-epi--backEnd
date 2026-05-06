@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ type UsuarioRepository interface {
 	RecuperaLogin(ctx context.Context, arg repository.RecuperaLoginParams) (int32, error)
 	SalvarToken(ctx context.Context, agr repository.SalvarTokenRecuperacaoParams) (int64, error)
 	AtualizarSenha(ctx context.Context, arg repository.UpdateSenhaParams) (int64, error)
+	RedefinirSenha(ctx context.Context, arg repository.UpdateSenhaParams)(int64,error)
 }
 
 type UsuarioService struct {
@@ -150,8 +152,6 @@ func (u *UsuarioService) ListarUsuario(ctx context.Context, tenantId int32) ([]m
 	return dto, nil
 }
 
-
-
 func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.RecuperaLogin) error {
 
 	//verifica se o email existe
@@ -166,7 +166,7 @@ func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.Recupera
 
 	//apos isso, gera o token
 	token := uuid.New().String()
-	tempoExpiracao := time.Now().Add(10 * time.Minute)
+	tempoExpiracao := time.Now().UTC().Add(10 * time.Minute)
 
 	_, err = u.repo.SalvarToken(ctx, repository.SalvarTokenRecuperacaoParams{
 		TokenRecuperacaoSenha: pgtype.Text{String: token, Valid: token != ""},
@@ -186,4 +186,27 @@ func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.Recupera
 	}
 	return nil
 
+}
+
+func (u *UsuarioService) RedefinirSenha(ctx context.Context, rs model.RedefinirSenha) error {
+
+	senhaByte, err:= auth.HashPassword(rs.NovaSenha)
+	if err != nil {
+		log.Printf("erro ao gerar hars da senha: %v", err)
+		return fmt.Errorf("erro ao gerar hash da senha")
+	}
+
+
+	linha, err:= u.repo.RedefinirSenha(ctx, repository.UpdateSenhaParams{
+		SenhaHash: string(senhaByte),
+		TokenRecuperacaoSenha: pgtype.Text{String: rs.Token, Valid: true},
+		TenantID: int32(rs.TenantId),
+	})
+
+	if linha == 0 {
+
+		return errors.New("link inválido, expirado ou não pertence a esta empresa")
+	}
+
+	return nil
 }

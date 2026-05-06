@@ -96,3 +96,14 @@ func (u *UsuarioRepository) AtualizarSenha(ctx context.Context, arg UpdateSenhaP
 
 	return result, nil
 }
+
+func (u *UsuarioRepository) RedefinirSenha(ctx context.Context, arg UpdateSenhaParams)(int64,error){
+
+	result, err:= u.q.UpdateSenha(ctx, arg)
+	if err != nil {
+
+		return 0, helper.TraduzErroPostgres(err)
+	}
+
+	return result, nil
+}

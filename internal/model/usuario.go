@@ -41,6 +41,12 @@ type UsuarioResponse struct {
 
 type RecuperaLogin struct {
 	Empresa  string `json:"empresa" binding:"required"`
-	TenantId int    `json:"tenatId" binding:"required"`
+	TenantId int    `json:"-"`
 	Email    string `json:"email" binding:"required"`
+}
+
+type RedefinirSenha struct {
+	Token     string `json:"token" binding:"required"`
+	NovaSenha string `json:"senha_nova" binding:"required,min=6"`
+	TenantId  int    `json:"-"`
 }

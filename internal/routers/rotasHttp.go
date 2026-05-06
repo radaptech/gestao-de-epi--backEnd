@@ -114,6 +114,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.POST("/cadastro", c.Usuario.Registrar())
 
 		api.POST("/esqueci-minha-senha", c.Usuario.SalvarToken())
+		api.POST("/redefinir-senha", c.Usuario.RedefinirSenha())
 	}
 
 	// --- GRUPO 3: Rotas Protegidas (SaaS) ---
