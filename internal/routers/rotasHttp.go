@@ -2,7 +2,7 @@ package routers
 
 import (
 	"net/http"
-	"os"
+	
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/controller"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -32,15 +32,6 @@ type Container struct {
 
 func NewContainer(db *pgxpool.Pool) *Container {
 
-	hostEmail := os.Getenv("SMTP_HOST")
-	if hostEmail == "" {
-		hostEmail = "localhost" // Fallback se rodar fora do docker
-	}
-
-	portEmail := os.Getenv("SMTP_PORT")
-	if portEmail == "" {
-		portEmail = "1025"
-	}
 
 	repoUsuario := repository.NewUsuarioRepository(db)
 	repoDepartamento := repository.NewDepartamentoRepository(db)
@@ -55,7 +46,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEstoque := repository.NewEstoqueRepository(db)
 	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
 
-	ServiceEmail := service.NewEmail(hostEmail, portEmail)
+	ServiceEmail := service.NewEmail()
 	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
 	funcaoService := service.NewFuncaoService(repoFuncao)

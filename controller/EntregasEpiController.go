@@ -63,7 +63,7 @@ func (e *EntregaController) UploadAssinaturaSupabase(base64str string, token str
 	contentType := "image/png"
 	arquivo := fmt.Sprintf("%s_%d.png", token, time.Now().Unix())
 	opts := storage_go.FileOptions{
-		ContentType: &contentType, // 🌟 Força o formato PNG
+		ContentType: &contentType, // força o formato PNG
 	}
 	_, errS := cliente.UploadFile(bucket, arquivo, bytes.NewReader(decodificador), opts)
 	if errS != nil {
