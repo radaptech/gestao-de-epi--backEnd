@@ -83,7 +83,7 @@ func (e *EmailService) EnviarEmailRecuperacao(emailDestino string, token string,
 
 
 	params:= &resend.SendEmailRequest{
-		From: "SGEPI <onboarding@resend.dev>",
+		From: "SGEPI <contato@radaptech.com.br>",
 		To: []string{emailDestino},
 		Subject: assunto,
 		Html: corpo,

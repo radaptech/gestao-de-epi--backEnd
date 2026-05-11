@@ -120,7 +120,6 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 		}
 
 		// 3. Atualiza o input com a URL do bucket antes de mandar para o Service
-		// Assim você economiza memória não criando uma struct nova do zero
 		input.Assinatura_Digital = urlAssinatura
 		input.Id_user = userId
 
@@ -142,7 +141,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"mensagem": "entrega cadastrada com sucesso",
-			// Opcional: retornar o token para o front
+			
 		})
 	}
 }
