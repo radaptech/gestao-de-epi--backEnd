@@ -226,10 +226,11 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 		err := l.service.RecuperacaoSenha(ctx, input)
 		if err != nil {
 
+			log.Println("erro ao enviar email de recuperaçao: %w", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-				"error":    "erro interno do servidor",
-				"detalhes": err.Error(),
+			 "error":    "erro interno do servidor",
+				
 			})
 			return
 		}
