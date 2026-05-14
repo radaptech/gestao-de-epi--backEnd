@@ -1,13 +1,12 @@
 package controller
 
 import (
-	"bytes"
+	
 	"context"
-	"encoding/base64"
+
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,8 +17,7 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
 
-	storage_go "github.com/supabase-community/storage-go"
-)
+)	
 
 type EntregasService interface {
 	Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32, token string) error
@@ -42,39 +40,7 @@ func NewEntregaController(service EntregasService) *EntregaController {
 	}
 }
 
-func (e *EntregaController) UploadAssinaturaSupabase(base64str string, token string) (string, error) {
 
-	if strings.Contains(base64str, ",") {
-		base64str = strings.Split(base64str, ",")[1]
-	}
-
-	decodificador, err := base64.StdEncoding.DecodeString(base64str)
-	if err != nil {
-
-		return "", fmt.Errorf("erro ao decodificar string. %w", err)
-	}
-
-	supabaseUrl := os.Getenv("SUPABASE_URL")
-	secretKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-	bucket := os.Getenv("SUPABASE_BUCKET")
-
-	cliente := storage_go.NewClient(supabaseUrl+"/storage/v1", secretKey, nil)
-
-	contentType := "image/png"
-	arquivo := fmt.Sprintf("%s_%d.png", token, time.Now().Unix())
-	opts := storage_go.FileOptions{
-		ContentType: &contentType, // força o formato PNG
-	}
-	_, errS := cliente.UploadFile(bucket, arquivo, bytes.NewReader(decodificador), opts)
-	if errS != nil {
-
-		return "", fmt.Errorf("erro ao enviar o arquivo para o supabase, %v", errS)
-	}
-
-	urlPublic := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", supabaseUrl, bucket, arquivo)
-
-	return urlPublic, err
-}
 
 func (e *EntregaController) Adicionar() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -110,7 +76,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 		}
 
 		// 2. Faz o Upload da Assinatura para o Bucket
-		urlAssinatura, errA := e.UploadAssinaturaSupabase(input.Assinatura_Digital, token)
+		urlAssinatura, errA := helper.UploadAssinaturaSupabase(input.Assinatura_Digital, token, "entregas")
 		if errA != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":    "falha ao salvar assinatura digital",
