@@ -150,11 +150,12 @@ type Funcionario struct {
 }
 
 type MotivoDevolucao struct {
-	ID         int32
-	TenantID   int32
-	Motivo     string
-	Ativo      bool
-	DeletadoEm pgtype.Timestamp
+	ID           int32
+	TenantID     int32
+	Motivo       string
+	Ativo        bool
+	DeletadoEm   pgtype.Timestamp
+	GeraDescarte bool
 }
 
 type Tamanho struct {

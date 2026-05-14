@@ -2,7 +2,6 @@ package routers
 
 import (
 	"net/http"
-	
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/controller"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -28,6 +27,7 @@ type Container struct {
 	Entrega         controller.EntregaController
 	Estoque         controller.EstoqueController
 	MotivoDevolucao controller.MotivoController
+	Devolucao controller.DevolucaoController
 }
 
 func NewContainer(db *pgxpool.Pool) *Container {
@@ -45,6 +45,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEntrega := repository.NewEntregaRepository(db)
 	repoEstoque := repository.NewEstoqueRepository(db)
 	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
+	repoDevolucao:= repository.NewDevolucaoRepository(db)
 
 	ServiceEmail := service.NewEmail()
 	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
@@ -59,6 +60,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	entregaService := service.NewEntregaService(repoEntrega, db)
 	estoqueService := service.NewEstoqueService(repoEstoque)
 	motivoService := service.NewMotivoDevolucaoRepositoryServe(repoMotivo)
+	devolucaoService:= service.NewDevolucaoService(repoDevolucao, db,*entregaService, repoMotivo)
 
 	return &Container{
 		Usuario:         *controller.NewLoginController(serviceUsuario),
@@ -73,6 +75,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 		Entrega:         *controller.NewEntregaController(entregaService),
 		Estoque:         *controller.NewEstoqueController(estoqueService),
 		MotivoDevolucao: *controller.NewMotivoController(motivoService),
+		Devolucao: 		 *controller.NewDevolucaoController(devolucaoService),
 	}
 }
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
@@ -163,6 +166,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/entrega-itens-dashbord", c.Entrega.BuscarEntregaItenDashbord())
 
 		//devolucao
+		api.POST("/devolucao", c.Devolucao.Adicionar())
 
 		//motivo da Motivo da Devolucao
 		api.POST("/cadastrar-motivo-devolucao", c.MotivoDevolucao.Salvar())
