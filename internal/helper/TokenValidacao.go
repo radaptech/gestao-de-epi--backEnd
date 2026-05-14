@@ -38,5 +38,5 @@ func GerarTokenDevolucao(nome, funcao, depto string, data time.Time) string {
 
     // 3. Retorna apenas os primeiros 12 ou 16 caracteres em maiúsculo para ficar elegante
     // Exemplo: ENT-A1B2C3D4E5F6
-    return fmt.Sprintf("DEVU-%X", hash)[:16]
+    return fmt.Sprintf("DEVO-%X", hash)[:16]
 }
