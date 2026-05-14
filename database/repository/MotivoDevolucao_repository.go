@@ -64,3 +64,26 @@ func (m *MotivoDevolucaoRepository) CancelarMotivoDevolucao(ctx context.Context,
 
 	return linhasAfetadas, nil
 }
+
+func (m *MotivoDevolucaoRepository) Descarte(ctx context.Context, arg EhDescarteParams) (bool, error){
+
+	descarte,err:= m.q.EhDescarte(ctx, arg)
+	if err != nil {
+
+		return false, helper.TraduzErroPostgres(err)
+	}
+
+
+	return descarte,err
+}
+
+func (m *MotivoDevolucaoRepository) ConsultaSaldo(ctx context.Context, arg ConsultarSaldoEpiFuncionarioParams)(int32, error){
+
+	saldo, err:= m.q.ConsultarSaldoEpiFuncionario(ctx, arg)
+	if err != nil {
+
+		return  0, helper.TraduzErroPostgres(err)
+	}
+
+	return saldo, nil
+}

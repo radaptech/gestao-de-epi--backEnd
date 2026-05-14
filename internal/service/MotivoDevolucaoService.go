@@ -15,6 +15,8 @@ type MotivoDevolucaoRepository interface {
 	ListarMotivo(ctx context.Context, arg repository.BuscaMotivoDevolucaoParams) (repository.BuscaMotivoDevolucaoRow, error)
 	ListarMotivos(ctx context.Context, tenantId int32) ([]repository.BuscaTodosMotivosDevolucaoRow, error)
 	CancelarMotivoDevolucao(ctx context.Context, arg repository.DeleteMotivoDevolucaoParams) (int64, error)
+	Descarte(ctx context.Context, arg repository.EhDescarteParams) (bool, error)
+	ConsultaSaldo(ctx context.Context, arg repository.ConsultarSaldoEpiFuncionarioParams)(int32, error)
 }
 
 type MotivoDevolucaoService struct {
@@ -33,6 +35,7 @@ func (m *MotivoDevolucaoService) Salvar(ctx context.Context, modelM model.Motivo
 	motivo, err:= m.repo.Adicionar(ctx,repository.AddMotivoDevolucaoParams{
 		TenantID: tenantId,
 		Motivo: modelM.Motivo,
+		GeraDescarte: modelM.Descaste,  
 	})
 	if err != nil {
 

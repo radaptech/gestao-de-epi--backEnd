@@ -1,0 +1,1 @@
+ALTER TABLE motivo_devolucao ADD COLUMN gera_descarte BOOLEAN NOT NULL DEFAULT false;

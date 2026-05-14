@@ -62,3 +62,29 @@ WHERE id = $1
   AND tenant_id = $3 -- SEGURANÇA: Só cancela se pertencer à empresa correta
   AND cancelada_em IS NULL
 RETURNING id;
+
+
+-- name: ConsultarSaldoEpiFuncionario :one
+SELECT
+    (
+        -- Total já entregue para este funcionário
+        COALESCE((
+            SELECT SUM(eei.quantidade)::int
+            FROM epis_entregues eei
+            JOIN entrega_epi ee ON ee.id = eei.id_entrega_cabecalho
+            WHERE ee.idfuncionario = $1
+              AND eei.id_epi = $2
+              AND eei.id_tamanho = $3
+              AND ee.tenant_id = $4
+        ), 0)
+        -
+        -- Menos o total que ele já devolveu anteriormente
+        COALESCE((
+            SELECT SUM(d.quantidadeadevolver)::int
+            FROM devolucao d
+            WHERE d.idfuncionario = $1
+              AND d.idepi = $2
+              AND d.idtamanho = $3
+              AND d.tenant_id = $4
+        ), 0)
+    )::int AS saldo;

@@ -1,10 +1,10 @@
 -- name: AddMotivoDevolucao :one
-INSERT INTO motivo_devolucao (tenant_id, motivo) 
-VALUES ($1, $2)
+INSERT INTO motivo_devolucao (tenant_id, motivo, gera_descarte) 
+VALUES ($1, $2, $3)
 returning id, motivo;
 
 -- name: BuscaMotivoDevolucao :one
-SELECT id, motivo 
+SELECT id, motivo, gera_descarte
 FROM motivo_devolucao 
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
@@ -12,7 +12,7 @@ WHERE id = $1
 LIMIT 1;
 
 -- name: BuscaTodosMotivosDevolucao :many
-SELECT id, motivo 
+SELECT id, motivo, gera_descarte
 FROM motivo_devolucao 
 WHERE tenant_id = $1 -- SEGURANÇA: Lista apenas os motivos desta empresa
   AND ativo = TRUE
@@ -25,3 +25,11 @@ SET ativo = FALSE,
 WHERE id = $1 
   AND tenant_id = $2 -- SEGURANÇA
   AND ativo = TRUE;
+
+-- name: EhDescarte :one
+SELECT gera_descarte
+FROM motivo_devolucao
+WHERE id = $1
+  AND tenant_id = $2 -- SEGURANÇA
+  AND ativo = TRUE
+LIMIT 1;

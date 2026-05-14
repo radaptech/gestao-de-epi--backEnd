@@ -141,6 +141,51 @@ func (q *Queries) CancelarDevolucao(ctx context.Context, arg CancelarDevolucaoPa
 	return id, err
 }
 
+const consultarSaldoEpiFuncionario = `-- name: ConsultarSaldoEpiFuncionario :one
+SELECT
+    (
+        -- Total já entregue para este funcionário
+        COALESCE((
+            SELECT SUM(eei.quantidade)::int
+            FROM epis_entregues eei
+            JOIN entrega_epi ee ON ee.id = eei.id_entrega_cabecalho
+            WHERE ee.idfuncionario = $1
+              AND eei.id_epi = $2
+              AND eei.id_tamanho = $3
+              AND ee.tenant_id = $4
+        ), 0)
+        -
+        -- Menos o total que ele já devolveu anteriormente
+        COALESCE((
+            SELECT SUM(d.quantidadeadevolver)::int
+            FROM devolucao d
+            WHERE d.idfuncionario = $1
+              AND d.idepi = $2
+              AND d.idtamanho = $3
+              AND d.tenant_id = $4
+        ), 0)
+    )::int AS saldo
+`
+
+type ConsultarSaldoEpiFuncionarioParams struct {
+	Idfuncionario int32
+	IDEpi         int32
+	IDTamanho     int32
+	TenantID      int32
+}
+
+func (q *Queries) ConsultarSaldoEpiFuncionario(ctx context.Context, arg ConsultarSaldoEpiFuncionarioParams) (int32, error) {
+	row := q.db.QueryRow(ctx, consultarSaldoEpiFuncionario,
+		arg.Idfuncionario,
+		arg.IDEpi,
+		arg.IDTamanho,
+		arg.TenantID,
+	)
+	var saldo int32
+	err := row.Scan(&saldo)
+	return saldo, err
+}
+
 const listarDevolucoes = `-- name: ListarDevolucoes :many
 SELECT 
     d.id, d.IdFuncionario, f.nome as func_nome, f.matricula,

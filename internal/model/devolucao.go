@@ -19,7 +19,7 @@ type DevolucaoInserir struct {
     
     // Outros campos do Payload
     AssinaturaDigital   string         `json:"assinatura_digital" binding:"required"`
-    TokenValidacao      string         `json:"token_validacao"`
+    TokenValidacao      string         `json:"-"`
     Observacao          *string        `json:"observacao"`
     
     // Você mencionou 'IdUser' na struct anterior, mas ele não está no payload do JS.

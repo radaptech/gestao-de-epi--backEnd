@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -27,19 +28,42 @@ type DevolucaoService struct {
 	db          *pgxpool.Pool
 	queries     *repository.Queries
 	repoEntrega EntregaService // Service de entrega para automatizar a troca
+	MotivoDevolucao MotivoDevolucaoRepository
 }
 
-func NewDevolucaoService(d DevolucaoRepository, db *pgxpool.Pool, repoEntregaEpi EntregaService) *DevolucaoService {
+func NewDevolucaoService(d DevolucaoRepository, db *pgxpool.Pool, repoEntregaEpi EntregaService, motivoDev MotivoDevolucaoRepository) *DevolucaoService {
 	return &DevolucaoService{
 		repo:        d,
 		db:          db,
 		queries:     repository.New(db),
 		repoEntrega: repoEntregaEpi,
+		MotivoDevolucao: motivoDev,
 	}
 }
 
+func (d *DevolucaoService) TokenDevolucao(ctx context.Context, tenantId, Idfuncionario int32) (string, error) {
+
+	fmt.Printf("🔍 [TOKEN] Buscando Funcionario %d | Tenant %d\n", Idfuncionario, tenantId)
+	funcionario, err := d.queries.BuscaFuncionarioPorId(ctx, repository.BuscaFuncionarioPorIdParams{
+		ID:       int32(Idfuncionario),
+		TenantID: tenantId,
+	})
+	if err != nil {
+		fmt.Printf("❌ [TOKEN] Erro na query: %v\n", err)
+		if err == pgx.ErrNoRows {
+			return "", helper.ErrNaoEncontrado
+		}
+		return "", err
+	}
+
+	token := helper.GerarTokenDevolucao(funcionario.Nome, funcionario.FuncaoNome,
+		funcionario.DepartamentoNome, time.Now())
+
+	return token, nil
+}
+
 // SalvarDevolucao orquestra a devolução de um EPI e opcionalmente realiza uma nova entrega (Troca)
-func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao model.DevolucaoInserir, tenantId int32) error {
+func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao model.DevolucaoInserir, tenantId int32, token string) error {
 	// Inicia a transação atômica
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -48,18 +72,25 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 	defer tx.Rollback(ctx)
 	qtx := d.queries.WithTx(tx)
 
-	// Busca dados do funcionário para gerar o token de validade
-	funcionario, err := d.queries.BuscaFuncionarioPorId(ctx, repository.BuscaFuncionarioPorIdParams{
-		ID:       int32(modelDevolucao.IdFuncionario),
+
+	//valida o saldo
+
+	saldoAtual, err:= d.MotivoDevolucao.ConsultaSaldo(ctx, repository.ConsultarSaldoEpiFuncionarioParams{
+		Idfuncionario: int32(modelDevolucao.IdFuncionario),
+		IDEpi: int32(modelDevolucao.IdEpi),
+		IDTamanho: int32(modelDevolucao.IdTamanho),
 		TenantID: tenantId,
 	})
+
 	if err != nil {
-		return fmt.Errorf("erro ao buscar funcionário: %w", err)
+
+		return  fmt.Errorf("erro ao consultar saldo do funcionario: %w", err)
 	}
 
-	// Gera o token de segurança para comprovar a operação
-	token := helper.GerarTokenDevolucao(funcionario.Nome, funcionario.FuncaoNome, funcionario.DepartamentoNome, modelDevolucao.DataDevolucao.Time())
+	if modelDevolucao.QuantidadeADevolver > int(saldoAtual) {
 
+		return fmt.Errorf("operação bloqueada: o funcionário possui apenas %d unidade(s) deste EPI em mãos, mas tentou devolver %d", saldoAtual, modelDevolucao.QuantidadeADevolver)
+	}
 	// Prepara variáveis para caso de troca (EPI novo)
 	var idEpiNovo, idTamanhoNovo, idQuantidadeNova pgtype.Int4
 	if modelDevolucao.Troca {
@@ -72,7 +103,14 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 	}
 
 	// Regra de Descarte: Motivos 1 (Desgaste), 2 (Dano) ou 3 (Vencimento) não voltam ao estoque
-	ehDescarte := modelDevolucao.IdMotivo == 1 || modelDevolucao.IdMotivo == 2 || modelDevolucao.IdMotivo == 3
+	ehDescarte, err:= d.MotivoDevolucao.Descarte(ctx, repository.EhDescarteParams{
+		ID: int32(modelDevolucao.IdMotivo),
+		TenantID: tenantId,
+	})
+	if err != nil{
+
+		return err
+	}
 
 	// Se não for descarte, devolve a quantidade ao estoque no lote mais recente
 	if !ehDescarte {
@@ -89,18 +127,18 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 
 	// Registra a devolução/troca na tabela principal
 	arg := repository.AddTrocaEpiParams{
-		TenantID:              tenantId,
-		Idfuncionario:         int32(modelDevolucao.IdFuncionario),
-		Idepi:                 int32(modelDevolucao.IdEpi),
-		Idmotivo:              int32(modelDevolucao.IdMotivo),
-		DataDevolucao:         pgtype.Date{Time: modelDevolucao.DataDevolucao.Time(), Valid: true},
-		Idtamanho:             int32(modelDevolucao.IdTamanho),
-		Quantidadeadevolver:   int32(modelDevolucao.QuantidadeADevolver),
-		Idepinovo:             idEpiNovo,
-		Idtamanhonovo:         idTamanhoNovo,
-		Quantidadenova:        idQuantidadeNova,
-		AssinaturaDigital:     modelDevolucao.AssinaturaDigital,
-		TokenValidacao:        pgtype.Text{String: token, Valid: true},
+		TenantID:            tenantId,
+		Idfuncionario:       int32(modelDevolucao.IdFuncionario),
+		Idepi:               int32(modelDevolucao.IdEpi),
+		Idmotivo:            int32(modelDevolucao.IdMotivo),
+		DataDevolucao:       pgtype.Date{Time: modelDevolucao.DataDevolucao.Time(), Valid: true},
+		Idtamanho:           int32(modelDevolucao.IdTamanho),
+		Quantidadeadevolver: int32(modelDevolucao.QuantidadeADevolver),
+		Idepinovo:           idEpiNovo,
+		Idtamanhonovo:       idTamanhoNovo,
+		Quantidadenova:      idQuantidadeNova,
+		AssinaturaDigital:   modelDevolucao.AssinaturaDigital,
+		TokenValidacao:      pgtype.Text{String: token, Valid: true},
 	}
 
 	idDevolucao, err := d.repo.AdicionarTroca(ctx, qtx, arg)
@@ -195,21 +233,21 @@ func (d *DevolucaoService) CancelarDevolucao(ctx context.Context, id, iduser, te
 }
 
 type FiltroDevolucao struct {
-	Canceladas bool
-	EpiID int32
-	DevolucaoID int32
+	Canceladas           bool
+	EpiID                int32
+	DevolucaoID          int32
 	MatriculaFuncionario string
-	DataInicio configs.DataBr
-	DataFim configs.DataBr
-	Pagina int32
-	Quantidade int32
+	DataInicio           configs.DataBr
+	DataFim              configs.DataBr
+	Pagina               int32
+	Quantidade           int32
 }
 
 type DevolucaoPaginada struct {
-	Devolucoes []model.DevolucaoDto `json:"entregas"`
-	Total int64 `json:"total"`
-	Pagina int32 `json:"pagina"`
-	PaginaFinal int32 `json:"pagina_final"`
+	Devolucoes  []model.DevolucaoDto `json:"entregas"`
+	Total       int64                `json:"total"`
+	Pagina      int32                `json:"pagina"`
+	PaginaFinal int32                `json:"pagina_final"`
 }
 
 // ListarDevolucoes gerencia a busca paginada com filtros
