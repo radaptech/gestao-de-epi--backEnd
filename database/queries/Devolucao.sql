@@ -88,3 +88,21 @@ SELECT
               AND d.tenant_id = $4
         ), 0)
     )::int AS saldo;
+
+
+-- name: ListarLotesParaRepor :many
+-- Busca todos os lotes que ainda têm espaço para receber devolução (quantidade_atual < quantidade)
+SELECT id, quantidade, quantidade_atual 
+FROM entrada_epi_item
+WHERE tenant_id = $1 
+  AND id_epi = $2 
+  AND id_tamanho = $3
+  AND ativo = TRUE
+  AND quantidade_atual < quantidade
+ORDER BY id DESC; -- Pega do lote mais recente para o mais antigo
+
+-- name: AtualizarSaldoLote :exec
+-- Atualiza o saldo de um lote específico
+UPDATE entrada_epi_item
+SET quantidade_atual = $2
+WHERE id = $1 AND tenant_id = $3;

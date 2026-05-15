@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"time"
@@ -87,8 +88,9 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 		return  fmt.Errorf("erro ao consultar saldo do funcionario: %w", err)
 	}
 
-	if modelDevolucao.QuantidadeADevolver > int(saldoAtual) {
+	if int32(modelDevolucao.QuantidadeADevolver) > saldoAtual {
 
+		log.Printf("erro: %v", err)
 		return fmt.Errorf("operação bloqueada: o funcionário possui apenas %d unidade(s) deste EPI em mãos, mas tentou devolver %d", saldoAtual, modelDevolucao.QuantidadeADevolver)
 	}
 	// Prepara variáveis para caso de troca (EPI novo)
@@ -114,15 +116,46 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 
 	// Se não for descarte, devolve a quantidade ao estoque no lote mais recente
 	if !ehDescarte {
-		err := qtx.DevolverItemAoEstoque(ctx, repository.DevolverItemAoEstoqueParams{
-			IDEpi:           int32(modelDevolucao.IdEpi),
-			IDTamanho:       int32(modelDevolucao.IdTamanho),
-			QuantidadeAtual: int32(modelDevolucao.QuantidadeADevolver),
-			TenantID:        tenantId,
+		qtdRestanteParaDevolver:= int32(modelDevolucao.QuantidadeADevolver)
+
+		lotes,err:= qtx.ListarLotesParaRepor(ctx, repository.ListarLotesParaReporParams{
+			TenantID: tenantId,
+			IDEpi: int32(modelDevolucao.IdEpi),
+			IDTamanho: int32(modelDevolucao.IdTamanho),
 		})
 		if err != nil {
-			return fmt.Errorf("erro ao repor estoque: %w", err)
+			log.Printf("erro ao buscar lotes para repor: %v", err)
+			return fmt.Errorf("erro ao buscar lotes para reposição")
 		}
+
+		for _, lote:= range lotes {
+
+			if qtdRestanteParaDevolver <= 0 {
+				break
+			}
+
+			espaçoNoLote:= lote.Quantidade - lote.QuantidadeAtual
+			qtdParaDeixarNoLote := min(qtdRestanteParaDevolver, espaçoNoLote)
+
+			novoSaldoLote := lote.QuantidadeAtual + qtdParaDeixarNoLote
+
+			err:= qtx.AtualizarSaldoLote(ctx, repository.AtualizarSaldoLoteParams{
+				ID: lote.ID,
+				QuantidadeAtual: novoSaldoLote,
+				TenantID: tenantId,
+			})
+			if err != nil {
+
+				return fmt.Errorf("erro ao atualizar saldo do lote %d: %w", lote.ID, err)
+			}
+
+			qtdRestanteParaDevolver -= qtdParaDeixarNoLote
+		}
+
+		if qtdRestanteParaDevolver > 0 {
+			return fmt.Errorf("anomalia de estoque: impossível repor %d itens. A quantidade devolvida excede o total comprado na história deste EPI", qtdRestanteParaDevolver)
+		}
+
 	}
 
 	// Registra a devolução/troca na tabela principal

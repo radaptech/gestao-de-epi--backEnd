@@ -117,6 +117,26 @@ func (q *Queries) AddTrocaEpi(ctx context.Context, arg AddTrocaEpiParams) (int32
 	return id, err
 }
 
+const atualizarSaldoLote = `-- name: AtualizarSaldoLote :exec
+
+UPDATE entrada_epi_item
+SET quantidade_atual = $2
+WHERE id = $1 AND tenant_id = $3
+`
+
+type AtualizarSaldoLoteParams struct {
+	ID              int32
+	QuantidadeAtual int32
+	TenantID        int32
+}
+
+// Pega do lote mais recente para o mais antigo
+// Atualiza o saldo de um lote específico
+func (q *Queries) AtualizarSaldoLote(ctx context.Context, arg AtualizarSaldoLoteParams) error {
+	_, err := q.db.Exec(ctx, atualizarSaldoLote, arg.ID, arg.QuantidadeAtual, arg.TenantID)
+	return err
+}
+
 const cancelarDevolucao = `-- name: CancelarDevolucao :one
 UPDATE devolucao
 SET cancelada_em = current_date,
@@ -330,6 +350,50 @@ func (q *Queries) ListarDevolucoes(ctx context.Context, arg ListarDevolucoesPara
 			&i.IDUsuarioCancelamento,
 			&i.TotalGeral,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listarLotesParaRepor = `-- name: ListarLotesParaRepor :many
+SELECT id, quantidade, quantidade_atual 
+FROM entrada_epi_item
+WHERE tenant_id = $1 
+  AND id_epi = $2 
+  AND id_tamanho = $3
+  AND ativo = TRUE
+  AND quantidade_atual < quantidade
+ORDER BY id DESC
+`
+
+type ListarLotesParaReporParams struct {
+	TenantID  int32
+	IDEpi     int32
+	IDTamanho int32
+}
+
+type ListarLotesParaReporRow struct {
+	ID              int32
+	Quantidade      int32
+	QuantidadeAtual int32
+}
+
+// Busca todos os lotes que ainda têm espaço para receber devolução (quantidade_atual < quantidade)
+func (q *Queries) ListarLotesParaRepor(ctx context.Context, arg ListarLotesParaReporParams) ([]ListarLotesParaReporRow, error) {
+	rows, err := q.db.Query(ctx, listarLotesParaRepor, arg.TenantID, arg.IDEpi, arg.IDTamanho)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListarLotesParaReporRow
+	for rows.Next() {
+		var i ListarLotesParaReporRow
+		if err := rows.Scan(&i.ID, &i.Quantidade, &i.QuantidadeAtual); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
