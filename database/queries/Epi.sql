@@ -115,13 +115,33 @@ WHERE e.tenant_id = $1;
 
 
 -- name: BuscaItensEntreguesPorFuncionario :many
-SELECT
-    ee.id,
-    ee.id_entrega_cabecalho, 
-    ee.quantidade,
-    ee.id_tamanho,
-    t.tamanho as tamanho_nome,
-    ee.id_epi,
+WITH Entregas AS (
+    -- 1. Agrupa e soma todas as quantidades que o funcionário já recebeu por EPI e Tamanho
+    SELECT 
+        ee.id_epi, 
+        ee.id_tamanho, 
+        SUM(ee.quantidade)::int as total_entregue
+    FROM epis_entregues ee
+    INNER JOIN entrega_epi e ON e.id = ee.id_entrega_cabecalho
+    WHERE e.tenant_id = $1 
+      AND e.IdFuncionario = $2
+      AND e.cancelada_em IS NULL
+    GROUP BY ee.id_epi, ee.id_tamanho
+),
+Devolucoes AS (
+    -- 2. Agrupa e soma tudo que ele já devolveu desse EPI e Tamanho
+    SELECT 
+      d.idepi, 
+        d.idtamanho, 
+        SUM(d.quantidadeadevolver)::int as total_devolvido
+    FROM devolucao d
+    WHERE d.tenant_id = $1 
+      AND d.idfuncionario = $2
+    GROUP BY d.idepi, d.idtamanho
+)
+-- 3. Junta as tabelas, traz os dados completos do EPI e filtra o saldo
+SELECT 
+    Entregas.id_epi,
     ep.nome as epi_nome,
     ep.fabricante,
     ep.ca,
@@ -129,12 +149,15 @@ SELECT
     ep.validade_ca,
     ep.alerta_minimo,
     ep.idtipoprotecao,
-    tp.nome as tipo_protecao_nome
-FROM epis_entregues ee
-INNER JOIN entrega_epi e ON e.id = ee.id_entrega_cabecalho
-INNER JOIN epi ep ON ep.id = ee.id_epi
-INNER JOIN tamanho t ON t.id = ee.id_tamanho
+    tp.nome as tipo_protecao_nome,
+    Entregas.id_tamanho,
+    t.tamanho as tamanho_nome,
+    (Entregas.total_entregue - COALESCE(Devolucoes.total_devolvido, 0))::int AS saldo_atual
+FROM Entregas
+LEFT JOIN Devolucoes 
+    ON Entregas.id_epi = Devolucoes.idepi 
+   AND Entregas.id_tamanho = Devolucoes.idtamanho
+INNER JOIN epi ep ON ep.id = Entregas.id_epi
+INNER JOIN tamanho t ON t.id = Entregas.id_tamanho
 INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
-WHERE e.tenant_id = $1 
-  AND e.IdFuncionario = $2 -- O Filtro que faltava!
-  AND e.cancelada_em IS NULL; -- Segurança extra: Garante que só traga itens de entregas ativas
+WHERE (Entregas.total_entregue - COALESCE(Devolucoes.total_devolvido, 0)) > 0;
