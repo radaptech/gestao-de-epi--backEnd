@@ -93,30 +93,45 @@ func (q *Queries) BuscarTamanhosComEstoquePorEpi(ctx context.Context, arg Buscar
 }
 
 const buscarTamanhosPorIdEpi = `-- name: BuscarTamanhosPorIdEpi :many
-SELECT t.id, t.tamanho, te.IdEpi
+SELECT 
+    t.id, 
+    t.tamanho, 
+    te.IdEpi,
+    -- Soma o estoque disponível deste tamanho e EPI
+    COALESCE((
+        SELECT SUM(eei.quantidade_atual)
+        FROM entrada_epi_item eei
+        WHERE eei.id_epi = te.IdEpi 
+          AND eei.id_tamanho = t.id
+          AND eei.tenant_id = $1
+          AND eei.ativo = TRUE
+          AND eei.quantidade_atual > 0
+          AND eei.data_validade >= CURRENT_DATE
+    ), 0)::int AS saldo_atual
 FROM tamanho t
 INNER JOIN tamanhos_epis te ON t.id = te.IdTamanho
-WHERE te.IdEpi = $1 
-  AND te.tenant_id = $2 -- SEGURANÇA: Garante que a relação é desta empresa
+WHERE te.IdEpi = $2 
+  AND te.tenant_id = $1 
   AND te.ativo = TRUE
-  AND t.tenant_id = $2 -- O sqlc sabe que é o MESMO tenant_id de cima!
+  AND t.tenant_id = $1 
   AND t.ativo = TRUE
 ORDER BY t.tamanho ASC
 `
 
 type BuscarTamanhosPorIdEpiParams struct {
-	IDEpi    int32
 	TenantID int32
+	IDEpi    int32
 }
 
 type BuscarTamanhosPorIdEpiRow struct {
-	ID      int32
-	Tamanho string
-	Idepi   int32
+	ID         int32
+	Tamanho    string
+	Idepi      int32
+	SaldoAtual int32
 }
 
 func (q *Queries) BuscarTamanhosPorIdEpi(ctx context.Context, arg BuscarTamanhosPorIdEpiParams) ([]BuscarTamanhosPorIdEpiRow, error) {
-	rows, err := q.db.Query(ctx, buscarTamanhosPorIdEpi, arg.IDEpi, arg.TenantID)
+	rows, err := q.db.Query(ctx, buscarTamanhosPorIdEpi, arg.TenantID, arg.IDEpi)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +139,12 @@ func (q *Queries) BuscarTamanhosPorIdEpi(ctx context.Context, arg BuscarTamanhos
 	var items []BuscarTamanhosPorIdEpiRow
 	for rows.Next() {
 		var i BuscarTamanhosPorIdEpiRow
-		if err := rows.Scan(&i.ID, &i.Tamanho, &i.Idepi); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Tamanho,
+			&i.Idepi,
+			&i.SaldoAtual,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

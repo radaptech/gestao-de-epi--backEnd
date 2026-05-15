@@ -11,13 +11,27 @@ WHERE id = $1
 LIMIT 1;
 
 -- name: BuscarTamanhosPorIdEpi :many
-SELECT t.id, t.tamanho, te.IdEpi
+SELECT 
+    t.id, 
+    t.tamanho, 
+    te.IdEpi,
+    -- Soma o estoque disponível deste tamanho e EPI
+    COALESCE((
+        SELECT SUM(eei.quantidade_atual)
+        FROM entrada_epi_item eei
+        WHERE eei.id_epi = te.IdEpi 
+          AND eei.id_tamanho = t.id
+          AND eei.tenant_id = @tenant_id
+          AND eei.ativo = TRUE
+          AND eei.quantidade_atual > 0
+          AND eei.data_validade >= CURRENT_DATE
+    ), 0)::int AS saldo_atual
 FROM tamanho t
 INNER JOIN tamanhos_epis te ON t.id = te.IdTamanho
 WHERE te.IdEpi = @id_epi 
-  AND te.tenant_id = @tenant_id -- SEGURANÇA: Garante que a relação é desta empresa
+  AND te.tenant_id = @tenant_id 
   AND te.ativo = TRUE
-  AND t.tenant_id = @tenant_id -- O sqlc sabe que é o MESMO tenant_id de cima!
+  AND t.tenant_id = @tenant_id 
   AND t.ativo = TRUE
 ORDER BY t.tamanho ASC;
 

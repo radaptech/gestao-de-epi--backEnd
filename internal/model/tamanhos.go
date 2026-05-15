@@ -10,7 +10,8 @@ type TamanhoDto struct {
 }
 
 type TamanhoEntregaDto struct {
-	ID      int    `json:"id"`
-	Tamanho string `json:"tamanho"`
-	Id_epi  int32  `json:"id_epi"`
+	ID              int    `json:"id"`
+	Tamanho         string `json:"tamanho"`
+	Id_epi          int32  `json:"id_epi"`
+	QuantidadeAtual int32  `json:"quantidade_atual"`
 }
