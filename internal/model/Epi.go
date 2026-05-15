@@ -29,6 +29,30 @@ type EpiDto struct {
 	AlertaMinimo   int32           `json:"alerta_minimo"`
 }
 
+type EpiDtoEntrega struct {
+	Id             int32               `json:"id"`
+	Nome           string              `json:"nome"`
+	Fabricante     string              `json:"fabricante"`
+	CA             string              `json:"ca"`
+	Tamanhos       []TamanhoEntregaDto `json:"tamanhos"` // Slive de objetos Tamanho (id e nome)
+	Descricao      string              `json:"descricao"`
+	DataValidadeCa configs.DataBr      `json:"validade_ca"`
+	Protecao       TipoProtecaoDto     `json:"protecao"`
+	AlertaMinimo   int32               `json:"alerta_minimo"`
+}
+type EpiDtoDevolucao struct {
+	Id             int32           `json:"id"`
+	Nome           string          `json:"nome"`
+	Fabricante     string          `json:"fabricante"`
+	CA             string          `json:"ca"`
+	Tamanhos       []TamanhoDto    `json:"tamanhos"` // Slive de objetos Tamanho (id e nome)
+	Descricao      string          `json:"descricao"`
+	DataValidadeCa configs.DataBr  `json:"validade_ca"`
+	Protecao       TipoProtecaoDto `json:"protecao"`
+	AlertaMinimo   int32           `json:"alerta_minimo"`
+	SaldoAtual     int32           `json:"saldoAtual"`
+}
+
 // UpdateEpiInput usa ponteiros para permitir atualização parcial (PATCH)
 type UpdateEpiInput struct {
 	Nome           *string         `json:"nome"`

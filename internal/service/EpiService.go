@@ -26,7 +26,7 @@ type EpiRepository interface {
 	AtualizaEpi(ctx context.Context, epi repository.UpdateEpiCampoParams) (int64, error)
 	BuscaEpiDashbord(ctx context.Context, tenant int32) ([]repository.BuscaEpiDashbordRow, error)
 	BuscaEpiTenant(ctx context.Context, tenant int32) ([]repository.BuscaTodosItensEntreguesDoTenantRow, error)
-	BuscaEpiFuncinario(ctx context.Context, idfuncionario, tenantId int32)([]repository.BuscaItensEntreguesPorFuncionarioRow, error)
+	BuscaEpiFuncionario(ctx context.Context, idfuncionario, tenantId int32)([]repository.BuscaItensEntreguesPorFuncionarioRow, error)
 }
 
 type EpiService struct {
@@ -439,20 +439,20 @@ func (e *EpiService) ListarEpiDashbord(ctx context.Context, tenantId int32) ([]m
 }
 
 
-func (e *EpiService) BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFuncionario int32) ([]model.EpiDto, error){
+func (e *EpiService) BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFuncionario int32) ([]model.EpiDtoDevolucao, error){
 
 
-	epis, err:= e.repo.BuscaEpiFuncinario(ctx, IdFuncionario, tenantId)
+	epis, err:= e.repo.BuscaEpiFuncionario(ctx, IdFuncionario, tenantId)
 	if err != nil {
-		return []model.EpiDto{}, err
+		return []model.EpiDtoDevolucao{}, err
 	}
 
-	dto:= make(map[int32]*model.EpiDto)
+	dto:= make(map[int32]*model.EpiDtoDevolucao)
 
 	for _, i:= range epis {
 
 		if _, ok := dto[i.IDEpi]; !ok{
-			dto[i.IDEpi] = &model.EpiDto{
+			dto[i.IDEpi] = &model.EpiDtoDevolucao{
 				Id: i.IDEpi,
 				Nome: i.EpiNome,
 				Fabricante: i.Fabricante,
@@ -461,7 +461,8 @@ func (e *EpiService) BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFun
 				Descricao: i.Descricao,
 				DataValidadeCa: configs.DataBr(i.ValidadeCa.Time),
 				Protecao: model.TipoProtecaoDto{ID: int64(i.Idtipoprotecao), Nome: i.TipoProtecaoNome},
-				AlertaMinimo: i.AlertaMinimo,				
+				AlertaMinimo: i.AlertaMinimo,	
+				SaldoAtual: i.SaldoAtual,			
 			}
 		}
 
@@ -471,7 +472,7 @@ func (e *EpiService) BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFun
 		} )
 	}
 
-	dtoSlice:= make([]model.EpiDto, 0, len(dto))
+	dtoSlice:= make([]model.EpiDtoDevolucao, 0, len(dto))
 	for _, v:= range dto {
 
 		dtoSlice = append(dtoSlice, *v)

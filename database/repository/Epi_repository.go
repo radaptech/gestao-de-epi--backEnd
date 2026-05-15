@@ -105,7 +105,7 @@ func (e *EpiRepository) BuscaEpiTenant(ctx context.Context, tenant int32) ([]Bus
 	return epi, nil
 }
 
-func ( e *EpiRepository) BuscaEpiFuncinario(ctx context.Context, idfuncionario, tenantId int32)([]BuscaItensEntreguesPorFuncionarioRow, error){
+func ( e *EpiRepository) BuscaEpiFuncionario(ctx context.Context, idfuncionario, tenantId int32)([]BuscaItensEntreguesPorFuncionarioRow, error){
 
 
 	epi, err:= e.q.BuscaItensEntreguesPorFuncionario(ctx,BuscaItensEntreguesPorFuncionarioParams{

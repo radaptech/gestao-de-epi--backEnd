@@ -97,13 +97,32 @@ func (q *Queries) BuscaEpiDashbord(ctx context.Context, tenantID int32) ([]Busca
 }
 
 const buscaItensEntreguesPorFuncionario = `-- name: BuscaItensEntreguesPorFuncionario :many
-SELECT
-    ee.id,
-    ee.id_entrega_cabecalho, 
-    ee.quantidade,
-    ee.id_tamanho,
-    t.tamanho as tamanho_nome,
-    ee.id_epi,
+WITH Entregas AS (
+    -- 1. Agrupa e soma todas as quantidades que o funcionário já recebeu por EPI e Tamanho
+    SELECT 
+        ee.id_epi, 
+        ee.id_tamanho, 
+        SUM(ee.quantidade)::int as total_entregue
+    FROM epis_entregues ee
+    INNER JOIN entrega_epi e ON e.id = ee.id_entrega_cabecalho
+    WHERE e.tenant_id = $1 
+      AND e.IdFuncionario = $2
+      AND e.cancelada_em IS NULL
+    GROUP BY ee.id_epi, ee.id_tamanho
+),
+Devolucoes AS (
+    -- 2. Agrupa e soma tudo que ele já devolveu desse EPI e Tamanho
+    SELECT 
+      d.idepi, 
+        d.idtamanho, 
+        SUM(d.quantidadeadevolver)::int as total_devolvido
+    FROM devolucao d
+    WHERE d.tenant_id = $1 
+      AND d.idfuncionario = $2
+    GROUP BY d.idepi, d.idtamanho
+)
+SELECT 
+    Entregas.id_epi,
     ep.nome as epi_nome,
     ep.fabricante,
     ep.ca,
@@ -111,15 +130,18 @@ SELECT
     ep.validade_ca,
     ep.alerta_minimo,
     ep.idtipoprotecao,
-    tp.nome as tipo_protecao_nome
-FROM epis_entregues ee
-INNER JOIN entrega_epi e ON e.id = ee.id_entrega_cabecalho
-INNER JOIN epi ep ON ep.id = ee.id_epi
-INNER JOIN tamanho t ON t.id = ee.id_tamanho
+    tp.nome as tipo_protecao_nome,
+    Entregas.id_tamanho,
+    t.tamanho as tamanho_nome,
+    (Entregas.total_entregue - COALESCE(Devolucoes.total_devolvido, 0))::int AS saldo_atual
+FROM Entregas
+LEFT JOIN Devolucoes 
+    ON Entregas.id_epi = Devolucoes.idepi 
+   AND Entregas.id_tamanho = Devolucoes.idtamanho
+INNER JOIN epi ep ON ep.id = Entregas.id_epi
+INNER JOIN tamanho t ON t.id = Entregas.id_tamanho
 INNER JOIN tipo_protecao tp ON tp.id = ep.IdTipoProtecao
-WHERE e.tenant_id = $1 
-  AND e.IdFuncionario = $2 -- O Filtro que faltava!
-  AND e.cancelada_em IS NULL
+WHERE (Entregas.total_entregue - COALESCE(Devolucoes.total_devolvido, 0)) > 0
 `
 
 type BuscaItensEntreguesPorFuncionarioParams struct {
@@ -128,22 +150,21 @@ type BuscaItensEntreguesPorFuncionarioParams struct {
 }
 
 type BuscaItensEntreguesPorFuncionarioRow struct {
-	ID                 int32
-	IDEntregaCabecalho int32
-	Quantidade         int32
-	IDTamanho          int32
-	TamanhoNome        string
-	IDEpi              int32
-	EpiNome            string
-	Fabricante         string
-	Ca                 string
-	Descricao          string
-	ValidadeCa         pgtype.Date
-	AlertaMinimo       int32
-	Idtipoprotecao     int32
-	TipoProtecaoNome   string
+	IDEpi            int32
+	EpiNome          string
+	Fabricante       string
+	Ca               string
+	Descricao        string
+	ValidadeCa       pgtype.Date
+	AlertaMinimo     int32
+	Idtipoprotecao   int32
+	TipoProtecaoNome string
+	IDTamanho        int32
+	TamanhoNome      string
+	SaldoAtual       int32
 }
 
+// 3. Junta as tabelas, traz os dados completos do EPI e filtra o saldo
 func (q *Queries) BuscaItensEntreguesPorFuncionario(ctx context.Context, arg BuscaItensEntreguesPorFuncionarioParams) ([]BuscaItensEntreguesPorFuncionarioRow, error) {
 	rows, err := q.db.Query(ctx, buscaItensEntreguesPorFuncionario, arg.TenantID, arg.Idfuncionario)
 	if err != nil {
@@ -154,11 +175,6 @@ func (q *Queries) BuscaItensEntreguesPorFuncionario(ctx context.Context, arg Bus
 	for rows.Next() {
 		var i BuscaItensEntreguesPorFuncionarioRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.IDEntregaCabecalho,
-			&i.Quantidade,
-			&i.IDTamanho,
-			&i.TamanhoNome,
 			&i.IDEpi,
 			&i.EpiNome,
 			&i.Fabricante,
@@ -168,6 +184,9 @@ func (q *Queries) BuscaItensEntreguesPorFuncionario(ctx context.Context, arg Bus
 			&i.AlertaMinimo,
 			&i.Idtipoprotecao,
 			&i.TipoProtecaoNome,
+			&i.IDTamanho,
+			&i.TamanhoNome,
+			&i.SaldoAtual,
 		); err != nil {
 			return nil, err
 		}

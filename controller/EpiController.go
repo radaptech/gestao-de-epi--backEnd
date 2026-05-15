@@ -21,7 +21,7 @@ type EpiService interface {
 	CancelarEpi(ctx context.Context, id int, tenantid int32) (int64, error)
 	AtualizaEpi(ctx context.Context, model model.UpdateEpiInput, id, tenantId int32) error
 	ListarEpiDashbord(ctx context.Context, tenantId int32) ([]model.EpiDashBord, error)
-	BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFuncionario int32) ([]model.EpiDto, error)
+	BuscarEpiDoFuncionario(ctx context.Context, tenantId, IdFuncionario int32) ([]model.EpiDtoDevolucao, error)
 }
 
 type EpiController struct {
