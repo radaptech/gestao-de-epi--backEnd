@@ -89,7 +89,7 @@ func (e *EntregaService) TokenEntrega(ctx context.Context, tenantId, idFuncionar
 // RegistrarEntrega: Lógica de negócio principal (Token, Lotes e Abate de Estoque)
 func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Queries, model model.EntregaParaInserir, tenantId int32, token string) error {
 	fmt.Printf("\n--- 📝 [ENTREGA] Iniciando Processo ---\n")
-	
+
 	var idTrocaParaBanco pgtype.Int4
 	if model.IdTroca != nil {
 		idTrocaParaBanco = pgtype.Int4{Int32: int32(*model.IdTroca), Valid: true}
@@ -115,7 +115,7 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 	// 2. Loop de Itens
 	for i, item := range model.Itens {
 		fmt.Printf("📦 [ITEM %d] EPI %d | Tam %d | Qtd %d\n", i, item.ID_epi, item.ID_tamanho, item.Quantidade)
-		
+
 		quantidadeNecessaria := item.Quantidade
 
 		lotes, err := e.repo.ListarEntregasDisponiveis(ctx, qtx, repository.ListarLotesParaConsumoParams{
@@ -129,9 +129,10 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 		}
 
 		if len(lotes) == 0 {
-			fmt.Printf("⚠️ [ESTOQUE] Saldo zerado ou inativo para EPI %d\n", item.ID_epi)
-			return fmt.Errorf("estoque insuficiente para o EPI ID %d", item.ID_epi)
-		}
+			fmt.Printf("⚠️ [ESTOQUE] Saldo zerado, inativo ou vencido para EPI %d\n", item.ID_epi)
+			// Essa é a mensagem que vai viajar até o React:
+			return fmt.Errorf("Não foi possível entregar. O estoque deste item está zerado ou com a validade vencida.")
+		}	
 
 		for _, lote := range lotes {
 			if quantidadeNecessaria <= 0 {
@@ -139,7 +140,7 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 			}
 
 			qtdAbater := min(lote.QuantidadeAtual, int32(quantidadeNecessaria))
-			
+
 			// Inserir Item
 			_, err := e.repo.AdicionarEntregaItem(ctx, qtx, repository.AddItemEntregueParams{
 				IDEntregaCabecalho: identrega,
@@ -337,12 +338,12 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 }
 
 // GerarDadosPdfService: Monta a estrutura para o gerador de PDF
-func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula string, idEntrega ,tenantId int32) (helper.DadosPdf, error) {
+func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula string, idEntrega, tenantId int32) (helper.DadosPdf, error) {
 	matInt, _ := strconv.Atoi(matricula)
 	entregas, err := e.repo.ListasEntregasPorMatricula(ctx, repository.ListarHistoricoEntregasPorMatriculaParams{
 		Matricula: int32(matInt),
 		TenantID:  tenantId,
-		ID: idEntrega,
+		ID:        idEntrega,
 	})
 	if err != nil || len(entregas) == 0 {
 		return helper.DadosPdf{}, err
