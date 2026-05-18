@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
-	"strconv"
+
 	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
@@ -21,23 +20,23 @@ import (
 type DevolucaoRepository interface {
 	AdicionarTroca(ctx context.Context, qtx *repository.Queries, arg repository.AddTrocaEpiParams) (int32, error)
 	Cancelar(ctx context.Context, qtx *repository.Queries, arg repository.CancelarDevolucaoParams) (int32, error)
-	Listar(ctx context.Context, args repository.ListarDevolucoesParams) ([]repository.ListarDevolucoesRow, error)
+	 Listar(ctx context.Context, tenantId int32) ([]repository.ListarDevolucoesRow, error)
 }
 
 type DevolucaoService struct {
-	repo        DevolucaoRepository
-	db          *pgxpool.Pool
-	queries     *repository.Queries
-	repoEntrega EntregaService // Service de entrega para automatizar a troca
+	repo            DevolucaoRepository
+	db              *pgxpool.Pool
+	queries         *repository.Queries
+	repoEntrega     EntregaService // Service de entrega para automatizar a troca
 	MotivoDevolucao MotivoDevolucaoRepository
 }
 
 func NewDevolucaoService(d DevolucaoRepository, db *pgxpool.Pool, repoEntregaEpi EntregaService, motivoDev MotivoDevolucaoRepository) *DevolucaoService {
 	return &DevolucaoService{
-		repo:        d,
-		db:          db,
-		queries:     repository.New(db),
-		repoEntrega: repoEntregaEpi,
+		repo:            d,
+		db:              db,
+		queries:         repository.New(db),
+		repoEntrega:     repoEntregaEpi,
 		MotivoDevolucao: motivoDev,
 	}
 }
@@ -73,19 +72,18 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 	defer tx.Rollback(ctx)
 	qtx := d.queries.WithTx(tx)
 
-
 	//valida o saldo
 
-	saldoAtual, err:= d.MotivoDevolucao.ConsultaSaldo(ctx, repository.ConsultarSaldoEpiFuncionarioParams{
+	saldoAtual, err := d.MotivoDevolucao.ConsultaSaldo(ctx, repository.ConsultarSaldoEpiFuncionarioParams{
 		Idfuncionario: int32(modelDevolucao.IdFuncionario),
-		IDEpi: int32(modelDevolucao.IdEpi),
-		IDTamanho: int32(modelDevolucao.IdTamanho),
-		TenantID: tenantId,
+		IDEpi:         int32(modelDevolucao.IdEpi),
+		IDTamanho:     int32(modelDevolucao.IdTamanho),
+		TenantID:      tenantId,
 	})
 
 	if err != nil {
 
-		return  fmt.Errorf("erro ao consultar saldo do funcionario: %w", err)
+		return fmt.Errorf("erro ao consultar saldo do funcionario: %w", err)
 	}
 
 	if int32(modelDevolucao.QuantidadeADevolver) > saldoAtual {
@@ -105,22 +103,22 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 	}
 
 	// Regra de Descarte: Motivos 1 (Desgaste), 2 (Dano) ou 3 (Vencimento) não voltam ao estoque
-	ehDescarte, err:= d.MotivoDevolucao.Descarte(ctx, repository.EhDescarteParams{
-		ID: int32(modelDevolucao.IdMotivo),
+	ehDescarte, err := d.MotivoDevolucao.Descarte(ctx, repository.EhDescarteParams{
+		ID:       int32(modelDevolucao.IdMotivo),
 		TenantID: tenantId,
 	})
-	if err != nil{
+	if err != nil {
 
 		return err
 	}
 
 	// Se não for descarte, devolve a quantidade ao estoque no lote mais recente
 	if !ehDescarte {
-		qtdRestanteParaDevolver:= int32(modelDevolucao.QuantidadeADevolver)
+		qtdRestanteParaDevolver := int32(modelDevolucao.QuantidadeADevolver)
 
-		lotes,err:= qtx.ListarLotesParaRepor(ctx, repository.ListarLotesParaReporParams{
-			TenantID: tenantId,
-			IDEpi: int32(modelDevolucao.IdEpi),
+		lotes, err := qtx.ListarLotesParaRepor(ctx, repository.ListarLotesParaReporParams{
+			TenantID:  tenantId,
+			IDEpi:     int32(modelDevolucao.IdEpi),
 			IDTamanho: int32(modelDevolucao.IdTamanho),
 		})
 		if err != nil {
@@ -128,21 +126,21 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 			return fmt.Errorf("erro ao buscar lotes para reposição")
 		}
 
-		for _, lote:= range lotes {
+		for _, lote := range lotes {
 
 			if qtdRestanteParaDevolver <= 0 {
 				break
 			}
 
-			espaçoNoLote:= lote.Quantidade - lote.QuantidadeAtual
+			espaçoNoLote := lote.Quantidade - lote.QuantidadeAtual
 			qtdParaDeixarNoLote := min(qtdRestanteParaDevolver, espaçoNoLote)
 
 			novoSaldoLote := lote.QuantidadeAtual + qtdParaDeixarNoLote
 
-			err:= qtx.AtualizarSaldoLote(ctx, repository.AtualizarSaldoLoteParams{
-				ID: lote.ID,
+			err := qtx.AtualizarSaldoLote(ctx, repository.AtualizarSaldoLoteParams{
+				ID:              lote.ID,
 				QuantidadeAtual: novoSaldoLote,
-				TenantID: tenantId,
+				TenantID:        tenantId,
 			})
 			if err != nil {
 
@@ -160,18 +158,21 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 
 	// Registra a devolução/troca na tabela principal
 	arg := repository.AddTrocaEpiParams{
-		TenantID:            tenantId,
-		Idfuncionario:       int32(modelDevolucao.IdFuncionario),
-		Idepi:               int32(modelDevolucao.IdEpi),
-		Idmotivo:            int32(modelDevolucao.IdMotivo),
-		DataDevolucao:       pgtype.Date{Time: modelDevolucao.DataDevolucao.Time(), Valid: true},
-		Idtamanho:           int32(modelDevolucao.IdTamanho),
-		Quantidadeadevolver: int32(modelDevolucao.QuantidadeADevolver),
-		Idepinovo:           idEpiNovo,
-		Idtamanhonovo:       idTamanhoNovo,
-		Quantidadenova:      idQuantidadeNova,
-		AssinaturaDigital:   modelDevolucao.AssinaturaDigital,
-		TokenValidacao:      pgtype.Text{String: token, Valid: true},
+		TenantID:              tenantId,
+		Idfuncionario:         int32(modelDevolucao.IdFuncionario),
+		Idepi:                 int32(modelDevolucao.IdEpi),
+		Idmotivo:              int32(modelDevolucao.IdMotivo),
+		DataDevolucao:         pgtype.Date{Time: modelDevolucao.DataDevolucao.Time(), Valid: true},
+		Idtamanho:             int32(modelDevolucao.IdTamanho),
+		Quantidadeadevolver:   int32(modelDevolucao.QuantidadeADevolver),
+		Idepinovo:             idEpiNovo,
+		Idtamanhonovo:         idTamanhoNovo,
+		Quantidadenova:        idQuantidadeNova,
+		AssinaturaDigital:     modelDevolucao.AssinaturaDigital,
+		IDUsuarioCancelamento: pgtype.Int4{Int32: int32(modelDevolucao.Iduser), Valid: true},
+		TokenValidacao:        pgtype.Text{String: token, Valid: true},
+		HouveTroca: pgtype.Bool{Bool: modelDevolucao.Troca, Valid: true},
+		Observacao: pgtype.Text{String: *modelDevolucao.Observacao, Valid: *modelDevolucao.Observacao == ""},
 	}
 
 	idDevolucao, err := d.repo.AdicionarTroca(ctx, qtx, arg)
@@ -184,6 +185,7 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 		idTrocaInt := int32(idDevolucao)
 		modelEntrega := model.EntregaParaInserir{
 			ID_funcionario:     int32(arg.Idfuncionario),
+			Id_user:            int32(modelDevolucao.Iduser),
 			Data_entrega:       modelDevolucao.DataDevolucao,
 			IdTroca:            &idTrocaInt,
 			Assinatura_Digital: arg.AssinaturaDigital,
@@ -265,130 +267,53 @@ func (d *DevolucaoService) CancelarDevolucao(ctx context.Context, id, iduser, te
 	return tx.Commit(ctx)
 }
 
-type FiltroDevolucao struct {
-	Canceladas           bool
-	EpiID                int32
-	DevolucaoID          int32
-	MatriculaFuncionario string
-	DataInicio           configs.DataBr
-	DataFim              configs.DataBr
-	Pagina               int32
-	Quantidade           int32
-}
 
-type DevolucaoPaginada struct {
-	Devolucoes  []model.DevolucaoDto `json:"entregas"`
-	Total       int64                `json:"total"`
-	Pagina      int32                `json:"pagina"`
-	PaginaFinal int32                `json:"pagina_final"`
-}
 
 // ListarDevolucoes gerencia a busca paginada com filtros
-func (d *DevolucaoService) ListarDevolucoes(ctx context.Context, f FiltroDevolucao, tenantId int32) (DevolucaoPaginada, error) {
-	limit := f.Quantidade
-	if limit <= 0 {
-		limit = 10
-	}
+func (d *DevolucaoService) ListarDevolucoes(ctx context.Context,tenantId int32) ([]model.DevolucaoResponse, error) {
 
-	paginaAtual := f.Pagina
-	if paginaAtual <= 0 {
-		paginaAtual = 1
-	}
-	offset := (paginaAtual - 1) * limit
 
-	filtro := repository.ListarDevolucoesParams{
-		Limit:      limit,
-		Offset:     offset,
-		Canceladas: f.Canceladas,
-		ID:         pgtype.Int4{Int32: f.DevolucaoID, Valid: f.DevolucaoID > 0},
-		Matricula:  pgtype.Text{String: f.MatriculaFuncionario, Valid: f.MatriculaFuncionario != ""},
-		DataInicio: pgtype.Date{Time: f.DataInicio.Time(), Valid: !f.DataInicio.IsZero()},
-		DataFim:    pgtype.Date{Time: f.DataFim.Time(), Valid: !f.DataFim.IsZero()},
-		TenantID:   tenantId,
-	}
-
-	devolucoes, err := d.repo.Listar(ctx, filtro)
+	devolucoes, err := d.repo.Listar(ctx, tenantId)
 	if err != nil {
-		return DevolucaoPaginada{}, helper.TraduzErroPostgres(err)
+		return []model.DevolucaoResponse{}, helper.TraduzErroPostgres(err)
 	}
 
-	dto := make([]model.DevolucaoDto, 0, len(devolucoes))
+	dto := make([]model.DevolucaoResponse, 0, len(devolucoes))
 
 	for _, dev := range devolucoes {
-		matriculaStr := strconv.Itoa(int(dev.Matricula))
-
-		// Mapeamento de dados do banco para o DTO do Frontend
-		item := model.DevolucaoDto{
-			Id: int(dev.ID),
-			Funcionario: model.Funcionario_Dto{
-				ID:        int32(dev.Idfuncionario),
-				Nome:      dev.FuncNome,
-				Matricula: matriculaStr,
-				Funcao: model.FuncaoDto{
-					ID:     int(dev.Idfuncao),
-					Funcao: dev.FuncaoNome,
-					Departamento: model.DepartamentoDto{
-						ID:           int(dev.Iddepartamento),
-						Departamento: dev.DepNome,
-					},
-				},
-			},
-			Epi: model.EpiDto{
-				Id:         int32(dev.Idepi),
-				Nome:       dev.EpiAntigoNome,
-				Fabricante: dev.EpiAntigoFab,
-				CA:         dev.EpiAntigoCa,
-				Tamanhos: []model.TamanhoDto{{
-					ID:      int(dev.TamAntigoID),
-					Tamanho: dev.TamAntigoNome,
-				}},
-				Descricao:      dev.DescAntiga,
-				DataValidadeCa: configs.DataBr(dev.ValidadeCaAntiga.Time),
-				Protecao: model.TipoProtecaoDto{
-					ID:   int64(dev.Idprotecaoantigo),
-					Nome: dev.TipoProtecaoNomeantigo,
-				},
-			},
-			Motivo: model.MotivoDevolucaoEpiDto{
-				Id:     int(dev.Idmotivo),
-				Motivo: dev.MotivoNome,
-			},
-			DataDevolucao:       configs.DataBr(dev.DataDevolucao.Time),
-			QuantidadeADevolver: int(dev.Quantidadeadevolver),
-			AssinaturaDigital:   dev.AssinaturaDigital,
+	
+		obs:= dev.Observacao.String
+		assinaturta:= dev.AssinaturaDigital
+		token:=dev.TokenValidacao.String
+		devo:= model.DevolucaoResponse{
+			ID: dev.ID,
+			DataDevolucao: *configs.NewDataBrPtr(dev.DataDevolucao.Time),
+			IDFuncionario: dev.Idfuncionario,
+			FuncionarioNome: dev.Funcionarionome,
+			FuncionarioMatricula: dev.Matricula,
+			EpiNome: dev.Epinome,
+			TamanhoNome: dev.Tamanho,
+			QuantidadeADevolver: dev.Quantidadeadevolver,
+			MotivoNome: dev.Motivo,
+			HouveTroca: dev.HouveTroca.Bool,
+			Observacao: &obs,
+			AssinaturaDigital: &assinaturta,
+			TokenValidacao: &token,
 		}
 
-		// Se a devolução incluiu uma troca, mapeia os dados do novo EPI
-		if dev.Idepinovo.Valid {
-			item.EpiNovo = &model.EpiDto{
-				Id:         dev.Idepinovo.Int32,
-				Nome:       dev.EpiNovoNome.String,
-				Fabricante: dev.EpiNovoFab.String,
-				CA:         dev.EpiNovoCa.String,
-				Tamanhos: []model.TamanhoDto{{
-					ID:      int(dev.Idtamanhonovo.Int32),
-					Tamanho: dev.TamNovoNome.String,
-				}},
-				Descricao:      dev.DescNova.String,
-				DataValidadeCa: configs.DataBr(dev.ValidadeCaNova.Time),
-				Protecao: model.TipoProtecaoDto{
-					ID:   int64(dev.Idprotecaonovo.Int32),
-					Nome: dev.TipoProtecaoNomenovo.String,
-				},
-			}
+		if devo.HouveTroca == true{
+
+			epinovo:= dev.Epinovo.String
+			tamanhoNovo:= dev.Tamanhonovo.String
+			quantidadeNova:=dev.Quantidadenova.Int32
+			devo.EpiNovoNome = &epinovo
+			devo.TamanhoNovoNome = &tamanhoNovo
+			devo.QuantidadeNova = &quantidadeNova
 		}
-		dto = append(dto, item)
-	}
 
-	var total int64
-	if len(devolucoes) > 0 {
-		total = devolucoes[0].TotalGeral
+		dto = append(dto, devo)
 	}
+		
+	return dto,nil
 
-	return DevolucaoPaginada{
-		Devolucoes:  dto,
-		Total:       total,
-		Pagina:      paginaAtual,
-		PaginaFinal: int32(math.Ceil(float64(total) / float64(limit))),
-	}, nil
 }

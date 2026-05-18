@@ -7,26 +7,22 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-
 type DevolucaoRepository struct {
-
-	q *Queries
+	q  *Queries
 	db *pgxpool.Pool
 }
 
-
-func NewDevolucaoRepository(pool *pgxpool.Pool) *DevolucaoRepository{
+func NewDevolucaoRepository(pool *pgxpool.Pool) *DevolucaoRepository {
 
 	return &DevolucaoRepository{
-		q: New(pool),
+		q:  New(pool),
 		db: pool,
-	} 
+	}
 }
 
-  
-func (d *DevolucaoRepository) AdicionarDevolucao(ctx context.Context,qtx *Queries ,args AddDevolucaoSimplesParams ) error {
+func (d *DevolucaoRepository) AdicionarDevolucao(ctx context.Context, qtx *Queries, args AddDevolucaoSimplesParams) error {
 
-	err:= qtx.AddDevolucaoSimples(ctx, args)
+	err := qtx.AddDevolucaoSimples(ctx, args)
 	if err != nil {
 
 		return helper.TraduzErroPostgres(err)
@@ -35,9 +31,9 @@ func (d *DevolucaoRepository) AdicionarDevolucao(ctx context.Context,qtx *Querie
 	return nil
 }
 
-func (d *DevolucaoRepository) AdicionarTroca(ctx context.Context,qtx *Queries  ,arg AddTrocaEpiParams) (int32, error) {
+func (d *DevolucaoRepository) AdicionarTroca(ctx context.Context, qtx *Queries, arg AddTrocaEpiParams) (int32, error) {
 
-	idDevolucao, err:=qtx.AddTrocaEpi(ctx, arg)
+	idDevolucao, err := qtx.AddTrocaEpi(ctx, arg)
 	if err != nil {
 
 		return 0, helper.TraduzErroPostgres(err)
@@ -46,9 +42,9 @@ func (d *DevolucaoRepository) AdicionarTroca(ctx context.Context,qtx *Queries  ,
 	return idDevolucao, nil
 }
 
-func (d *DevolucaoRepository) EntregaVinculada(ctx context.Context, qtx *Queries ,arg AddEntregaVinculadaParams) (int32, error){
+func (d *DevolucaoRepository) EntregaVinculada(ctx context.Context, qtx *Queries, arg AddEntregaVinculadaParams) (int32, error) {
 
-	identrega, err:= qtx.AddEntregaVinculada(ctx, arg)
+	identrega, err := qtx.AddEntregaVinculada(ctx, arg)
 	if err != nil {
 
 		return 0, helper.TraduzErroPostgres(err)
@@ -57,19 +53,19 @@ func (d *DevolucaoRepository) EntregaVinculada(ctx context.Context, qtx *Queries
 	return identrega, nil
 }
 
-func (d *DevolucaoRepository) Cancelar(ctx context.Context,qtx *Queries , arg CancelarDevolucaoParams) (int32, error) {
+func (d *DevolucaoRepository) Cancelar(ctx context.Context, qtx *Queries, arg CancelarDevolucaoParams) (int32, error) {
 
-	id, err:= qtx.CancelarDevolucao(ctx, arg)
+	id, err := qtx.CancelarDevolucao(ctx, arg)
 	if err != nil {
 		return 0, helper.TraduzErroPostgres(err)
 	}
 
-	return  id, nil
+	return id, nil
 }
 
-func (d *DevolucaoRepository) Listar(ctx context.Context,args ListarDevolucoesParams) ([]ListarDevolucoesRow, error){
+func (d *DevolucaoRepository) Listar(ctx context.Context, tenantId int32) ([]ListarDevolucoesRow, error) {
 
-	devolucoes, err:= d.q.ListarDevolucoes(ctx, args)
+	devolucoes, err := d.q.ListarDevolucoes(ctx, tenantId)
 	if err != nil {
 
 		return []ListarDevolucoesRow{}, helper.TraduzErroPostgres(err)

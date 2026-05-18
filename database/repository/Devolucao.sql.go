@@ -77,24 +77,27 @@ func (q *Queries) AddEntregaVinculada(ctx context.Context, arg AddEntregaVincula
 const addTrocaEpi = `-- name: AddTrocaEpi :one
 INSERT INTO devolucao (
     tenant_id, IdFuncionario, IdEpi, IdMotivo, data_devolucao, IdTamanho, 
-    quantidadeAdevolver, IdEpiNovo, IdTamanhoNovo, quantidadeNova, assinatura_digital, token_validacao
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    quantidadeAdevolver, IdEpiNovo, IdTamanhoNovo, quantidadeNova, assinatura_digital,id_usuario_cancelamento, token_validacao, houve_troca, observacao
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 RETURNING id
 `
 
 type AddTrocaEpiParams struct {
-	TenantID            int32
-	Idfuncionario       int32
-	Idepi               int32
-	Idmotivo            int32
-	DataDevolucao       pgtype.Date
-	Idtamanho           int32
-	Quantidadeadevolver int32
-	Idepinovo           pgtype.Int4
-	Idtamanhonovo       pgtype.Int4
-	Quantidadenova      pgtype.Int4
-	AssinaturaDigital   string
-	TokenValidacao      pgtype.Text
+	TenantID              int32
+	Idfuncionario         int32
+	Idepi                 int32
+	Idmotivo              int32
+	DataDevolucao         pgtype.Date
+	Idtamanho             int32
+	Quantidadeadevolver   int32
+	Idepinovo             pgtype.Int4
+	Idtamanhonovo         pgtype.Int4
+	Quantidadenova        pgtype.Int4
+	AssinaturaDigital     string
+	IDUsuarioCancelamento pgtype.Int4
+	TokenValidacao        pgtype.Text
+	HouveTroca            pgtype.Bool
+	Observacao            pgtype.Text
 }
 
 func (q *Queries) AddTrocaEpi(ctx context.Context, arg AddTrocaEpiParams) (int32, error) {
@@ -110,7 +113,10 @@ func (q *Queries) AddTrocaEpi(ctx context.Context, arg AddTrocaEpiParams) (int32
 		arg.Idtamanhonovo,
 		arg.Quantidadenova,
 		arg.AssinaturaDigital,
+		arg.IDUsuarioCancelamento,
 		arg.TokenValidacao,
+		arg.HouveTroca,
+		arg.Observacao,
 	)
 	var id int32
 	err := row.Scan(&id)
@@ -207,104 +213,42 @@ func (q *Queries) ConsultarSaldoEpiFuncionario(ctx context.Context, arg Consulta
 }
 
 const listarDevolucoes = `-- name: ListarDevolucoes :many
-SELECT 
-    d.id, d.IdFuncionario, f.nome as func_nome, f.matricula,
-    f.IdDepartamento, dd.nome as dep_nome,
-    f.IdFuncao, ff.nome as funcao_nome,
-    d.IdEpi, e.nome as epi_antigo_nome, e.fabricante as epi_antigo_fab, e.CA as epi_antigo_ca,
-    d.IdTamanho as tam_antigo_id, t.tamanho as tam_antigo_nome, e.descricao as desc_antiga,
-    e.validade_CA as validade_ca_antiga, e.IdTipoProtecao as idprotecaoAntigo, tp.nome as tipo_protecao_nomeAntigo,
-    d.quantidadeAdevolver, d.IdMotivo, m.motivo as motivo_nome,
-    d.IdEpiNovo, 
-    en.nome as epi_novo_nome, en.fabricante as epi_novo_fab, en.CA as epi_novo_ca,
-    d.quantidadeNova, d.IdTamanhoNovo, tn.tamanho as tam_novo_nome, en.descricao as desc_nova,
-    en.validade_CA as validade_ca_nova, en.IdTipoProtecao as idprotecaoNovo, tpn.nome as tipo_protecao_nomeNovo,
-    d.assinatura_digital, d.data_devolucao, d.id_usuario_cancelamento,
-    COUNT(*) OVER() as total_geral
-FROM devolucao d
-INNER JOIN epi e ON d.IdEpi = e.id
-INNER JOIN funcionario f ON d.IdFuncionario = f.id  
-INNER JOIN departamento dd ON f.IdDepartamento = dd.id
-INNER JOIN funcao ff ON f.IdFuncao = ff.id
-INNER JOIN tamanho t ON d.IdTamanho = t.id
-INNER JOIN motivo_devolucao m ON d.IdMotivo = m.id
-INNER JOIN tipo_protecao tp ON e.IdTipoProtecao = tp.id
-LEFT JOIN epi en ON d.IdEpiNovo = en.id
-LEFT JOIN tamanho tn ON d.IdTamanhoNovo = tn.id
-LEFT JOIN tipo_protecao tpn ON en.IdTipoProtecao = tpn.id
-WHERE 
-    d.tenant_id = $3 -- SEGURANÇA: Filtro obrigatório do tenant
-    AND (($4::boolean IS FALSE AND d.cancelada_em IS NULL) OR
-         ($4::boolean IS TRUE AND d.cancelada_em IS NOT NULL))
-    AND ($5::int IS NULL OR d.id = $5)
-    AND ($6::text IS NULL OR f.matricula = $6)
-    AND ($7::date IS NULL OR d.data_devolucao >= $7)
-    AND ($8::date IS NULL OR d.data_devolucao <= $8)
-ORDER BY d.data_devolucao DESC 
-LIMIT $1 OFFSET $2
+select d.id, d.data_devolucao, d.idfuncionario, f.nome as funcionarioNome, f.matricula, e.nome as epiNome, 
+t.tamanho, d.quantidadeadevolver, m.motivo, d.houve_troca, en.nome as epiNovo, tn.tamanho as tamanhoNovo,
+d.quantidadenova,d.observacao, d.assinatura_digital, d.token_validacao
+from devolucao d
+inner join funcionario f on f.id = d.idfuncionario 
+inner join epi e on e.id = d.idepi
+full outer join epi en on en.id = d.idepinovo
+inner join tamanhos_epis te on te.idtamanho = d.idtamanho
+full outer join tamanho tn ON tn.id = d.idtamanhonovo
+inner join tamanho t on t.id = te.idtamanho
+inner join motivo_devolucao m on m.id = d.idmotivo
+where d.tenant_id = $1 and d.cancelada_em is null
+order by d.data_devolucao desc
 `
 
-type ListarDevolucoesParams struct {
-	Limit      int32
-	Offset     int32
-	TenantID   int32
-	Canceladas bool
-	ID         pgtype.Int4
-	Matricula  pgtype.Text
-	DataInicio pgtype.Date
-	DataFim    pgtype.Date
-}
-
 type ListarDevolucoesRow struct {
-	ID                     int32
-	Idfuncionario          int32
-	FuncNome               string
-	Matricula              int32
-	Iddepartamento         int32
-	DepNome                string
-	Idfuncao               int32
-	FuncaoNome             string
-	Idepi                  int32
-	EpiAntigoNome          string
-	EpiAntigoFab           string
-	EpiAntigoCa            string
-	TamAntigoID            int32
-	TamAntigoNome          string
-	DescAntiga             string
-	ValidadeCaAntiga       pgtype.Date
-	Idprotecaoantigo       int32
-	TipoProtecaoNomeantigo string
-	Quantidadeadevolver    int32
-	Idmotivo               int32
-	MotivoNome             string
-	Idepinovo              pgtype.Int4
-	EpiNovoNome            pgtype.Text
-	EpiNovoFab             pgtype.Text
-	EpiNovoCa              pgtype.Text
-	Quantidadenova         pgtype.Int4
-	Idtamanhonovo          pgtype.Int4
-	TamNovoNome            pgtype.Text
-	DescNova               pgtype.Text
-	ValidadeCaNova         pgtype.Date
-	Idprotecaonovo         pgtype.Int4
-	TipoProtecaoNomenovo   pgtype.Text
-	AssinaturaDigital      string
-	DataDevolucao          pgtype.Date
-	IDUsuarioCancelamento  pgtype.Int4
-	TotalGeral             int64
+	ID                  int32
+	DataDevolucao       pgtype.Date
+	Idfuncionario       int32
+	Funcionarionome     string
+	Matricula           int32
+	Epinome             string
+	Tamanho             string
+	Quantidadeadevolver int32
+	Motivo              string
+	HouveTroca          pgtype.Bool
+	Epinovo             pgtype.Text
+	Tamanhonovo         pgtype.Text
+	Quantidadenova      pgtype.Int4
+	Observacao          pgtype.Text
+	AssinaturaDigital   string
+	TokenValidacao      pgtype.Text
 }
 
-func (q *Queries) ListarDevolucoes(ctx context.Context, arg ListarDevolucoesParams) ([]ListarDevolucoesRow, error) {
-	rows, err := q.db.Query(ctx, listarDevolucoes,
-		arg.Limit,
-		arg.Offset,
-		arg.TenantID,
-		arg.Canceladas,
-		arg.ID,
-		arg.Matricula,
-		arg.DataInicio,
-		arg.DataFim,
-	)
+func (q *Queries) ListarDevolucoes(ctx context.Context, tenantID int32) ([]ListarDevolucoesRow, error) {
+	rows, err := q.db.Query(ctx, listarDevolucoes, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -314,41 +258,21 @@ func (q *Queries) ListarDevolucoes(ctx context.Context, arg ListarDevolucoesPara
 		var i ListarDevolucoesRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Idfuncionario,
-			&i.FuncNome,
-			&i.Matricula,
-			&i.Iddepartamento,
-			&i.DepNome,
-			&i.Idfuncao,
-			&i.FuncaoNome,
-			&i.Idepi,
-			&i.EpiAntigoNome,
-			&i.EpiAntigoFab,
-			&i.EpiAntigoCa,
-			&i.TamAntigoID,
-			&i.TamAntigoNome,
-			&i.DescAntiga,
-			&i.ValidadeCaAntiga,
-			&i.Idprotecaoantigo,
-			&i.TipoProtecaoNomeantigo,
-			&i.Quantidadeadevolver,
-			&i.Idmotivo,
-			&i.MotivoNome,
-			&i.Idepinovo,
-			&i.EpiNovoNome,
-			&i.EpiNovoFab,
-			&i.EpiNovoCa,
-			&i.Quantidadenova,
-			&i.Idtamanhonovo,
-			&i.TamNovoNome,
-			&i.DescNova,
-			&i.ValidadeCaNova,
-			&i.Idprotecaonovo,
-			&i.TipoProtecaoNomenovo,
-			&i.AssinaturaDigital,
 			&i.DataDevolucao,
-			&i.IDUsuarioCancelamento,
-			&i.TotalGeral,
+			&i.Idfuncionario,
+			&i.Funcionarionome,
+			&i.Matricula,
+			&i.Epinome,
+			&i.Tamanho,
+			&i.Quantidadeadevolver,
+			&i.Motivo,
+			&i.HouveTroca,
+			&i.Epinovo,
+			&i.Tamanhonovo,
+			&i.Quantidadenova,
+			&i.Observacao,
+			&i.AssinaturaDigital,
+			&i.TokenValidacao,
 		); err != nil {
 			return nil, err
 		}

@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +14,7 @@ import (
 type DevolucaoService interface {
 	SalvarDevolucao(ctx context.Context, modelDevolucao model.DevolucaoInserir, tenantId int32, token string) error
 	CancelarDevolucao(ctx context.Context, id, iduser, tenantId int) error
-	ListarDevolucoes(ctx context.Context, f service.FiltroDevolucao, tenantId int32) (service.DevolucaoPaginada, error)
+	ListarDevolucoes(ctx context.Context, tenantId int32) ([]model.DevolucaoResponse, error)
 	TokenDevolucao(ctx context.Context, tenantId, Idfuncionario int32) (string, error)
 }
 
@@ -50,7 +48,13 @@ func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-
+		userId, ok := middleware.GetUserID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"erro": "erro ao setar usuario",
+			})
+			return
+		}
 
 		token, err := d.service.TokenDevolucao(ctx, tenantId, int32(input.IdFuncionario))
 		if err != nil {
@@ -68,7 +72,7 @@ func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 		}
 
 		input.AssinaturaDigital = urlAssinatura
-
+		input.Iduser = int(userId)
 		err = d.service.SalvarDevolucao(ctx, input, tenantId, token)
 		if err != nil {
 			// Tratamento de erros específicos
@@ -80,10 +84,37 @@ func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		
 		ctx.JSON(http.StatusOK, gin.H{
 			"mensagem": "devolucao cadastrada com sucesso",
-			
 		})
+	}
+}
+
+func (d *DevolucaoController) Listar() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "erro ao receber tenantId",
+			})
+			return
+		}
+
+
+		devolucoes, err:= d.service.ListarDevolucoes(ctx, tenantId)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error": "erro ao realizar buscar das entregas de epi",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+
+		ctx.JSON(http.StatusOK, devolucoes)
 	}
 }
