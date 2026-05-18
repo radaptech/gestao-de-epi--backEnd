@@ -63,7 +63,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 		userId, ok := middleware.GetUserID(ctx)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"erro": "erro au setar usuario",
+				"erro": "erro ao setar usuario",
 			})
 			return
 		}

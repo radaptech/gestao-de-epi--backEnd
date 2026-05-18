@@ -34,6 +34,8 @@ type Devolucao struct {
 	IDUsuarioCancelamento          pgtype.Int4
 	IDUsuarioDevolucaoCancelamento pgtype.Int4
 	TokenValidacao                 pgtype.Text
+	HouveTroca                     pgtype.Bool
+	Observacao                     pgtype.Text
 }
 
 type Empresa struct {

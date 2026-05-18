@@ -166,7 +166,8 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		api.GET("/entrega-itens-dashbord", c.Entrega.BuscarEntregaItenDashbord())
 
 		//devolucao
-		api.POST("/devolucao", c.Devolucao.Adicionar())
+		api.POST("/cadastro-devolucao", c.Devolucao.Adicionar())
+		api.GET("/devolucao", c.Devolucao.Listar())
 
 		//motivo da Motivo da Devolucao
 		api.POST("/cadastrar-motivo-devolucao", c.MotivoDevolucao.Salvar())
