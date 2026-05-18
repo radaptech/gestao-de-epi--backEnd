@@ -11,6 +11,7 @@ services:
     ports:
       - "${DB_PORT}:5432" # Porta externa:interna
     environment:
+      - TZ=America/Sao_Paulo
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DATABASE}
