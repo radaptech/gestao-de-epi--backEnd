@@ -1,0 +1,1 @@
+alter table devolucao add column observacao text;

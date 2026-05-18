@@ -1,0 +1,1 @@
+alter table devolucao add column houve_troca boolean default false;
