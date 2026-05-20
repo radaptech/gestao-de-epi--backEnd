@@ -1,0 +1,15 @@
+FROM golang:1.26.1-alpine
+
+WORKDIR /app
+
+# Instala o CompileDaemon: a ferramenta que faz o "Hot-Reload" para o Go
+RUN go install github.com/githubnemo/CompileDaemon@latest
+
+# Baixa as dependências
+COPY go.mod go.sum ./
+RUN go mod download
+
+# O resto do código NÃO entra aqui no COPY, pois ele virá pelo 'volumes' do docker-compose.dev.yml
+
+# O CompileDaemon fica vigiando seus arquivos. Se você salvar algo, ele roda o --build e depois o --command
+ENTRYPOINT CompileDaemon -log-prefix=false -build="go build -o main main.go" -command="./main"
