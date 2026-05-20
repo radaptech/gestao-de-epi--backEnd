@@ -222,6 +222,9 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			//usuarios
 			rotasAdm.GET("/usuarios", c.Usuario.ListarUsuario())
 
+			//devolucao
+			rotasAdm.GET("/devolucoes/:id/pdf", c.Devolucao.GerarFichaPDF())
+
 		}
 	}
 
