@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 
 	"time"
 
@@ -20,7 +21,8 @@ import (
 type DevolucaoRepository interface {
 	AdicionarTroca(ctx context.Context, qtx *repository.Queries, arg repository.AddTrocaEpiParams) (int32, error)
 	Cancelar(ctx context.Context, qtx *repository.Queries, arg repository.CancelarDevolucaoParams) (int32, error)
-	 Listar(ctx context.Context, tenantId int32) ([]repository.ListarDevolucoesRow, error)
+	Listar(ctx context.Context, tenantId int32) ([]repository.ListarDevolucoesRow, error)
+	DadosPdfDevolucao(ctx context.Context, arg repository.BuscarDadosPdfDevolucaoParams)(repository.BuscarDadosPdfDevolucaoRow, error)
 }
 
 type DevolucaoService struct {
@@ -315,5 +317,46 @@ func (d *DevolucaoService) ListarDevolucoes(ctx context.Context,tenantId int32) 
 	}
 		
 	return dto,nil
+
+}
+
+func (d *DevolucaoService) GerarDadosPdf(ctx context.Context, idDevolucao, tenantId int32)(helper.DadosDevolucaoPdf, error){
+
+	
+	devolucao, err:= d.repo.DadosPdfDevolucao(ctx, repository.BuscarDadosPdfDevolucaoParams{
+		ID: idDevolucao,
+		TenantID: tenantId,
+	})
+	if err != nil {
+
+		return helper.DadosDevolucaoPdf{}, err
+	}
+
+	matString:= strconv.Itoa(int(devolucao.Matricula))
+	epi:= helper.ItemDevolvidoPdf{
+		DataDevolucao: configs.DataBr(devolucao.DataDevolucao.Time),
+		NomeEpi: devolucao.EpiNome,
+		Tamanho: devolucao.Tamanho,
+		QuantidadeADevolver: devolucao.Quantidadeadevolver,
+		Motivo: devolucao.Motivo,
+		HouveTroca: devolucao.HouveTroca.Bool,
+	}
+
+	if devolucao.HouveTroca.Bool {
+		epi.EpiNovo = devolucao.EpiNovo.String
+		epi.TamanhoNovo = devolucao.TamanhoNovo.String
+		epi.QuantidadeNova = devolucao.Quantidadenova.Int32
+
+	}
+	return helper.DadosDevolucaoPdf{
+		NomeEmpresa: devolucao.NomeEmpresa,
+		NomeFuncionario: devolucao.FuncionarioNome,
+		Matricula: matString,
+		Setor: devolucao.Setor,
+		Cargo: devolucao.Cargo,
+		Assinatura: devolucao.AssinaturaDigital,
+		Itens: epi,
+
+	}, nil
 
 }

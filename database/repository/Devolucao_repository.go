@@ -73,3 +73,13 @@ func (d *DevolucaoRepository) Listar(ctx context.Context, tenantId int32) ([]Lis
 
 	return devolucoes, nil
 }
+
+func (d *DevolucaoRepository) DadosPdfDevolucao(ctx context.Context, arg BuscarDadosPdfDevolucaoParams)(BuscarDadosPdfDevolucaoRow, error){
+	devs, err:= d.q.BuscarDadosPdfDevolucao(ctx, arg)
+	if err != nil {
+
+		return BuscarDadosPdfDevolucaoRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return devs, nil
+}

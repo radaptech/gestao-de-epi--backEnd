@@ -143,6 +143,82 @@ func (q *Queries) AtualizarSaldoLote(ctx context.Context, arg AtualizarSaldoLote
 	return err
 }
 
+const buscarDadosPdfDevolucao = `-- name: BuscarDadosPdfDevolucao :one
+SELECT 
+    em.razao_social AS nome_empresa, 
+    f.nome AS funcionario_nome, 
+    f.matricula, 
+    dep.nome AS setor, 
+    ff.nome AS cargo, 
+    d.assinatura_digital,
+    d.data_devolucao, 
+    d.quantidadeadevolver, 
+    e.nome AS epi_nome, 
+    t.tamanho, 
+    m.motivo, 
+    d.houve_troca,               
+    en.nome AS epi_novo, 
+    tn.tamanho AS tamanho_novo, 
+    d.quantidadenova
+FROM devolucao d
+INNER JOIN empresas em ON em.id = d.tenant_id
+INNER JOIN funcionario f ON f.id = d.idfuncionario
+INNER JOIN funcao ff ON ff.id = f.idfuncao
+INNER JOIN departamento dep ON dep.id = f.iddepartamento
+INNER JOIN epi e ON e.id = d.idepi
+INNER JOIN tamanho t ON t.id = d.idtamanho
+INNER JOIN motivo_devolucao m ON m.id = d.idmotivo
+LEFT JOIN epi en ON en.id = d.idepinovo      
+LEFT JOIN tamanho tn ON tn.id = d.idtamanhonovo 
+WHERE d.id = $1 AND d.tenant_id = $2
+`
+
+type BuscarDadosPdfDevolucaoParams struct {
+	ID       int32
+	TenantID int32
+}
+
+type BuscarDadosPdfDevolucaoRow struct {
+	NomeEmpresa         string
+	FuncionarioNome     string
+	Matricula           int32
+	Setor               string
+	Cargo               string
+	AssinaturaDigital   string
+	DataDevolucao       pgtype.Date
+	Quantidadeadevolver int32
+	EpiNome             string
+	Tamanho             string
+	Motivo              string
+	HouveTroca          pgtype.Bool
+	EpiNovo             pgtype.Text
+	TamanhoNovo         pgtype.Text
+	Quantidadenova      pgtype.Int4
+}
+
+func (q *Queries) BuscarDadosPdfDevolucao(ctx context.Context, arg BuscarDadosPdfDevolucaoParams) (BuscarDadosPdfDevolucaoRow, error) {
+	row := q.db.QueryRow(ctx, buscarDadosPdfDevolucao, arg.ID, arg.TenantID)
+	var i BuscarDadosPdfDevolucaoRow
+	err := row.Scan(
+		&i.NomeEmpresa,
+		&i.FuncionarioNome,
+		&i.Matricula,
+		&i.Setor,
+		&i.Cargo,
+		&i.AssinaturaDigital,
+		&i.DataDevolucao,
+		&i.Quantidadeadevolver,
+		&i.EpiNome,
+		&i.Tamanho,
+		&i.Motivo,
+		&i.HouveTroca,
+		&i.EpiNovo,
+		&i.TamanhoNovo,
+		&i.Quantidadenova,
+	)
+	return i, err
+}
+
 const cancelarDevolucao = `-- name: CancelarDevolucao :one
 UPDATE devolucao
 SET cancelada_em = current_date,
@@ -213,19 +289,32 @@ func (q *Queries) ConsultarSaldoEpiFuncionario(ctx context.Context, arg Consulta
 }
 
 const listarDevolucoes = `-- name: ListarDevolucoes :many
-select d.id, d.data_devolucao, d.idfuncionario, f.nome as funcionarioNome, f.matricula, e.nome as epiNome, 
-t.tamanho, d.quantidadeadevolver, m.motivo, d.houve_troca, en.nome as epiNovo, tn.tamanho as tamanhoNovo,
-d.quantidadenova,d.observacao, d.assinatura_digital, d.token_validacao
-from devolucao d
-inner join funcionario f on f.id = d.idfuncionario 
-inner join epi e on e.id = d.idepi
-full outer join epi en on en.id = d.idepinovo
-inner join tamanhos_epis te on te.idtamanho = d.idtamanho
-full outer join tamanho tn ON tn.id = d.idtamanhonovo
-inner join tamanho t on t.id = te.idtamanho
-inner join motivo_devolucao m on m.id = d.idmotivo
-where d.tenant_id = $1 and d.cancelada_em is null
-order by d.data_devolucao desc
+SELECT 
+    d.id, 
+    d.data_devolucao, 
+    d.idfuncionario, 
+    f.nome AS funcionarioNome, 
+    f.matricula, 
+    e.nome AS epiNome, 
+    t.tamanho, 
+    d.quantidadeadevolver, 
+    m.motivo, 
+    d.houve_troca, 
+    en.nome AS epiNovo, 
+    tn.tamanho AS tamanhoNovo,
+    d.quantidadenova,
+    d.observacao, 
+    d.assinatura_digital, 
+    d.token_validacao
+FROM devolucao d
+INNER JOIN funcionario f ON f.id = d.idfuncionario 
+INNER JOIN epi e ON e.id = d.idepi
+INNER JOIN tamanho t ON t.id = d.idtamanho            
+INNER JOIN motivo_devolucao m ON m.id = d.idmotivo
+LEFT JOIN epi en ON en.id = d.idepinovo               
+LEFT JOIN tamanho tn ON tn.id = d.idtamanhonovo       
+WHERE d.tenant_id = $1 AND d.cancelada_em IS NULL
+ORDER BY d.data_devolucao DESC
 `
 
 type ListarDevolucoesRow struct {

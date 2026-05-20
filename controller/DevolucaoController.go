@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -16,6 +18,7 @@ type DevolucaoService interface {
 	CancelarDevolucao(ctx context.Context, id, iduser, tenantId int) error
 	ListarDevolucoes(ctx context.Context, tenantId int32) ([]model.DevolucaoResponse, error)
 	TokenDevolucao(ctx context.Context, tenantId, Idfuncionario int32) (string, error)
+	GerarDadosPdf(ctx context.Context, idDevolucao, tenantId int32) (helper.DadosDevolucaoPdf, error)
 }
 
 type DevolucaoController struct {
@@ -102,19 +105,69 @@ func (d *DevolucaoController) Listar() gin.HandlerFunc {
 			return
 		}
 
-
-		devolucoes, err:= d.service.ListarDevolucoes(ctx, tenantId)
+		devolucoes, err := d.service.ListarDevolucoes(ctx, tenantId)
 		if err != nil {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-				"error": "erro ao realizar buscar das entregas de epi",
+				"error":    "erro ao realizar buscar das entregas de epi",
 				"detalhes": err.Error(),
 			})
 			return
 		}
 
-
 		ctx.JSON(http.StatusOK, devolucoes)
+	}
+}
+
+func (d *DevolucaoController) GerarFichaPDF() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		iddevolucaoStr := ctx.Param("id")
+		idDevolucao, err := strconv.Atoi(iddevolucaoStr)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "id da entrega inválido"})
+			return
+		}
+
+		tenantId, ok := middleware.GetTenantID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "erro interno de tenant",
+			})
+			return
+		}
+
+		responsavel := ctx.GetString("user_nome") //pegando o responsavel logado no sistema
+
+		auditoria := helper.Auditoria{
+			DadosServidor: time.Now().Format("02/01/2006 às 15:04:05"),
+			Ip:            ctx.ClientIP(),
+		}
+
+		devolucaoDados, err := d.service.GerarDadosPdf(ctx, int32(idDevolucao), tenantId)
+		if err != nil {
+
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+				"error":    "dados nao encontrados",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		pdf, err := helper.CreatePdfDevolucao(devolucaoDados, auditoria, responsavel)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    err.Error(),
+				"detalhes": "erro na geração do pdf",
+			})
+			return
+		}
+
+		ctx.Header("Content-Disposition", "attachment; filename=Ficha_devolucao_"+iddevolucaoStr+".pdf")
+		ctx.Data(http.StatusOK, "application/pdf", pdf.GetBytes()) // Extrai os bytes limpos!
 	}
 }
