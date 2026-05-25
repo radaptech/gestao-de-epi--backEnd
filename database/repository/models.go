@@ -160,6 +160,18 @@ type MotivoDevolucao struct {
 	GeraDescarte bool
 }
 
+type Plano struct {
+	ID                 int32
+	Nome               string
+	Mensalidade        pgtype.Numeric
+	LimiteFuncionarios pgtype.Int4
+	LimiteUsuarios     pgtype.Int4
+	LimiteEpis         pgtype.Int4
+	Status             pgtype.Text
+	Descricao          string
+	CriadoEm           pgtype.Timestamp
+}
+
 type Tamanho struct {
 	ID         int32
 	TenantID   int32
