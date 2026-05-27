@@ -29,6 +29,7 @@ type Container struct {
 	MotivoDevolucao controller.MotivoController
 	Devolucao       controller.DevolucaoController
 	Planos          controller.PlanosController
+	Empresas        controller.EmpresaController
 }
 
 func NewContainer(db *pgxpool.Pool) *Container {
@@ -47,6 +48,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
 	repoDevolucao := repository.NewDevolucaoRepository(db)
 	repoPlanos := repository.NewPlanosRepository(db)
+	repoEmpresas := repository.NewEmpresaRepository(db)
 
 	ServiceEmail := service.NewEmail()
 	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
@@ -63,6 +65,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	motivoService := service.NewMotivoDevolucaoRepositoryServe(repoMotivo)
 	devolucaoService := service.NewDevolucaoService(repoDevolucao, db, *entregaService, repoMotivo)
 	planosService := service.NewPlanoService(repoPlanos)
+	empresaService := service.NewEmpresaService(repoEmpresas, repoPlanos)
 
 	return &Container{
 		Usuario:         *controller.NewLoginController(serviceUsuario),
@@ -79,6 +82,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 		MotivoDevolucao: *controller.NewMotivoController(motivoService),
 		Devolucao:       *controller.NewDevolucaoController(devolucaoService),
 		Planos:          *controller.NewPlanoController(planosService),
+		Empresas:        *controller.NewEmpresaController(empresaService),
 	}
 }
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
@@ -102,12 +106,16 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		})
 	})
 	api := r.Group("/api")
-	painel:= r.Group("api/painel")
-	painel.Use(middleware.AutenticacaoJWT(),middleware.VerificaSuperAdmin())
+	painel := r.Group("api/painel")
+	painel.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
 	{
 		painel.POST("/cadastrar-planos", c.Planos.SalvarPlano())
 		painel.GET("/planos", c.Planos.MostrarPlanos())
-		
+		painel.PUT("planos/:id", c.Planos.Atualizar())
+		painel.PATCH("planos/:id/status", c.Planos.AtualizaStatus())
+
+		//empresas
+		painel.POST("/cadastrar-empresa", c.Empresas.Salvar())
 	}
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
