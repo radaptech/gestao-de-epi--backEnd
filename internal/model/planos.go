@@ -12,3 +12,19 @@ type Plano struct {
 	Status             string          `json:"status" binding:"required"`
 	Descricao          string          `json:"descricao" binding:"required"`
 }
+
+type AtualizarPlanoParams struct {
+	Nome               *string          `json:"nome"`
+	Mensalidade        *decimal.Decimal `json:"mensalidade"` // ou pgtype.Numeric
+	Descricao          *string          `json:"descricao"`
+	LimiteFuncionarios *int32           `json:"limite_funcionarios"`
+	LimiteUsuarios     *int32           `json:"limite_usuarios"`
+	LimiteEpis         *int32           `json:"limite_epis"`
+	Status             *string          `json:"status"`
+	ID                 int32            `json:"id"`
+}
+
+type PlanoNome struct {
+	Id   int
+	Nome string
+}

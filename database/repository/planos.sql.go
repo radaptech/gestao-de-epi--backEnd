@@ -42,6 +42,60 @@ func (q *Queries) AddPlano(ctx context.Context, arg AddPlanoParams) (int32, erro
 	return id, err
 }
 
+const atualizarPlano = `-- name: AtualizarPlano :exec
+UPDATE planos
+SET
+  nome = COALESCE($1, nome),
+  mensalidade = COALESCE($2, mensalidade),
+  descricao = COALESCE($3, descricao),
+  limite_funcionarios = COALESCE($4, limite_funcionarios),
+  limite_usuarios = COALESCE($5, limite_usuarios),
+  limite_epis = COALESCE($6, limite_epis),
+  status = COALESCE($7, status)
+WHERE id = $8
+`
+
+type AtualizarPlanoParams struct {
+	Nome               pgtype.Text
+	Mensalidade        pgtype.Numeric
+	Descricao          pgtype.Text
+	LimiteFuncionarios pgtype.Int4
+	LimiteUsuarios     pgtype.Int4
+	LimiteEpis         pgtype.Int4
+	Status             pgtype.Text
+	ID                 int32
+}
+
+func (q *Queries) AtualizarPlano(ctx context.Context, arg AtualizarPlanoParams) error {
+	_, err := q.db.Exec(ctx, atualizarPlano,
+		arg.Nome,
+		arg.Mensalidade,
+		arg.Descricao,
+		arg.LimiteFuncionarios,
+		arg.LimiteUsuarios,
+		arg.LimiteEpis,
+		arg.Status,
+		arg.ID,
+	)
+	return err
+}
+
+const atualizarStatusPlano = `-- name: AtualizarStatusPlano :exec
+UPDATE planos
+SET status = $1
+WHERE id = $2
+`
+
+type AtualizarStatusPlanoParams struct {
+	Status pgtype.Text
+	ID     int32
+}
+
+func (q *Queries) AtualizarStatusPlano(ctx context.Context, arg AtualizarStatusPlanoParams) error {
+	_, err := q.db.Exec(ctx, atualizarStatusPlano, arg.Status, arg.ID)
+	return err
+}
+
 const buscaPlanos = `-- name: BuscaPlanos :many
 SELECT id, nome, mensalidade, limite_funcionarios, limite_usuarios, limite_epis, status, descricao
 FROM planos
@@ -87,4 +141,21 @@ func (q *Queries) BuscaPlanos(ctx context.Context) ([]BuscaPlanosRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const buscarPlanoPorNome = `-- name: BuscarPlanoPorNome :one
+select id, nome from planos 
+where nome = $1 and status = 'Ativo'
+`
+
+type BuscarPlanoPorNomeRow struct {
+	ID   int32
+	Nome string
+}
+
+func (q *Queries) BuscarPlanoPorNome(ctx context.Context, nome string) (BuscarPlanoPorNomeRow, error) {
+	row := q.db.QueryRow(ctx, buscarPlanoPorNome, nome)
+	var i BuscarPlanoPorNomeRow
+	err := row.Scan(&i.ID, &i.Nome)
+	return i, err
 }

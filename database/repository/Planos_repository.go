@@ -42,3 +42,38 @@ func (p *PlanosRepository) MostrarPlanos(ctx context.Context)([]BuscaPlanosRow, 
 
 	return planos, err
 }
+
+func (p *PlanosRepository) AtualizarPlanos(ctx context.Context, arg AtualizarPlanoParams) (error) {
+
+	err:= p.q.AtualizarPlano(ctx, arg)
+	if err != nil{
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return  nil
+
+}
+
+
+func (p *PlanosRepository) AtualizaStatus(ctx context.Context, arg AtualizarStatusPlanoParams)(error){
+
+	err:= p.q.AtualizarStatusPlano(ctx, arg)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
+}
+
+func(p *PlanosRepository) BuscarPlanoPorNome(ctx context.Context, nome string)(BuscarPlanoPorNomeRow, error){
+
+	plano, err:= p.q.BuscarPlanoPorNome(ctx, nome)
+	if err != nil {
+		return BuscarPlanoPorNomeRow{}, helper.TraduzErroPostgres(err)
+	}
+
+
+	return plano, nil
+}

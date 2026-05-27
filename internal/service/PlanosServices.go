@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -11,14 +12,14 @@ import (
 
 type PlanosRepository interface {
 	Adicionar(ctx context.Context, arg repository.AddPlanoParams) (int32, error)
-	MostrarPlanos(ctx context.Context)([]repository.BuscaPlanosRow, error)
+	MostrarPlanos(ctx context.Context) ([]repository.BuscaPlanosRow, error)
+	AtualizarPlanos(ctx context.Context, arg repository.AtualizarPlanoParams) error
+	AtualizaStatus(ctx context.Context, arg repository.AtualizarStatusPlanoParams) error
+	BuscarPlanoPorNome(ctx context.Context, nome string)(repository.BuscarPlanoPorNomeRow, error)
 }
 
-
 type PlanosService struct {
-
 	repo PlanosRepository
-
 }
 
 func NewPlanoService(p PlanosRepository) *PlanosService {
@@ -27,7 +28,6 @@ func NewPlanoService(p PlanosRepository) *PlanosService {
 		repo: p,
 	}
 }
-
 
 func (p *PlanosService) SalvarPlanos(ctx context.Context, model model.Plano) (int32, error) {
 
@@ -58,14 +58,13 @@ func (p *PlanosService) SalvarPlanos(ctx context.Context, model model.Plano) (in
 		Status:             pgtype.Text{String: model.Status, Valid: model.Status != ""},
 		Descricao:          model.Descricao,
 	})
-	
+
 	if err != nil {
 		return 0, err
 	}
 
 	return planoId, nil
 }
-
 
 func (p *PlanosService) MostrarPlanos(ctx context.Context) ([]model.Plano, error) {
 
@@ -109,3 +108,62 @@ func (p *PlanosService) MostrarPlanos(ctx context.Context) ([]model.Plano, error
 
 	return dto, nil
 }
+
+func (p *PlanosService) AtualizarPlano(ctx context.Context, input model.AtualizarPlanoParams) error {
+
+	// 1. Instancia a struct do repositório apenas com o ID (que é sempre obrigatório)
+	params := repository.AtualizarPlanoParams{
+		ID: input.ID,
+	}
+	// 2. Preenche os campos com segurança (só desempacota o ponteiro se ele NÃO for nil)
+	if input.Nome != nil {
+		params.Nome = pgtype.Text{String: *input.Nome, Valid: true}
+	}
+
+	if input.Descricao != nil {
+		params.Descricao = pgtype.Text{String: *input.Descricao, Valid: true}
+	}
+
+	if input.Status != nil {
+		params.Status = pgtype.Text{String: *input.Status, Valid: true}
+	}
+
+	if input.LimiteFuncionarios != nil {
+		params.LimiteFuncionarios = pgtype.Int4{Int32: *input.LimiteFuncionarios, Valid: true}
+	}
+
+	if input.LimiteUsuarios != nil {
+		params.LimiteUsuarios = pgtype.Int4{Int32: *input.LimiteUsuarios, Valid: true}
+	}
+
+	if input.LimiteEpis != nil {
+		params.LimiteEpis = pgtype.Int4{Int32: *input.LimiteEpis, Valid: true}
+	}
+
+	if input.Mensalidade != nil {
+		var numericMensalidade pgtype.Numeric
+
+		// .Scan() lê a string gerada pelo shopspring/decimal e converte perfeitamente para o formato do banco
+		err := numericMensalidade.Scan(input.Mensalidade.String())
+		if err == nil {
+			params.Mensalidade = numericMensalidade
+		} else {
+			// erro se a conversão falhar por algum motivo bizarro
+			log.Printf("Erro ao converter mensalidade: %v", err)
+		}
+	}
+	err := p.repo.AtualizarPlanos(ctx, params)
+
+	return err
+}
+
+func (p *PlanosService) AtualizaStatus(ctx context.Context, status string, id int32)error{
+
+	err:= p.repo.AtualizaStatus(ctx, repository.AtualizarStatusPlanoParams{
+		Status: pgtype.Text{String: status, Valid: true},
+		ID: id,
+	})
+
+	return err
+}
+
