@@ -7,12 +7,77 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const criarEmpresa = `-- name: CriarEmpresa :exec
+INSERT INTO empresas (
+    nome_fantasia,
+    razao_social,
+    cnpj,
+    responsavel,
+    email,
+    telefone,
+    plano_id,
+    status,
+    mensalidade,
+    vencimento,
+    observacoes,
+    subdominio
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11,
+    $12
+)
+`
+
+type CriarEmpresaParams struct {
+	NomeFantasia string
+	RazaoSocial  string
+	Cnpj         string
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
+	PlanoID      pgtype.Int4
+	Status       string
+	Mensalidade  pgtype.Numeric
+	Vencimento   pgtype.Date
+	Observacoes  pgtype.Text
+	Subdominio   string
+}
+
+func (q *Queries) CriarEmpresa(ctx context.Context, arg CriarEmpresaParams) error {
+	_, err := q.db.Exec(ctx, criarEmpresa,
+		arg.NomeFantasia,
+		arg.RazaoSocial,
+		arg.Cnpj,
+		arg.Responsavel,
+		arg.Email,
+		arg.Telefone,
+		arg.PlanoID,
+		arg.Status,
+		arg.Mensalidade,
+		arg.Vencimento,
+		arg.Observacoes,
+		arg.Subdominio,
+	)
+	return err
+}
 
 const getTenantBySubdomain = `-- name: GetTenantBySubdomain :one
 SELECT id, nome_fantasia 
 FROM empresas 
-WHERE subdominio = $1 AND ativo = TRUE
+WHERE subdominio = $1 AND status = 'Ativa'
 `
 
 type GetTenantBySubdomainRow struct {
