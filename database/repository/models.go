@@ -44,8 +44,15 @@ type Empresa struct {
 	RazaoSocial  string
 	Cnpj         string
 	Subdominio   string
-	Ativo        bool
 	CriadoEm     pgtype.Timestamp
+	PlanoID      pgtype.Int4
+	Status       string
+	Mensalidade  pgtype.Numeric
+	Vencimento   pgtype.Date
+	Observacoes  pgtype.Text
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
 }
 
 type EntradaEpiItem struct {
