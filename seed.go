@@ -83,7 +83,7 @@ func SeedEmpresaTeste(db *pgxpool.Pool) error {
 	// 2. Insere a Empresa
 	_, err = db.Exec(ctx, `
        insert into empresas(id,nome_fantasia, razao_social, cnpj, subdominio) values(
-				2, 'teste', 'teste','11123323', 'teste'
+				2, 'teste12', 'teste12','11123323', 'teste'
 		);
     `)
 	if err != nil {
