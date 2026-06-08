@@ -111,7 +111,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 		token, user, err := l.service.FazerLogin(c, input.Email, input.Senha, tenantID)
 		if err != nil {
 
-			log.Println("erro ao realizar login: %w", err)
+			log.Printf("erro ao realizar login: %v", err)
 			if err.Error() == "email ou senha inválidos" {
 
 				c.JSON(http.StatusUnauthorized, gin.H{
