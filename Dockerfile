@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Compila o binário otimizado
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o main main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o main .
 
 # ==========================================
 # ESTÁGIO 2: A Imagem Final (Produção)
