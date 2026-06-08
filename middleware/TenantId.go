@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
-
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/gin-gonic/gin"
@@ -32,6 +32,9 @@ func TenantMiddleware(querie *repository.Queries)  gin.HandlerFunc {
 		// Busca no banco (usando o Context da request para cancelamento/timeout)
 		empresa,err:= querie.GetTenantBySubdomain(c.Request.Context(), subdominio)
 		if err != nil {
+
+			log.Printf("subdominio: %s", subdominio)
+			log.Printf("erro: %v", err)
 			if err == sql.ErrNoRows {
 				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Empresa não encontrada"})
 				return
