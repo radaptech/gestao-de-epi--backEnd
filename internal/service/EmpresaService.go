@@ -12,6 +12,8 @@ import (
 
 type EmpresaRepository interface {
 	Salvar(ctx context.Context, arg repository.CriarEmpresaParams) error
+	ResumoDashboard(ctx context.Context) (int64, int64, int64, int64, int64, int64, int64, float64)
+	EmpresasRecentes(ctx context.Context)([]repository.EmpresasRecentesRow, error)
 }
 
 type EmpresaService struct {
@@ -64,4 +66,52 @@ func (e *EmpresaService) Salvar(ctx context.Context, model model.EmpresaInserir)
 	})
 
 	return err
+}
+
+func (e *EmpresaService) EmpresaDashboard(ctx context.Context) (model.ResumoDashboard, error){
+
+
+	empresaA, empresaB, empresaT, Te, Tf, tep, tee, RM:= e.repo.ResumoDashboard(ctx)
+
+
+	return model.ResumoDashboard{
+		EmpresasAtivas: int(empresaA),
+		EmpresasBloqueadas: int(empresaB),
+		EmpresasEmTeste: int(empresaT),
+		TotalEmpresas: int(Te),
+		TotalFuncionarios: int(Tf),
+		TotalEpis: int(tep),
+		TotalEntregas: int(tee),
+		ReceitaMensal: RM,
+	}, nil
+}
+
+func (e *EmpresaService) EmpresaRecentes(ctx context.Context)([]model.EmpresaRecente, error){
+
+	empresas,err:= e.repo.EmpresasRecentes(ctx)
+	if err != nil {
+		return  []model.EmpresaRecente{}, err
+	}
+
+	dto:= make([]model.EmpresaRecente, 0, len(empresas))
+
+	for _, empresa := range empresas {
+
+		e:= model.EmpresaRecente{
+			ID: int(empresa.ID),
+			Nome: empresa.NomeFantasia,
+			Subdominio: empresa.Subdominio,
+			Responsavel: empresa.Responsavel.String,
+			Status: empresa.Status,
+			Plano: empresa.PlanoNome,
+			Funcionarios: int(empresa.Funcionarios),
+			Epis: int(empresa.Epis),
+			Mensalidade: empresa.EMensalidade,
+		}
+
+		dto = append(dto, e)
+	}
+
+
+	return dto, nil
 }

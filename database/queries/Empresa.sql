@@ -31,3 +31,35 @@ INSERT INTO empresas (
     sqlc.arg('observacoes'),
     sqlc.arg('subdominio')
 );
+
+
+-- name: EmpresasAtivas :one
+select count(*) from empresas where status = 'Ativa';
+-- name: EmpresaEmTeste :one
+select count(*) from empresas where status = 'Em teste';
+-- name: EmpresasBloqueadas :one
+select count(*) from empresas where status = 'Bloqueada';   
+-- name: TotalFuncionarios :one
+SELECT COUNT(*) FROM funcionario;      
+-- name: TotalEpis :one
+SELECT COUNT(*) FROM epi; 
+-- name: TotalEntregas :one
+SELECT COUNT(*) FROM entrega_epi;
+-- name: ReceitaMensal :one
+SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM empresas WHERE status = 'Ativa';
+
+
+-- name: EmpresasRecentes :many
+SELECT 
+    e.id, 
+    e.nome_fantasia, 
+    e.subdominio, 
+    e.responsavel,
+    e.status, 
+    p.nome AS plano_nome, 
+    e.mensalidade::float8,
+    -- As subqueries agora estão no lugar certo (no SELECT), separadas por vírgula
+    (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
+    (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis
+FROM empresas e
+INNER JOIN planos p ON e.plano_id = p.id;;

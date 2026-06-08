@@ -74,6 +74,97 @@ func (q *Queries) CriarEmpresa(ctx context.Context, arg CriarEmpresaParams) erro
 	return err
 }
 
+const empresaEmTeste = `-- name: EmpresaEmTeste :one
+select count(*) from empresas where status = 'Em teste'
+`
+
+func (q *Queries) EmpresaEmTeste(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, empresaEmTeste)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const empresasAtivas = `-- name: EmpresasAtivas :one
+select count(*) from empresas where status = 'Ativa'
+`
+
+func (q *Queries) EmpresasAtivas(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, empresasAtivas)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const empresasBloqueadas = `-- name: EmpresasBloqueadas :one
+select count(*) from empresas where status = 'Bloqueada'
+`
+
+func (q *Queries) EmpresasBloqueadas(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, empresasBloqueadas)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const empresasRecentes = `-- name: EmpresasRecentes :many
+SELECT 
+    e.id, 
+    e.nome_fantasia, 
+    e.subdominio, 
+    e.responsavel,
+    e.status, 
+    p.nome AS plano_nome, 
+    e.mensalidade::float8,
+    -- As subqueries agora estão no lugar certo (no SELECT), separadas por vírgula
+    (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
+    (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis
+FROM empresas e
+INNER JOIN planos p ON e.plano_id = p.id
+`
+
+type EmpresasRecentesRow struct {
+	ID           int32
+	NomeFantasia string
+	Subdominio   string
+	Responsavel  pgtype.Text
+	Status       string
+	PlanoNome    string
+	EMensalidade float64
+	Funcionarios int32
+	Epis         int32
+}
+
+func (q *Queries) EmpresasRecentes(ctx context.Context) ([]EmpresasRecentesRow, error) {
+	rows, err := q.db.Query(ctx, empresasRecentes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmpresasRecentesRow
+	for rows.Next() {
+		var i EmpresasRecentesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.NomeFantasia,
+			&i.Subdominio,
+			&i.Responsavel,
+			&i.Status,
+			&i.PlanoNome,
+			&i.EMensalidade,
+			&i.Funcionarios,
+			&i.Epis,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTenantBySubdomain = `-- name: GetTenantBySubdomain :one
 SELECT id, nome_fantasia 
 FROM empresas 
@@ -90,4 +181,48 @@ func (q *Queries) GetTenantBySubdomain(ctx context.Context, subdominio string) (
 	var i GetTenantBySubdomainRow
 	err := row.Scan(&i.ID, &i.NomeFantasia)
 	return i, err
+}
+
+const receitaMensal = `-- name: ReceitaMensal :one
+SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM empresas WHERE status = 'Ativa'
+`
+
+func (q *Queries) ReceitaMensal(ctx context.Context) (float64, error) {
+	row := q.db.QueryRow(ctx, receitaMensal)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const totalEntregas = `-- name: TotalEntregas :one
+SELECT COUNT(*) FROM entrega_epi
+`
+
+func (q *Queries) TotalEntregas(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalEntregas)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const totalEpis = `-- name: TotalEpis :one
+SELECT COUNT(*) FROM epi
+`
+
+func (q *Queries) TotalEpis(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalEpis)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const totalFuncionarios = `-- name: TotalFuncionarios :one
+SELECT COUNT(*) FROM funcionario
+`
+
+func (q *Queries) TotalFuncionarios(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalFuncionarios)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

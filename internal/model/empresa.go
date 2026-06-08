@@ -6,20 +6,41 @@ import (
 )
 
 type EmpresaInserir struct {
-   
-    NomeFantasia string          `json:"nome_fantasia" binding:"required"`
-    Cnpj         string          `json:"cnpj" binding:"cnpj,required,max=40"`
-    Responsavel  string          `json:"responsavel" binding:"required,max=40"`
-    Email        string          `json:"email" binding:"required,max=40"`
-  
-    Telefone     string          `json:"telefone" binding:"max=40"`
-    
-    Plano        string          `json:"plano" binding:"required"`
-    Status       string          `json:"status" binding:"required"`
-    Mensalidade  decimal.Decimal `json:"mensalidade" binding:"required"`
-    Vencimento   configs.DataBr  `json:"vencimento" binding:"required"`
-    
-    
-    Observacoes  string          `json:"observacoes" binding:"lte=150"`
-    Subdominio   string          `json:"-"`
+	NomeFantasia string `json:"nome_fantasia" binding:"required"`
+	Cnpj         string `json:"cnpj" binding:"cnpj,required,max=40"`
+	Responsavel  string `json:"responsavel" binding:"required,max=40"`
+	Email        string `json:"email" binding:"required,max=40"`
+
+	Telefone string `json:"telefone" binding:"max=40"`
+
+	Plano       string          `json:"plano" binding:"required"`
+	Status      string          `json:"status" binding:"required"`
+	Mensalidade decimal.Decimal `json:"mensalidade" binding:"required"`
+	Vencimento  configs.DataBr  `json:"vencimento" binding:"required"`
+
+	Observacoes string `json:"observacoes" binding:"lte=150"`
+	Subdominio  string `json:"-"`
+}
+
+type ResumoDashboard struct {
+	EmpresasAtivas     int     `json:"empresasAtivas"`
+	EmpresasBloqueadas int     `json:"empresasBloqueadas"`
+	EmpresasEmTeste    int     `json:"empresasEmTeste"`
+    TotalEmpresas      int     `json:"totalEmpresas"`
+	TotalFuncionarios  int     `json:"totalFuncionarios"`
+	TotalEpis          int     `json:"totalEpis"`
+	TotalEntregas      int     `json:"totalEntregas"`
+	ReceitaMensal      float64 `json:"receitaMensal"`
+}
+
+type EmpresaRecente struct {
+	ID           int     `json:"id"`           
+	Nome         string  `json:"nome"`
+	Subdominio   string  `json:"subdominio"`   
+	Responsavel  string  `json:"responsavel"`
+	Status       string  `json:"status"`
+	Plano        string  `json:"plano"`
+	Funcionarios int     `json:"funcionarios"`
+	Epis         int     `json:"epis"`
+	Mensalidade  float64 `json:"mensalidade"`
 }
