@@ -57,11 +57,6 @@ func main() {
 		log.Fatalf("Falha ao criar a Empresa Matriz: %v", err)
 	}
 
-	err = SeedEmpresaTeste(db)
-	if err != nil {
-		log.Fatalf("Falha ao criar a Empresa teste: %v", err)
-	}
-
 	// --- BLOCO DE REGISTRO DO VALIDATOR ---
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		// Aqui você registra a tag "cnpj"
