@@ -113,16 +113,13 @@ SELECT
     id, IdFuncionario, data_entrega,
     assinatura, token_validacao
 FROM entrega_epi
-WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC;
+WHERE tenant_id = $1 AND ativo = TRUE;
 
 -- name: EntregaItensDashbord :many
 SELECT
     id, id_entrega_cabecalho, id_epi, id_tamanho, quantidade
 FROM epis_entregues
-WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY id DESC;
-
+WHERE tenant_id = $1 AND ativo = TRUE;
 -- name: BuscaTodasEntregasDoTenant :many
 SELECT 
     id, 
@@ -130,5 +127,4 @@ SELECT
     data_entrega, 
     assinatura
 FROM entrega_epi
-WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC;
+WHERE tenant_id = $1 AND ativo = TRUE;

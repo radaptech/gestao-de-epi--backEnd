@@ -44,8 +44,15 @@ type Empresa struct {
 	RazaoSocial  string
 	Cnpj         string
 	Subdominio   string
-	Ativo        bool
 	CriadoEm     pgtype.Timestamp
+	PlanoID      pgtype.Int4
+	Status       string
+	Mensalidade  pgtype.Numeric
+	Vencimento   pgtype.Date
+	Observacoes  pgtype.Text
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
 }
 
 type EntradaEpiItem struct {
@@ -158,6 +165,18 @@ type MotivoDevolucao struct {
 	Ativo        bool
 	DeletadoEm   pgtype.Timestamp
 	GeraDescarte bool
+}
+
+type Plano struct {
+	ID                 int32
+	Nome               string
+	Mensalidade        pgtype.Numeric
+	LimiteFuncionarios pgtype.Int4
+	LimiteUsuarios     pgtype.Int4
+	LimiteEpis         pgtype.Int4
+	Status             pgtype.Text
+	Descricao          string
+	CriadoEm           pgtype.Timestamp
 }
 
 type Tamanho struct {

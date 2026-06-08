@@ -90,7 +90,6 @@ SELECT
     assinatura
 FROM entrega_epi
 WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC
 `
 
 type BuscaTodasEntregasDoTenantRow struct {
@@ -288,7 +287,6 @@ SELECT
     assinatura, token_validacao
 FROM entrega_epi
 WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC
 `
 
 type EntregaDashbordRow struct {
@@ -330,7 +328,6 @@ SELECT
     id, id_entrega_cabecalho, id_epi, id_tamanho, quantidade
 FROM epis_entregues
 WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY id DESC
 `
 
 type EntregaItensDashbordRow struct {

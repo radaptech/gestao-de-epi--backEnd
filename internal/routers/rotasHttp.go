@@ -27,11 +27,12 @@ type Container struct {
 	Entrega         controller.EntregaController
 	Estoque         controller.EstoqueController
 	MotivoDevolucao controller.MotivoController
-	Devolucao controller.DevolucaoController
+	Devolucao       controller.DevolucaoController
+	Planos          controller.PlanosController
+	Empresas        controller.EmpresaController
 }
 
 func NewContainer(db *pgxpool.Pool) *Container {
-
 
 	repoUsuario := repository.NewUsuarioRepository(db)
 	repoDepartamento := repository.NewDepartamentoRepository(db)
@@ -45,7 +46,10 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEntrega := repository.NewEntregaRepository(db)
 	repoEstoque := repository.NewEstoqueRepository(db)
 	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
-	repoDevolucao:= repository.NewDevolucaoRepository(db)
+	repoDevolucao := repository.NewDevolucaoRepository(db)
+	repoPlanos := repository.NewPlanosRepository(db)
+	repoEmpresas := repository.NewEmpresaRepository(db)
+
 
 	ServiceEmail := service.NewEmail()
 	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
@@ -60,7 +64,9 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	entregaService := service.NewEntregaService(repoEntrega, db)
 	estoqueService := service.NewEstoqueService(repoEstoque)
 	motivoService := service.NewMotivoDevolucaoRepositoryServe(repoMotivo)
-	devolucaoService:= service.NewDevolucaoService(repoDevolucao, db,*entregaService, repoMotivo)
+	devolucaoService := service.NewDevolucaoService(repoDevolucao, db, *entregaService, repoMotivo)
+	planosService := service.NewPlanoService(repoPlanos)
+	empresaService := service.NewEmpresaService(repoEmpresas, repoPlanos)
 
 	return &Container{
 		Usuario:         *controller.NewLoginController(serviceUsuario),
@@ -75,7 +81,9 @@ func NewContainer(db *pgxpool.Pool) *Container {
 		Entrega:         *controller.NewEntregaController(entregaService),
 		Estoque:         *controller.NewEstoqueController(estoqueService),
 		MotivoDevolucao: *controller.NewMotivoController(motivoService),
-		Devolucao: 		 *controller.NewDevolucaoController(devolucaoService),
+		Devolucao:       *controller.NewDevolucaoController(devolucaoService),
+		Planos:          *controller.NewPlanoController(planosService),
+		Empresas:        *controller.NewEmpresaController(empresaService),
 	}
 }
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
@@ -99,6 +107,25 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		})
 	})
 	api := r.Group("/api")
+	painel := r.Group("api/painel")
+	painel.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	{
+		painel.POST("/cadastrar-planos", c.Planos.SalvarPlano())
+		painel.GET("/planos", c.Planos.MostrarPlanos())
+		painel.PUT("planos/:id", c.Planos.Atualizar())
+		painel.PATCH("planos/:id/status", c.Planos.AtualizaStatus())
+
+		//empresas
+		painel.POST("/cadastrar-empresa", c.Empresas.Salvar())
+	}
+
+	master:= r.Group("api/master")
+	master.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	{
+		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
+		master.GET("dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
+	}
+
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
 	// Precisa do tenant Id para passar
 	api.Use(middleware.TenantMiddleware(queries))
