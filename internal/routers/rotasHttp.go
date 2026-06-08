@@ -50,6 +50,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoPlanos := repository.NewPlanosRepository(db)
 	repoEmpresas := repository.NewEmpresaRepository(db)
 
+
 	ServiceEmail := service.NewEmail()
 	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
@@ -116,6 +117,13 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 		//empresas
 		painel.POST("/cadastrar-empresa", c.Empresas.Salvar())
+	}
+
+	master:= r.Group("api/master")
+	master.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	{
+		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
+		master.GET("dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
 	}
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
