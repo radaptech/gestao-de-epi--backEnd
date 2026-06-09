@@ -19,6 +19,7 @@ func CorsConfig() gin.HandlerFunc {
                 origin == "http://teste.localhost" ||
                 origin == "http://painel.localhost" ||
                 origin == "https://radaptech.com.br" ||
+                origin == "http://painel-homologacao.localhost" ||
                 origin == "http://localhost"{
                 return true
             }
