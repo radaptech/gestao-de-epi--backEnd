@@ -5,6 +5,7 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/errgroup"
 )
 
 type EmpresaRepository struct {
@@ -31,32 +32,101 @@ func (e *EmpresaRepository) Salvar(ctx context.Context, arg CriarEmpresaParams) 
 	return nil
 }
 
-func (e *EmpresaRepository) ResumoDashboard(ctx context.Context) (int64, int64, int64, int64, int64, int64, int64, float64) {
+func (e *EmpresaRepository) ResumoDashboard(ctx context.Context) (int64, int64, int64, int64, int64, int64, int64, float64, error) {
 
+	var (
+		EmpresasAtivas     int64
+		EmpresasBloqueadas int64
+		EmpresasEmTeste    int64
+		TotalFuncionarios  int64
+		TotalEpis          int64
+		TotalEntregas      int64
+		ReceitaMensal      float64
+	)
 
-	EmpresasAtivas, _ := e.q.EmpresasAtivas(ctx)
-	EmpresasBloqueadas, _ := e.q.EmpresasBloqueadas(ctx)
-	EmpresasEmTeste, _ := e.q.EmpresaEmTeste(ctx)
-	TotalEmpresas:= EmpresasAtivas + EmpresasEmTeste + EmpresasBloqueadas
-	TotalFuncionarios, _ := e.q.TotalFuncionarios(ctx)
-	TotalEpis, _ := e.q.TotalEpis(ctx)
-	TotalEntregas, _ := e.q.TotalEntregas(ctx)
-	ReceitaMensal, _:= e.q.ReceitaMensal(ctx)
+	eg, gctx := errgroup.WithContext(ctx)
 
+	eg.Go(func() error {
 
-	return EmpresasAtivas, EmpresasBloqueadas,EmpresasEmTeste,TotalEmpresas, TotalFuncionarios, TotalEpis, TotalEntregas, ReceitaMensal
+		var err error
+		EmpresasAtivas, err = e.q.EmpresasAtivas(gctx)
+		return err
+
+	})
+
+	eg.Go(func() error {
+
+		var err error
+		EmpresasBloqueadas, err = e.q.EmpresasBloqueadas(gctx)
+		return err
+
+	})
+
+	eg.Go(func() error {
+
+		var err error
+		EmpresasEmTeste, err = e.q.EmpresaEmTeste(gctx)
+		return err
+
+	})
+
+	eg.Go(func() error {
+
+		var err error
+		TotalFuncionarios, err = e.q.TotalFuncionarios(gctx)
+		return err
+
+	})
+
+	eg.Go(func() error {
+
+		var err error
+		TotalEpis, err = e.q.TotalEpis(gctx)
+		return err
+
+	})
+
+	eg.Go(func() error {
+
+		var err error
+		TotalEntregas, err = e.q.TotalEntregas(gctx)
+		return err
+
+	})
+
+	eg.Go(func() error {
+
+		var err error
+		ReceitaMensal, err = e.q.ReceitaMensal(gctx)
+		return err
+	})
+
+	if err:= eg.Wait(); err != nil {
+
+		return 0,0,0,0,0,0,0,0,err
+	}
+
+	TotalEmpresas := EmpresasAtivas + EmpresasEmTeste + EmpresasBloqueadas
+	return EmpresasAtivas, EmpresasBloqueadas, EmpresasEmTeste, TotalEmpresas, TotalFuncionarios, TotalEpis, TotalEntregas, ReceitaMensal, nil
 
 }
 
+func (e *EmpresaRepository) EmpresasRecentes(ctx context.Context) ([]EmpresasRecentesRow, error) {
 
-func (e *EmpresaRepository) EmpresasRecentes(ctx context.Context)([]EmpresasRecentesRow, error){
-
-
-	empresas, err:= e.q.EmpresasRecentes(ctx)
+	empresas, err := e.q.EmpresasRecentes(ctx)
 	if err != nil {
 		return []EmpresasRecentesRow{}, helper.TraduzErroPostgres(err)
 	}
 
+	return empresas, nil
+}
+
+func (e *EmpresaRepository) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error) {
+
+	empresas, err := e.q.DadosEmpresas(ctx)
+	if err != nil {
+		return []DadosEmpresasRow{}, helper.TraduzErroPostgres(err)
+	}
 
 	return empresas, nil
 }

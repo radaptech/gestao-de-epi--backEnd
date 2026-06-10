@@ -74,6 +74,72 @@ func (q *Queries) CriarEmpresa(ctx context.Context, arg CriarEmpresaParams) erro
 	return err
 }
 
+const dadosEmpresas = `-- name: DadosEmpresas :many
+SELECT 
+    e.id, 
+    e.nome_fantasia as nome, 
+    e.cnpj,
+    e.responsavel,
+    e.email,
+    e.telefone, 
+    p.nome AS plano_nome, 
+    (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
+    (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
+    e.mensalidade::float8,
+    e.vencimento,
+    e.status    
+FROM empresas e
+INNER JOIN planos p ON e.plano_id = p.id
+`
+
+type DadosEmpresasRow struct {
+	ID           int32
+	Nome         string
+	Cnpj         string
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
+	PlanoNome    string
+	Funcionarios int32
+	Epis         int32
+	EMensalidade float64
+	Vencimento   pgtype.Date
+	Status       string
+}
+
+func (q *Queries) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error) {
+	rows, err := q.db.Query(ctx, dadosEmpresas)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DadosEmpresasRow
+	for rows.Next() {
+		var i DadosEmpresasRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nome,
+			&i.Cnpj,
+			&i.Responsavel,
+			&i.Email,
+			&i.Telefone,
+			&i.PlanoNome,
+			&i.Funcionarios,
+			&i.Epis,
+			&i.EMensalidade,
+			&i.Vencimento,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const empresaEmTeste = `-- name: EmpresaEmTeste :one
 select count(*) from empresas where status = 'Em teste'
 `

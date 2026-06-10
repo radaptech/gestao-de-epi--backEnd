@@ -13,6 +13,7 @@ type EmpresaService interface {
 	Salvar(ctx context.Context, model model.EmpresaInserir) error
 	EmpresaDashboard(ctx context.Context) (model.ResumoDashboard, error)
 	EmpresaRecentes(ctx context.Context) ([]model.EmpresaRecente, error)
+	DadosEmpresas(ctx context.Context)([]model.Empresa, error)
 }
 
 type EmpresaController struct {
@@ -81,6 +82,26 @@ func (e *EmpresaController) EmpresaRecentes() gin.HandlerFunc {
 		empresa, err := e.service.EmpresaRecentes(ctx)
 		if err != nil {
 			log.Printf("erro dashbord: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao realizar buscar dos dados das empresas",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, empresa)
+
+	}
+}
+
+func (e *EmpresaController) DadosEmpresas() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		empresa, err := e.service.DadosEmpresas(ctx)
+		if err != nil {
+			log.Printf("erro em pegar os dados das empresas: %v", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados das empresas",

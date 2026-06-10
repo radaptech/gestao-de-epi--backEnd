@@ -63,3 +63,21 @@ SELECT
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis
 FROM empresas e
 INNER JOIN planos p ON e.plano_id = p.id;;
+
+
+-- name: DadosEmpresas :many
+SELECT 
+    e.id, 
+    e.nome_fantasia as nome, 
+    e.cnpj,
+    e.responsavel,
+    e.email,
+    e.telefone, 
+    p.nome AS plano_nome, 
+    (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
+    (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
+    e.mensalidade::float8,
+    e.vencimento,
+    e.status    
+FROM empresas e
+INNER JOIN planos p ON e.plano_id = p.id;
