@@ -123,7 +123,8 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	master.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
 	{
 		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
-		master.GET("dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
+		master.GET("/dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
+		master.GET("/dashboard/dados-empresas", c.Empresas.DadosEmpresas())
 	}
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
