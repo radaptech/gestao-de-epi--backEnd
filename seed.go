@@ -31,7 +31,7 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 			
 			
 			errPlano = db.QueryRow(ctx, `
-				INSERT INTO planos (nome, mensalidade, limite_funcionarios, limite_usuarios, limites_epis, status, descricao, criado_em)
+				INSERT INTO planos (nome, mensalidade, limite_funcionarios, limite_usuarios, limite_epis, status, descricao, criado_em)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 				RETURNING id;
 			`, "plano de testes", 1000.00, 10000, 10000, 1000, "Ativo", "plano de testes").Scan(&planoid)

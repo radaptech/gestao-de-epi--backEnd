@@ -50,7 +50,6 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoPlanos := repository.NewPlanosRepository(db)
 	repoEmpresas := repository.NewEmpresaRepository(db)
 
-
 	ServiceEmail := service.NewEmail()
 	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
@@ -107,19 +106,19 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		})
 	})
 	api := r.Group("/api")
-	painel := r.Group("api/painel")
+	painel := r.Group("/api/painel")
 	painel.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
 	{
 		painel.POST("/cadastrar-planos", c.Planos.SalvarPlano())
 		painel.GET("/planos", c.Planos.MostrarPlanos())
-		painel.PUT("planos/:id", c.Planos.Atualizar())
-		painel.PATCH("planos/:id/status", c.Planos.AtualizaStatus())
+		painel.PUT("/planos/:id", c.Planos.Atualizar())
+		painel.PATCH("/planos/:id/status", c.Planos.AtualizaStatus())
 
 		//empresas
 		painel.POST("/cadastrar-empresa", c.Empresas.Salvar())
 	}
 
-	master:= r.Group("api/master")
+	master := r.Group("/api/master")
 	master.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
 	{
 		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
