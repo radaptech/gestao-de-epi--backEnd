@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const atualizarUltimoAcesso = `-- name: AtualizarUltimoAcesso :execrows
+update usuarios
+set ultimo_acesso = now()
+where id = $1 and tenant_id = $2
+`
+
+type AtualizarUltimoAcessoParams struct {
+	ID       int32
+	TenantID int32
+}
+
+func (q *Queries) AtualizarUltimoAcesso(ctx context.Context, arg AtualizarUltimoAcessoParams) (int64, error) {
+	result, err := q.db.Exec(ctx, atualizarUltimoAcesso, arg.ID, arg.TenantID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const buscarPorIdUsuario = `-- name: BuscarPorIdUsuario :one
 SELECT id, nome, email, ativo, role
 FROM usuarios
@@ -166,6 +185,50 @@ func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const mostrarUsuariosPainel = `-- name: MostrarUsuariosPainel :many
+select tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
+from usuarios u
+inner join empresas e on u.tenant_id = e.id
+`
+
+type MostrarUsuariosPainelRow struct {
+	TenantID     int32
+	Nome         string
+	Email        string
+	Empresa      string
+	Tipo         pgtype.Text
+	Ativo        pgtype.Bool
+	UltimoAcesso pgtype.Timestamp
+}
+
+func (q *Queries) MostrarUsuariosPainel(ctx context.Context) ([]MostrarUsuariosPainelRow, error) {
+	rows, err := q.db.Query(ctx, mostrarUsuariosPainel)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MostrarUsuariosPainelRow
+	for rows.Next() {
+		var i MostrarUsuariosPainelRow
+		if err := rows.Scan(
+			&i.TenantID,
+			&i.Nome,
+			&i.Email,
+			&i.Empresa,
+			&i.Tipo,
+			&i.Ativo,
+			&i.UltimoAcesso,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const recuperaLogin = `-- name: RecuperaLogin :one

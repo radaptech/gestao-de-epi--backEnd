@@ -214,4 +214,5 @@ type Usuario struct {
 	Role                  pgtype.Text
 	TokenRecuperacaoSenha pgtype.Text
 	TokenExpiracao        pgtype.Timestamp
+	UltimoAcesso          pgtype.Timestamp
 }

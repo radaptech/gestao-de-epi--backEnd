@@ -124,6 +124,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
 		master.GET("/dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
 		master.GET("/dashboard/dados-empresas", c.Empresas.DadosEmpresas())
+		master.GET("/dashboard/dados-usuarios", c.Usuario.MostrarUsuariosPainel())
 	}
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---

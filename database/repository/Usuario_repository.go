@@ -107,3 +107,26 @@ func (u *UsuarioRepository) RedefinirSenha(ctx context.Context, arg UpdateSenhaP
 
 	return result, nil
 }
+
+
+func (u *UsuarioRepository) UltimoAcesso(ctx context.Context, arg AtualizarUltimoAcessoParams)(error) {
+
+	_, err:= u.q.AtualizarUltimoAcesso(ctx, arg)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
+}
+
+func (u *UsuarioRepository) MostrarUsuariosPainel(ctx context.Context)([]MostrarUsuariosPainelRow, error){
+
+	usuarios, err:= u.q.MostrarUsuariosPainel(ctx)
+	if err != nil {
+
+		return []MostrarUsuariosPainelRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return usuarios, nil
+}

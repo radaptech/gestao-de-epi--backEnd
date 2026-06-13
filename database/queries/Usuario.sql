@@ -48,3 +48,16 @@ set senha_hash = $1,
     token_recuperacao_senha = null,
     token_expiracao = null
 where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now();
+
+
+-- name: AtualizarUltimoAcesso :execrows
+update usuarios
+set ultimo_acesso = now()
+where id = $1 and tenant_id = $2;
+
+
+-- name: MostrarUsuariosPainel :many
+select tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
+from usuarios u
+inner join empresas e on u.tenant_id = e.id;
+

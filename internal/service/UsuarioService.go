@@ -26,6 +26,8 @@ type UsuarioRepository interface {
 	SalvarToken(ctx context.Context, agr repository.SalvarTokenRecuperacaoParams) (int64, error)
 	AtualizarSenha(ctx context.Context, arg repository.UpdateSenhaParams) (int64, error)
 	RedefinirSenha(ctx context.Context, arg repository.UpdateSenhaParams)(int64,error)
+	UltimoAcesso(ctx context.Context, arg repository.AtualizarUltimoAcessoParams)(error)
+	MostrarUsuariosPainel(ctx context.Context)([]repository.MostrarUsuariosPainelRow, error)
 }
 
 type UsuarioService struct {
@@ -209,4 +211,47 @@ func (u *UsuarioService) RedefinirSenha(ctx context.Context, rs model.RedefinirS
 	}
 
 	return nil
+}
+
+func (u *UsuarioService) UltimoAcesso(ctx context.Context, id, tenantId int32)(error) {
+
+  	err:= u.repo.UltimoAcesso(ctx, repository.AtualizarUltimoAcessoParams{
+		ID: id,
+		TenantID: tenantId,
+	})
+	if err != nil {
+
+		return  err
+	}
+
+	return nil
+}
+
+func (u *UsuarioService) MostrarUsuariosPainel(ctx context.Context)([]model.UsuarioResponsePainel, error){
+
+	usuarios, err:= u.repo.MostrarUsuariosPainel(ctx)
+	if err != nil {
+
+		return  []model.UsuarioResponsePainel{}, err
+	}
+
+	dto:= make([]model.UsuarioResponsePainel, 0, len(usuarios))
+
+	for _, usuario:= range usuarios{
+
+		uu:= model.UsuarioResponsePainel{
+			ID: int(usuario.TenantID),
+			Nome: usuario.Nome,
+			Email: usuario.Email,
+			Empresa: usuario.Empresa,
+			Tipo: usuario.Tipo.String,
+			Status: usuario.Ativo.Bool,
+			UltimoAcesso: usuario.UltimoAcesso.Time.Format("02/01/2006 15:04"),
+		}
+		
+		dto = append(dto, uu)
+	}
+
+
+	return dto, nil
 }

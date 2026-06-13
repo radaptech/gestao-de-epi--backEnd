@@ -1,10 +1,13 @@
 package model
 
+import "time"
+
 type Usuario struct {
-	Nome  string `json:"nome" binding:"required,min=3,max=50"`
-	Email string `json:"email" binding:"required,email"`
-	Senha string `json:"senha" binding:"required,max=10"`
-	Role  string `json:"cargo" binding:"required"`
+	Nome         string     `json:"nome" binding:"required,min=3,max=50"`
+	Email        string     `json:"email" binding:"required,email"`
+	Senha        string     `json:"senha" binding:"required,max=10"`
+	Role         string     `json:"cargo" binding:"required"`
+	UltimoAcesso *time.Time `json:"ultimoAcesso"`
 }
 
 // LoginResponse é o que o Front vai receber
@@ -37,6 +40,16 @@ type UsuarioResponse struct {
 	Nome  string `json:"nome"`
 	Email string `json:"email"`
 	Cargo string `json:"cargo"`
+}
+
+type UsuarioResponsePainel struct {
+	ID           int    `json:"id"`
+	Nome         string `json:"nome"`
+	Email        string `json:"email"`
+	Empresa      string `json:"empresa"` // Aqui vai apenas o nome da empresa
+	Tipo         string `json:"tipo"`
+	Status       bool   `json:"status"`
+	UltimoAcesso string `json:"ultimoAcesso"` // Formatado como string "DD/MM/YYYY HH:MM"
 }
 
 type RecuperaLogin struct {

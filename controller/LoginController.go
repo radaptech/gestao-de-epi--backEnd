@@ -21,6 +21,8 @@ type LoginService interface {
 	ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error)
 	RecuperacaoSenha(ctx context.Context, rl model.RecuperaLogin) error
 	RedefinirSenha(ctx context.Context, rs model.RedefinirSenha) error
+	UltimoAcesso(ctx context.Context, id, tenantId int32) error
+	MostrarUsuariosPainel(ctx context.Context) ([]model.UsuarioResponsePainel, error)
 }
 
 type LoginController struct {
@@ -122,10 +124,22 @@ func (l *LoginController) Login() gin.HandlerFunc {
 			}
 
 			c.JSON(http.StatusInternalServerError, gin.H{
-				
+
 				"error": "Erro interno ao realizar login",
 			})
 			return
+		}
+
+		err = l.service.UltimoAcesso(c, user.ID, tenantID)
+		if err != nil {
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "Erro interno ao realizar login",
+				"detalhes": err.Error(),
+			})
+			return
+
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -222,7 +236,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
- 
+
 		input.TenantId = int(tenantID)
 
 		err := l.service.RecuperacaoSenha(ctx, input)
@@ -231,8 +245,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 			log.Println("erro ao enviar email de recuperaçao: %w", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-			 "error":    "erro interno do servidor",
-				
+				"error": "erro interno do servidor",
 			})
 			return
 		}
@@ -277,5 +290,27 @@ func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 			"mensagem": "Senha redefinida com sucesso! Você já pode fazer login.",
 		})
+	}
+}
+
+func (l *LoginController) 	MostrarUsuariosPainel() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+	
+
+		users, err := l.service.MostrarUsuariosPainel(ctx)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro interno do servidor",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, users)
+
 	}
 }
