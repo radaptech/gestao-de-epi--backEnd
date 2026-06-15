@@ -234,7 +234,8 @@ func (q *Queries) EmpresasRecentes(ctx context.Context) ([]EmpresasRecentesRow, 
 const getTenantBySubdomain = `-- name: GetTenantBySubdomain :one
 SELECT id, nome_fantasia 
 FROM empresas 
-WHERE subdominio = $1 AND status = 'Ativa'
+WHERE subdominio = $1 
+  AND status IN ('Ativa', 'Em teste')
 `
 
 type GetTenantBySubdomainRow struct {

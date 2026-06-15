@@ -1,7 +1,8 @@
 -- name: GetTenantBySubdomain :one
 SELECT id, nome_fantasia 
 FROM empresas 
-WHERE subdominio = $1 AND status = 'Ativa';
+WHERE subdominio = $1 
+  AND status IN ('Ativa', 'Em teste');
 
 -- name: CriarEmpresa :exec
 INSERT INTO empresas (
