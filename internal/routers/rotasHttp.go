@@ -125,6 +125,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		master.GET("/dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
 		master.GET("/dashboard/dados-empresas", c.Empresas.DadosEmpresas())
 		master.GET("/dashboard/dados-usuarios", c.Usuario.MostrarUsuariosPainel())
+		master.POST("/dashboard/salvar-usuarios", c.Usuario.Registrar())
 	}
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
@@ -133,7 +134,6 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	{
 
 		api.POST("/login", c.Usuario.Login())
-		api.POST("/cadastro", c.Usuario.Registrar())
 
 		api.POST("/esqueci-minha-senha", c.Usuario.SalvarToken())
 		api.POST("/redefinir-senha", c.Usuario.RedefinirSenha())

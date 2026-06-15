@@ -15,7 +15,7 @@ import (
 )
 
 type LoginService interface {
-	Registrar(ctx context.Context, model model.Usuario, tenantId int32) error
+	Registrar(ctx context.Context, model model.Usuario) error
 	FazerLogin(ctx context.Context, email, senha string, tenantId int32) (string, repository.BuscarUsuarioPorEmailRow, error)
 	BuscarPorId(ctx context.Context, id uint, tenantId int32) (model.RecuperaUser, error)
 	ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error)
@@ -56,14 +56,10 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 			Email: input.Email,
 			Senha: input.Senha,
 			Role:  input.Role,
+			EmpresaID: input.EmpresaID,
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
-		if !ok {
-			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
-			return
-		}
-		err := l.service.Registrar(ctx, novoUsuario, tenantID)
+		err := l.service.Registrar(ctx, novoUsuario)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
