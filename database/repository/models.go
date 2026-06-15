@@ -206,7 +206,7 @@ type TipoProtecao struct {
 
 type Usuario struct {
 	ID                    int32
-	TenantID              int32
+	TenantID              pgtype.Int4
 	Nome                  string
 	Email                 string
 	SenhaHash             string

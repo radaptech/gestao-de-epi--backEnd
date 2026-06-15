@@ -6,7 +6,8 @@ type Usuario struct {
 	Nome         string     `json:"nome" binding:"required,min=3,max=50"`
 	Email        string     `json:"email" binding:"required,email"`
 	Senha        string     `json:"senha" binding:"required,max=10"`
-	Role         string     `json:"cargo" binding:"required"`
+	Role         string     `json:"role" binding:"required"`
+	EmpresaID    *int       `json:"empresaId"`
 	UltimoAcesso *time.Time `json:"ultimoAcesso"`
 }
 

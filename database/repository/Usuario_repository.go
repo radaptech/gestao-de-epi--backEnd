@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -32,7 +33,8 @@ func (u *UsuarioRepository) Cadastrar(ctx context.Context, user CreateUserParams
 
 func (u *UsuarioRepository) Listar(ctx context.Context, tenantId int32) ([]BuscarTodosUsuariosRow, error){
 
-	usuarios, err:= u.q.BuscarTodosUsuarios(ctx, tenantId)
+	id := pgtype.Int4{Int32: tenantId, Valid: true}
+	usuarios, err:= u.q.BuscarTodosUsuarios(ctx, id)
 	if err != nil {
 		return []BuscarTodosUsuariosRow{}, helper.TraduzErroPostgres(err)
 	}

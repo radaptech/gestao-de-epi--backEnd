@@ -13,14 +13,10 @@ func CorsConfig() gin.HandlerFunc {
         AllowOriginFunc: func(origin string) bool {
             origin = strings.TrimSuffix(origin, "/")
 
-            // 👇 ADICIONE O LOCALHOST:5173 (ou a porta exata que seu Front está rodando)
-            if origin == "http://localhost:3000" ||
-                origin == "https://sgepi-homologacao.radaptech.com.br" ||
-                origin == "http://teste.localhost" ||
-                origin == "http://painel.localhost" ||
-                origin == "https://radaptech.com.br" ||
-                origin == "http://painel-homologacao.localhost" ||
-                origin == "http://localhost"{
+        
+
+            if strings.HasSuffix(origin, ".localhost"){
+
                 return true
             }
 

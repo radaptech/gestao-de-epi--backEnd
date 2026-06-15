@@ -61,7 +61,7 @@ func (e *EmpresaService) Salvar(ctx context.Context, model model.EmpresaInserir)
 		Mensalidade: mensalidadePg,
 		Subdominio:  subdominio,
 
-		// 👇 Supondo que Vencimento seja do tipo time.Time padrão do Go:
+		// Supondo que Vencimento seja do tipo time.Time padrão do Go:
 		Vencimento: pgtype.Date{Time: model.Vencimento.Time(), Valid: !model.Vencimento.IsZero()},
 	})
 

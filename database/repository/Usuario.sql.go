@@ -19,7 +19,7 @@ where id = $1 and tenant_id = $2
 
 type AtualizarUltimoAcessoParams struct {
 	ID       int32
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 func (q *Queries) AtualizarUltimoAcesso(ctx context.Context, arg AtualizarUltimoAcessoParams) (int64, error) {
@@ -41,7 +41,7 @@ LIMIT 1
 
 type BuscarPorIdUsuarioParams struct {
 	ID       int32
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 type BuscarPorIdUsuarioRow struct {
@@ -79,7 +79,7 @@ type BuscarTodosUsuariosRow struct {
 	Cargo pgtype.Text
 }
 
-func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]BuscarTodosUsuariosRow, error) {
+func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID pgtype.Int4) ([]BuscarTodosUsuariosRow, error) {
 	rows, err := q.db.Query(ctx, buscarTodosUsuarios, tenantID)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ LIMIT 1
 
 type BuscarUsuarioPorEmailParams struct {
 	Email    string
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 type BuscarUsuarioPorEmailRow struct {
@@ -123,7 +123,7 @@ type BuscarUsuarioPorEmailRow struct {
 	Nome      string
 	Email     string
 	SenhaHash string
-	TenantID  int32
+	TenantID  pgtype.Int4
 	Role      pgtype.Text
 }
 
@@ -148,7 +148,7 @@ VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateUserParams struct {
-	TenantID  int32
+	TenantID  pgtype.Int4
 	Nome      string
 	Email     string
 	SenhaHash string
@@ -176,7 +176,7 @@ WHERE id = $1
 
 type DeletarUsuarioParams struct {
 	ID       int32
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) (int64, error) {
@@ -194,7 +194,7 @@ inner join empresas e on u.tenant_id = e.id
 `
 
 type MostrarUsuariosPainelRow struct {
-	TenantID     int32
+	TenantID     pgtype.Int4
 	Nome         string
 	Email        string
 	Empresa      string
@@ -238,7 +238,7 @@ where email = $1 and tenant_id = $2 limit 1
 
 type RecuperaLoginParams struct {
 	Email    string
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 func (q *Queries) RecuperaLogin(ctx context.Context, arg RecuperaLoginParams) (int32, error) {
@@ -258,7 +258,7 @@ type SalvarTokenRecuperacaoParams struct {
 	TokenRecuperacaoSenha pgtype.Text
 	TokenExpiracao        pgtype.Timestamp
 	ID                    int32
-	TenantID              int32
+	TenantID              pgtype.Int4
 }
 
 func (q *Queries) SalvarTokenRecuperacao(ctx context.Context, arg SalvarTokenRecuperacaoParams) (int64, error) {
@@ -285,7 +285,7 @@ where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now(
 type UpdateSenhaParams struct {
 	SenhaHash             string
 	TokenRecuperacaoSenha pgtype.Text
-	TenantID              int32
+	TenantID              pgtype.Int4
 }
 
 func (q *Queries) UpdateSenha(ctx context.Context, arg UpdateSenhaParams) (int64, error) {

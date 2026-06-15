@@ -40,7 +40,7 @@ func NewUsuarioService(repo UsuarioRepository, emailSrv EmailService) *UsuarioSe
 	return &UsuarioService{repo: repo, emailService: emailSrv}
 }
 
-func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario, tenantId int32) error {
+func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario) error {
 
 	model.Email = strings.TrimSpace(model.Email)
 	model.Nome = strings.TrimSpace(model.Nome)
@@ -52,11 +52,18 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario, ten
 		return err
 	}
 
+	var tenantID int32
+	
+	// extrai o valor do ponteiro se ele NÃO for nulo
+	if model.EmpresaID != nil {
+		tenantID = int32(*model.EmpresaID)
+	}
+
 	arg := repository.CreateUserParams{
 		Nome:      model.Nome,
 		Email:     model.Email,
 		SenhaHash: string(novasenha),
-		TenantID:  tenantId,
+		TenantID:  pgtype.Int4{Int32: tenantID, Valid: model.EmpresaID != nil},
 		Role:      pgtype.Text{String: model.Role, Valid: model.Role != ""},
 	}
 
@@ -79,7 +86,7 @@ func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, te
 	//buscando o usuario pelo email
 	usuario, err := u.repo.BuscarPorEmail(ctx, repository.BuscarUsuarioPorEmailParams{
 		Email:    email,
-		TenantID: tenantId,
+		TenantID: pgtype.Int4{Int32: tenantId, Valid: true},
 	})
 	if err != nil {
 
@@ -115,7 +122,7 @@ func (u *UsuarioService) BuscarPorId(ctx context.Context, id uint, tenantId int3
 
 	usuario, err := u.repo.BuscarPoId(ctx, repository.BuscarPorIdUsuarioParams{
 		ID:       int32(id),
-		TenantID: tenantId,
+		TenantID: pgtype.Int4{Int32: tenantId, Valid: true},
 	})
 	if err != nil {
 
@@ -159,7 +166,7 @@ func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.Recupera
 	//verifica se o email existe
 	id, err := u.repo.RecuperaLogin(ctx, repository.RecuperaLoginParams{
 		Email:    rl.Email,
-		TenantID: int32(rl.TenantId),
+		TenantID: pgtype.Int4{Int32: int32(rl.TenantId), Valid: true},
 	})
 	if err != nil {
 
@@ -174,7 +181,7 @@ func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.Recupera
 		TokenRecuperacaoSenha: pgtype.Text{String: token, Valid: token != ""},
 		TokenExpiracao:        pgtype.Timestamp{Time: tempoExpiracao, Valid: true},
 		ID:                    id,
-		TenantID:              int32(rl.TenantId),
+		TenantID:              pgtype.Int4{Int32: int32(rl.TenantId), Valid: true},
 	})
 	if err != nil {
 
@@ -202,7 +209,7 @@ func (u *UsuarioService) RedefinirSenha(ctx context.Context, rs model.RedefinirS
 	linha, err:= u.repo.RedefinirSenha(ctx, repository.UpdateSenhaParams{
 		SenhaHash: string(senhaByte),
 		TokenRecuperacaoSenha: pgtype.Text{String: rs.Token, Valid: true},
-		TenantID: int32(rs.TenantId),
+		TenantID:pgtype.Int4{Int32: int32(rs.TenantId), Valid: true},
 	})
 
 	if linha == 0 {
@@ -217,7 +224,7 @@ func (u *UsuarioService) UltimoAcesso(ctx context.Context, id, tenantId int32)(e
 
   	err:= u.repo.UltimoAcesso(ctx, repository.AtualizarUltimoAcessoParams{
 		ID: id,
-		TenantID: tenantId,
+		TenantID: pgtype.Int4{Int32: tenantId, Valid: true},
 	})
 	if err != nil {
 
@@ -240,7 +247,7 @@ func (u *UsuarioService) MostrarUsuariosPainel(ctx context.Context)([]model.Usua
 	for _, usuario:= range usuarios{
 
 		uu:= model.UsuarioResponsePainel{
-			ID: int(usuario.TenantID),
+			ID: int(usuario.TenantID.Int32),
 			Nome: usuario.Nome,
 			Email: usuario.Email,
 			Empresa: usuario.Empresa,
