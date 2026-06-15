@@ -51,9 +51,9 @@ where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now(
 
 
 -- name: AtualizarUltimoAcesso :execrows
-update usuarios
-set ultimo_acesso = now()
-where id = $1 and tenant_id = $2;
+UPDATE usuarios
+SET ultimo_acesso = now() AT TIME ZONE 'America/Sao_Paulo'
+WHERE id = $1 AND tenant_id = $2;
 
 
 -- name: MostrarUsuariosPainel :many

@@ -12,9 +12,9 @@ import (
 )
 
 const atualizarUltimoAcesso = `-- name: AtualizarUltimoAcesso :execrows
-update usuarios
-set ultimo_acesso = now()
-where id = $1 and tenant_id = $2
+UPDATE usuarios
+SET ultimo_acesso = now() AT TIME ZONE 'America/Sao_Paulo'
+WHERE id = $1 AND tenant_id = $2
 `
 
 type AtualizarUltimoAcessoParams struct {
