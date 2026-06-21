@@ -61,3 +61,11 @@ select tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, 
 from usuarios u
 inner join empresas e on u.tenant_id = e.id;
 
+
+-- name: EditarUsuario :exec
+UPDATE usuarios
+SET 
+    nome = @nome,
+    email = @email,
+    role = @role
+WHERE id = @id;

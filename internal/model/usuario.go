@@ -64,3 +64,10 @@ type RedefinirSenha struct {
 	NovaSenha string `json:"senha_nova" binding:"required,min=6"`
 	TenantId  int    `json:"-"`
 }
+
+
+type EditarUsuarioRequest struct {
+	Nome  string `json:"nome" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
+	Role  string `json:"role" binding:"required"`
+}

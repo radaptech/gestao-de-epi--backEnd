@@ -187,6 +187,32 @@ func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) 
 	return result.RowsAffected(), nil
 }
 
+const editarUsuario = `-- name: EditarUsuario :exec
+UPDATE usuarios
+SET 
+    nome = $1,
+    email = $2,
+    role = $3
+WHERE id = $4
+`
+
+type EditarUsuarioParams struct {
+	Nome  string
+	Email string
+	Role  pgtype.Text
+	ID    int32
+}
+
+func (q *Queries) EditarUsuario(ctx context.Context, arg EditarUsuarioParams) error {
+	_, err := q.db.Exec(ctx, editarUsuario,
+		arg.Nome,
+		arg.Email,
+		arg.Role,
+		arg.ID,
+	)
+	return err
+}
+
 const mostrarUsuariosPainel = `-- name: MostrarUsuariosPainel :many
 select tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
 from usuarios u
