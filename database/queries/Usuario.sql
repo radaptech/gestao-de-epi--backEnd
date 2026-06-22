@@ -57,7 +57,7 @@ WHERE id = $1 AND tenant_id = $2;
 
 
 -- name: MostrarUsuariosPainel :many
-select tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
+select u.id, tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
 from usuarios u
 inner join empresas e on u.tenant_id = e.id;
 
@@ -68,4 +68,10 @@ SET
     nome = @nome,
     email = @email,
     role = @role
+WHERE id = @id;
+
+-- name: EditarStatusUsuario :exec
+UPDATE usuarios
+SET 
+    ativo = @ativo
 WHERE id = @id;

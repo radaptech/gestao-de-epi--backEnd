@@ -65,9 +65,12 @@ type RedefinirSenha struct {
 	TenantId  int    `json:"-"`
 }
 
-
 type EditarUsuarioRequest struct {
 	Nome  string `json:"nome" binding:"required"`
 	Email string `json:"email" binding:"required,email"`
 	Role  string `json:"role" binding:"required"`
+}
+
+type AlterarStatusRequest struct {
+	Status *bool `json:"ativo" binding:"required"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strconv"
 
 	"net/http"
 
@@ -23,6 +24,9 @@ type LoginService interface {
 	RedefinirSenha(ctx context.Context, rs model.RedefinirSenha) error
 	UltimoAcesso(ctx context.Context, id, tenantId int32) error
 	MostrarUsuariosPainel(ctx context.Context) ([]model.UsuarioResponsePainel, error)
+	EditarUsuario(ctx context.Context, id int32, model model.EditarUsuarioRequest) error
+	EditarStatusUsuario(ctx context.Context, id int32, model model.AlterarStatusRequest) error
+	
 }
 
 type LoginController struct {
@@ -52,10 +56,10 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 
 		novoUsuario := model.Usuario{
 
-			Nome:  input.Nome,
-			Email: input.Email,
-			Senha: input.Senha,
-			Role:  input.Role,
+			Nome:      input.Nome,
+			Email:     input.Email,
+			Senha:     input.Senha,
+			Role:      input.Role,
 			EmpresaID: input.EmpresaID,
 		}
 
@@ -289,11 +293,9 @@ func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
 	}
 }
 
-func (l *LoginController) 	MostrarUsuariosPainel() gin.HandlerFunc {
+func (l *LoginController) MostrarUsuariosPainel() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
-
-	
 
 		users, err := l.service.MostrarUsuariosPainel(ctx)
 		if err != nil {
@@ -308,5 +310,81 @@ func (l *LoginController) 	MostrarUsuariosPainel() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, users)
 
+	}
+}
+
+func (l *LoginController) EditarUsuario() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		idParam := ctx.Param("id")
+		idUsuario, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "ID inválido",
+			})
+			return
+		}
+		log.Printf("[DEBUG] ID recebido para edição: %d", idUsuario)
+		var input model.EditarUsuarioRequest
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":    "dados invalidos",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		err = l.service.EditarUsuario(ctx, int32(idUsuario), input)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao atualizar usuario",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		ctx.Status(http.StatusNoContent)
+	}
+}
+
+func (l *LoginController) EditarStatusUsuario() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		idParam := ctx.Param("id")
+		idUsuario, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "ID inválido",
+			})
+			return
+		}
+		
+		var input model.AlterarStatusRequest
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":    "dados invalidos",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		err = l.service.EditarStatusUsuario(ctx, int32(idUsuario), input)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao atualizar usuario",
+				"detalhes": err.Error(),
+			})
+			return 
+		}
+
+		ctx.Status(http.StatusNoContent)
 	}
 }

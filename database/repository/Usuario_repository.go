@@ -133,3 +133,26 @@ func (u *UsuarioRepository) MostrarUsuariosPainel(ctx context.Context)([]Mostrar
 	return usuarios, nil
 }
 
+func (u *UsuarioRepository) EditarUsuario(ctx context.Context ,args EditarUsuarioParams)(error) {
+
+
+	err:= u.q.EditarUsuario(ctx, args)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+
+	return nil
+}
+
+func (u *UsuarioRepository) EditarStatusUsuario(ctx context.Context, arg EditarStatusUsuarioParams) (error) {
+
+	err := u.q.EditarStatusUsuario(ctx, arg)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
+}

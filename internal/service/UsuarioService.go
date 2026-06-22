@@ -28,6 +28,8 @@ type UsuarioRepository interface {
 	RedefinirSenha(ctx context.Context, arg repository.UpdateSenhaParams)(int64,error)
 	UltimoAcesso(ctx context.Context, arg repository.AtualizarUltimoAcessoParams)(error)
 	MostrarUsuariosPainel(ctx context.Context)([]repository.MostrarUsuariosPainelRow, error)
+	EditarUsuario(ctx context.Context ,args repository.EditarUsuarioParams)(error)
+	EditarStatusUsuario(ctx context.Context, arg repository.EditarStatusUsuarioParams) (error)
 }
 
 type UsuarioService struct {
@@ -247,7 +249,7 @@ func (u *UsuarioService) MostrarUsuariosPainel(ctx context.Context)([]model.Usua
 	for _, usuario:= range usuarios{
 
 		uu:= model.UsuarioResponsePainel{
-			ID: int(usuario.TenantID.Int32),
+			ID: int(usuario.ID),
 			Nome: usuario.Nome,
 			Email: usuario.Email,
 			Empresa: usuario.Empresa,
@@ -261,4 +263,38 @@ func (u *UsuarioService) MostrarUsuariosPainel(ctx context.Context)([]model.Usua
 
 
 	return dto, nil
+}
+
+
+func (u *UsuarioService) EditarUsuario(ctx context.Context, id int32, model model.EditarUsuarioRequest)(error){
+
+	err:= u.repo.EditarUsuario(ctx, repository.EditarUsuarioParams{
+		Nome: model.Nome,
+		Email: model.Email,
+		Role: pgtype.Text{String: model.Role, Valid: model.Role != ""},
+		ID: id,
+	})
+
+
+	if err != nil {
+
+		return err
+	}
+
+
+	return nil
+}
+
+func (u *UsuarioService) EditarStatusUsuario(ctx context.Context, id int32, model model.AlterarStatusRequest)(error){
+
+	err:= u.repo.EditarStatusUsuario(ctx, repository.EditarStatusUsuarioParams{
+		Ativo: pgtype.Bool{Bool: *model.Status, Valid: true},
+		ID: id,
+	})
+	if err != nil {
+
+		return err
+	}
+
+	return nil
 }

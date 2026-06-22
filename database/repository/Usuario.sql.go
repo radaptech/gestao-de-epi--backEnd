@@ -187,6 +187,23 @@ func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) 
 	return result.RowsAffected(), nil
 }
 
+const editarStatusUsuario = `-- name: EditarStatusUsuario :exec
+UPDATE usuarios
+SET 
+    ativo = $1
+WHERE id = $2
+`
+
+type EditarStatusUsuarioParams struct {
+	Ativo pgtype.Bool
+	ID    int32
+}
+
+func (q *Queries) EditarStatusUsuario(ctx context.Context, arg EditarStatusUsuarioParams) error {
+	_, err := q.db.Exec(ctx, editarStatusUsuario, arg.Ativo, arg.ID)
+	return err
+}
+
 const editarUsuario = `-- name: EditarUsuario :exec
 UPDATE usuarios
 SET 
@@ -214,12 +231,13 @@ func (q *Queries) EditarUsuario(ctx context.Context, arg EditarUsuarioParams) er
 }
 
 const mostrarUsuariosPainel = `-- name: MostrarUsuariosPainel :many
-select tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
+select u.id, tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
 from usuarios u
 inner join empresas e on u.tenant_id = e.id
 `
 
 type MostrarUsuariosPainelRow struct {
+	ID           int32
 	TenantID     pgtype.Int4
 	Nome         string
 	Email        string
@@ -239,6 +257,7 @@ func (q *Queries) MostrarUsuariosPainel(ctx context.Context) ([]MostrarUsuariosP
 	for rows.Next() {
 		var i MostrarUsuariosPainelRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.TenantID,
 			&i.Nome,
 			&i.Email,
