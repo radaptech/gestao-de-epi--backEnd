@@ -109,10 +109,6 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	painel := r.Group("/api/painel")
 	painel.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
 	{
-		painel.POST("/cadastrar-planos", c.Planos.SalvarPlano())
-		painel.GET("/planos", c.Planos.MostrarPlanos())
-		painel.PUT("/planos/:id", c.Planos.Atualizar())
-		painel.PATCH("/planos/:id/status", c.Planos.AtualizaStatus())
 
 		//empresas
 		painel.POST("/cadastrar-empresa", c.Empresas.Salvar())
@@ -128,6 +124,10 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		master.POST("/dashboard/salvar-usuarios", c.Usuario.Registrar())
 		master.PATCH("/dashboard/editar/:id", c.Usuario.EditarUsuario())
 		master.PATCH("/dashboard/usuario/:id/status", c.Usuario.EditarStatusUsuario())
+		master.GET("/dashboard/planos", c.Planos.MostrarPlanos())
+		master.PUT("/dashborad/planos/:id", c.Planos.Atualizar())
+		master.POST("/dashborad/cadastrar-planos", c.Planos.SalvarPlano())
+		master.PATCH("/dashboard/planos/:id/status", c.Planos.AtualizaStatus())
 	}
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---

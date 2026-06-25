@@ -32,11 +32,6 @@ func NewEmpresaService(repo EmpresaRepository, repoPlano PlanosRepository) *Empr
 
 func (e *EmpresaService) Salvar(ctx context.Context, model model.EmpresaInserir) error {
 
-	var mensalidadePg pgtype.Numeric
-	err := mensalidadePg.Scan(model.Mensalidade.String())
-	if err != nil {
-		return err
-	}
 
 	plano, err := e.repoPlano.BuscarPlanoPorNome(ctx, model.Plano)
 	if err != nil {
@@ -58,7 +53,6 @@ func (e *EmpresaService) Salvar(ctx context.Context, model model.EmpresaInserir)
 
 		PlanoID:     pgtype.Int4{Int32: plano.ID, Valid: true},
 		Status:      model.Status,
-		Mensalidade: mensalidadePg,
 		Subdominio:  subdominio,
 
 		// Supondo que Vencimento seja do tipo time.Time padrão do Go:
@@ -109,7 +103,7 @@ func (e *EmpresaService) EmpresaRecentes(ctx context.Context) ([]model.EmpresaRe
 			Plano:        empresa.PlanoNome,
 			Funcionarios: int(empresa.Funcionarios),
 			Epis:         int(empresa.Epis),
-			Mensalidade:  empresa.EMensalidade,
+			Mensalidade:  empresa.PMensalidade,
 		}
 
 		dto = append(dto, e)
@@ -141,7 +135,7 @@ func (e *EmpresaService) DadosEmpresas(ctx context.Context)([]model.Empresa, err
 			Plano: empresa.PlanoNome,
 			Funcionarios: int(empresa.Funcionarios),
 			EPIs: int(empresa.Epis),
-			Mensalidade: empresa.EMensalidade,
+			Mensalidade: empresa.PMensalidade,
 			Vencimento: *configs.NewDataBrPtr(empresa.Vencimento.Time),
 			Status: empresa.Status,
 		}

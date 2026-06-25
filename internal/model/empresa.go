@@ -2,7 +2,6 @@ package model
 
 import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
-	"github.com/shopspring/decimal"
 )
 
 type EmpresaInserir struct {
@@ -15,7 +14,6 @@ type EmpresaInserir struct {
 
 	Plano       string          `json:"plano" binding:"required"`
 	Status      string          `json:"status" binding:"required"`
-	Mensalidade decimal.Decimal `json:"mensalidade" binding:"required"`
 	Vencimento  configs.DataBr  `json:"vencimento" binding:"required"`
 
 	Observacoes string `json:"observacoes" binding:"lte=150"`
