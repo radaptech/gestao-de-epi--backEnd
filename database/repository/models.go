@@ -47,7 +47,6 @@ type Empresa struct {
 	CriadoEm     pgtype.Timestamp
 	PlanoID      pgtype.Int4
 	Status       string
-	Mensalidade  pgtype.Numeric
 	Vencimento   pgtype.Date
 	Observacoes  pgtype.Text
 	Responsavel  pgtype.Text
