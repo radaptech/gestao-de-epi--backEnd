@@ -14,7 +14,6 @@ INSERT INTO empresas (
     telefone,
     plano_id,
     status,
-    mensalidade,
     vencimento,
     observacoes,
     subdominio
@@ -27,7 +26,6 @@ INSERT INTO empresas (
     sqlc.arg('telefone'),
     sqlc.arg('plano_id'),
     sqlc.arg('status'),
-    sqlc.arg('mensalidade'),
     sqlc.arg('vencimento'),
     sqlc.arg('observacoes'),
     sqlc.arg('subdominio')
@@ -47,7 +45,7 @@ SELECT COUNT(*) FROM epi;
 -- name: TotalEntregas :one
 SELECT COUNT(*) FROM entrega_epi;
 -- name: ReceitaMensal :one
-SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM empresas WHERE status = 'Ativa';
+SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM planos;
 
 
 -- name: EmpresasRecentes :many
@@ -58,7 +56,7 @@ SELECT
     e.responsavel,
     e.status, 
     p.nome AS plano_nome, 
-    e.mensalidade::float8,
+    p.mensalidade::float8,
     -- As subqueries agora estão no lugar certo (no SELECT), separadas por vírgula
     (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis
@@ -77,7 +75,7 @@ SELECT
     p.nome AS plano_nome, 
     (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
-    e.mensalidade::float8,
+    p.mensalidade::float8,
     e.vencimento,
     e.status    
 FROM empresas e

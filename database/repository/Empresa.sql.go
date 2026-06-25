@@ -21,7 +21,6 @@ INSERT INTO empresas (
     telefone,
     plano_id,
     status,
-    mensalidade,
     vencimento,
     observacoes,
     subdominio
@@ -36,8 +35,7 @@ INSERT INTO empresas (
     $8,
     $9,
     $10,
-    $11,
-    $12
+    $11
 )
 `
 
@@ -50,7 +48,6 @@ type CriarEmpresaParams struct {
 	Telefone     pgtype.Text
 	PlanoID      pgtype.Int4
 	Status       string
-	Mensalidade  pgtype.Numeric
 	Vencimento   pgtype.Date
 	Observacoes  pgtype.Text
 	Subdominio   string
@@ -66,7 +63,6 @@ func (q *Queries) CriarEmpresa(ctx context.Context, arg CriarEmpresaParams) erro
 		arg.Telefone,
 		arg.PlanoID,
 		arg.Status,
-		arg.Mensalidade,
 		arg.Vencimento,
 		arg.Observacoes,
 		arg.Subdominio,
@@ -85,7 +81,7 @@ SELECT
     p.nome AS plano_nome, 
     (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
-    e.mensalidade::float8,
+    p.mensalidade::float8,
     e.vencimento,
     e.status    
 FROM empresas e
@@ -102,7 +98,7 @@ type DadosEmpresasRow struct {
 	PlanoNome    string
 	Funcionarios int32
 	Epis         int32
-	EMensalidade float64
+	PMensalidade float64
 	Vencimento   pgtype.Date
 	Status       string
 }
@@ -126,7 +122,7 @@ func (q *Queries) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error)
 			&i.PlanoNome,
 			&i.Funcionarios,
 			&i.Epis,
-			&i.EMensalidade,
+			&i.PMensalidade,
 			&i.Vencimento,
 			&i.Status,
 		); err != nil {
@@ -181,7 +177,7 @@ SELECT
     e.responsavel,
     e.status, 
     p.nome AS plano_nome, 
-    e.mensalidade::float8,
+    p.mensalidade::float8,
     -- As subqueries agora estão no lugar certo (no SELECT), separadas por vírgula
     (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis
@@ -196,7 +192,7 @@ type EmpresasRecentesRow struct {
 	Responsavel  pgtype.Text
 	Status       string
 	PlanoNome    string
-	EMensalidade float64
+	PMensalidade float64
 	Funcionarios int32
 	Epis         int32
 }
@@ -217,7 +213,7 @@ func (q *Queries) EmpresasRecentes(ctx context.Context) ([]EmpresasRecentesRow, 
 			&i.Responsavel,
 			&i.Status,
 			&i.PlanoNome,
-			&i.EMensalidade,
+			&i.PMensalidade,
 			&i.Funcionarios,
 			&i.Epis,
 		); err != nil {
@@ -251,7 +247,7 @@ func (q *Queries) GetTenantBySubdomain(ctx context.Context, subdominio string) (
 }
 
 const receitaMensal = `-- name: ReceitaMensal :one
-SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM empresas WHERE status = 'Ativa'
+SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM planos
 `
 
 func (q *Queries) ReceitaMensal(ctx context.Context) (float64, error) {
