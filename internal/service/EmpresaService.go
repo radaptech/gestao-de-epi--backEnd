@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -15,6 +16,7 @@ type EmpresaRepository interface {
 	ResumoDashboard(ctx context.Context) (int64, int64, int64, int64, int64, int64, int64, float64, error)
 	EmpresasRecentes(ctx context.Context) ([]repository.EmpresasRecentesRow, error)
 	DadosEmpresas(ctx context.Context) ([]repository.DadosEmpresasRow, error)
+	EditarEmpresa(ctx context.Context, arg repository.EditarEmpresaParams) error
 }
 
 type EmpresaService struct {
@@ -31,7 +33,6 @@ func NewEmpresaService(repo EmpresaRepository, repoPlano PlanosRepository) *Empr
 }
 
 func (e *EmpresaService) Salvar(ctx context.Context, model model.EmpresaInserir) error {
-
 
 	plano, err := e.repoPlano.BuscarPlanoPorNome(ctx, model.Plano)
 	if err != nil {
@@ -51,9 +52,9 @@ func (e *EmpresaService) Salvar(ctx context.Context, model model.EmpresaInserir)
 		Telefone:    pgtype.Text{String: model.Telefone, Valid: model.Telefone != ""},
 		Observacoes: pgtype.Text{String: model.Observacoes, Valid: model.Observacoes != ""},
 
-		PlanoID:     pgtype.Int4{Int32: plano.ID, Valid: true},
-		Status:      model.Status,
-		Subdominio:  subdominio,
+		PlanoID:    pgtype.Int4{Int32: plano.ID, Valid: true},
+		Status:     model.Status,
+		Subdominio: subdominio,
 
 		// Supondo que Vencimento seja do tipo time.Time padrão do Go:
 		Vencimento: pgtype.Date{Time: model.Vencimento.Time(), Valid: !model.Vencimento.IsZero()},
@@ -112,36 +113,61 @@ func (e *EmpresaService) EmpresaRecentes(ctx context.Context) ([]model.EmpresaRe
 	return dto, nil
 }
 
-func (e *EmpresaService) DadosEmpresas(ctx context.Context)([]model.Empresa, error){
+func (e *EmpresaService) DadosEmpresas(ctx context.Context) ([]model.Empresa, error) {
 
-
-	empresas,err:= e.repo.DadosEmpresas(ctx)
+	empresas, err := e.repo.DadosEmpresas(ctx)
 	if err != nil {
 		return []model.Empresa{}, err
 
 	}
 
-	dto:= make([]model.Empresa, 0, len(empresas))
+	dto := make([]model.Empresa, 0, len(empresas))
 
-	for _, empresa:= range empresas{
+	for _, empresa := range empresas {
 
-		ee:= model.Empresa{
-			ID: int64(empresa.ID),
-			Nome: empresa.Nome,
-			CNPJ: empresa.Cnpj,
-			Responsavel: empresa.Responsavel.String,
-			Email: empresa.Email.String,
-			Telefone: empresa.Telefone.String,
-			Plano: empresa.PlanoNome,
+		ee := model.Empresa{
+			ID:           int64(empresa.ID),
+			Nome:         empresa.Nome,
+			CNPJ:         empresa.Cnpj,
+			Responsavel:  empresa.Responsavel.String,
+			Email:        empresa.Email.String,
+			Telefone:     empresa.Telefone.String,
+			Plano:        empresa.PlanoNome,
 			Funcionarios: int(empresa.Funcionarios),
-			EPIs: int(empresa.Epis),
-			Mensalidade: empresa.PMensalidade,
-			Vencimento: *configs.NewDataBrPtr(empresa.Vencimento.Time),
-			Status: empresa.Status,
+			EPIs:         int(empresa.Epis),
+			Mensalidade:  empresa.PMensalidade,
+			Vencimento:   *configs.NewDataBrPtr(empresa.Vencimento.Time),
+			Status:       empresa.Status,
+			Observacoes:  empresa.Observacoes.String,
 		}
 
 		dto = append(dto, ee)
 	}
 
 	return dto, nil
+}
+
+func (e *EmpresaService) EditarEmpresa(ctx context.Context,  id int32, model model.EditarEmpresaRequest) error {
+
+	err := e.repo.EditarEmpresa(ctx, repository.EditarEmpresaParams{
+		NomeFantasia: model.Nome,
+		RazaoSocial:  model.Nome,
+		Cnpj:         model.Cnpj,
+		Responsavel:  pgtype.Text{String: model.Responsavel, Valid: model.Responsavel != ""},
+		Email:        pgtype.Text{String: model.Email, Valid: model.Email != ""},
+		Telefone:     pgtype.Text{String: model.Telefone, Valid: model.Telefone != ""},
+		PlanoID:      pgtype.Int4{Int32: int32(model.PlanoID), Valid: int32(model.PlanoID) != 0},
+		Status:       model.Status,
+		Vencimento:   pgtype.Date{Time: time.Time(*configs.NewDataBrPtr(model.Vencimento.Time())), Valid: true},
+		Observacoes: pgtype.Text{String: model.Observacoes, Valid: model.Observacoes != ""},
+		ID: id,
+	})
+	if err != nil {
+
+		return err
+	}
+
+
+	return nil
+
 }

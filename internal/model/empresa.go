@@ -12,9 +12,9 @@ type EmpresaInserir struct {
 
 	Telefone string `json:"telefone" binding:"max=40"`
 
-	Plano       string          `json:"plano" binding:"required"`
-	Status      string          `json:"status" binding:"required"`
-	Vencimento  configs.DataBr  `json:"vencimento" binding:"required"`
+	Plano      string         `json:"plano" binding:"required"`
+	Status     string         `json:"status" binding:"required"`
+	Vencimento configs.DataBr `json:"vencimento" binding:"required"`
 
 	Observacoes string `json:"observacoes" binding:"lte=150"`
 	Subdominio  string `json:"-"`
@@ -56,4 +56,17 @@ type Empresa struct {
 	Mensalidade  float64        `json:"mensalidade"`
 	Vencimento   configs.DataBr `json:"vencimento"`
 	Status       string         `json:"status"`
+	Observacoes  string         `json:"observacoes"`
+}
+
+type EditarEmpresaRequest struct {
+	Nome        string         `json:"nome" binding:"required"`
+	Cnpj        string         `json:"cnpj"`
+	Responsavel string         `json:"responsavel" binding:"required"`
+	Email       string         `github:"email" json:"email" binding:"required,email"`
+	Telefone    string         `json:"telefone"`
+	PlanoID     int64          `json:"planoId" binding:"required"`
+	Vencimento  configs.DataBr `json:"vencimento"`
+	Status      string         `json:"status" binding:"required"`
+	Observacoes string         `json:"observacoes"`
 }

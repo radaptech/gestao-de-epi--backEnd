@@ -77,6 +77,23 @@ SELECT
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
     p.mensalidade::float8,
     e.vencimento,
-    e.status    
+    e.status,
+    e.observacoes    
 FROM empresas e
 INNER JOIN planos p ON e.plano_id = p.id;
+
+
+-- name: EditarEmpresa :exec
+UPDATE empresas
+SET
+    nome_fantasia = @nome_fantasia,
+    razao_social = @razao_social,
+    cnpj = @cnpj,
+    responsavel = @responsavel,
+    email = @email,
+    telefone = @telefone,
+    plano_id = @plano_id,
+    status = @status,
+    vencimento = @vencimento,
+    observacoes = @observacoes
+where id = @id;

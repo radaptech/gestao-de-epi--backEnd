@@ -2,6 +2,8 @@ package controller
 
 import (
 	"context"
+	"strconv"
+
 	"log"
 	"net/http"
 
@@ -13,7 +15,8 @@ type EmpresaService interface {
 	Salvar(ctx context.Context, model model.EmpresaInserir) error
 	EmpresaDashboard(ctx context.Context) (model.ResumoDashboard, error)
 	EmpresaRecentes(ctx context.Context) ([]model.EmpresaRecente, error)
-	DadosEmpresas(ctx context.Context)([]model.Empresa, error)
+	DadosEmpresas(ctx context.Context) ([]model.Empresa, error)
+	EditarEmpresa(ctx context.Context, id int32, model model.EditarEmpresaRequest) error
 }
 
 type EmpresaController struct {
@@ -112,5 +115,41 @@ func (e *EmpresaController) DadosEmpresas() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, empresa)
 
+	}
+}
+
+func (e *EmpresaController) EditarEmpresa() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		idparam := ctx.Param("id")
+		id, err := strconv.Atoi(idparam)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "ID do plano inválido"})
+			return
+		}
+		var input model.EditarEmpresaRequest
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"erro": err.Error(),
+			})
+			return
+		}
+
+		err = e.service.EditarEmpresa(ctx, int32(id), input)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao editar empresa",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		ctx.Status(http.StatusNoContent)
 	}
 }

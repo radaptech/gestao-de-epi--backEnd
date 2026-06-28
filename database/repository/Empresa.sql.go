@@ -83,7 +83,8 @@ SELECT
     (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
     p.mensalidade::float8,
     e.vencimento,
-    e.status    
+    e.status,
+    e.observacoes    
 FROM empresas e
 INNER JOIN planos p ON e.plano_id = p.id
 `
@@ -101,6 +102,7 @@ type DadosEmpresasRow struct {
 	PMensalidade float64
 	Vencimento   pgtype.Date
 	Status       string
+	Observacoes  pgtype.Text
 }
 
 func (q *Queries) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error) {
@@ -125,6 +127,7 @@ func (q *Queries) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error)
 			&i.PMensalidade,
 			&i.Vencimento,
 			&i.Status,
+			&i.Observacoes,
 		); err != nil {
 			return nil, err
 		}
@@ -134,6 +137,53 @@ func (q *Queries) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error)
 		return nil, err
 	}
 	return items, nil
+}
+
+const editarEmpresa = `-- name: EditarEmpresa :exec
+UPDATE empresas
+SET
+    nome_fantasia = $1,
+    razao_social = $2,
+    cnpj = $3,
+    responsavel = $4,
+    email = $5,
+    telefone = $6,
+    plano_id = $7,
+    status = $8,
+    vencimento = $9,
+    observacoes = $10
+where id = $11
+`
+
+type EditarEmpresaParams struct {
+	NomeFantasia string
+	RazaoSocial  string
+	Cnpj         string
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
+	PlanoID      pgtype.Int4
+	Status       string
+	Vencimento   pgtype.Date
+	Observacoes  pgtype.Text
+	ID           int32
+}
+
+func (q *Queries) EditarEmpresa(ctx context.Context, arg EditarEmpresaParams) error {
+	_, err := q.db.Exec(ctx, editarEmpresa,
+		arg.NomeFantasia,
+		arg.RazaoSocial,
+		arg.Cnpj,
+		arg.Responsavel,
+		arg.Email,
+		arg.Telefone,
+		arg.PlanoID,
+		arg.Status,
+		arg.Vencimento,
+		arg.Observacoes,
+		arg.ID,
+	)
+	return err
 }
 
 const empresaEmTeste = `-- name: EmpresaEmTeste :one

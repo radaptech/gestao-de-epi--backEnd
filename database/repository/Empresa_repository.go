@@ -130,3 +130,12 @@ func (e *EmpresaRepository) DadosEmpresas(ctx context.Context) ([]DadosEmpresasR
 
 	return empresas, nil
 }
+
+func (e *EmpresaRepository) EditarEmpresa(ctx context.Context, arg EditarEmpresaParams) error {
+	err := e.q.EditarEmpresa(ctx, arg)
+	if err != nil {
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
+}
