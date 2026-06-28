@@ -57,12 +57,12 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 
 			
 			err = db.QueryRow(ctx, `
-				INSERT INTO empresas (nome_fantasia, razao_social, cnpj, subdominio, criado_em, plano_id, status, mensalidade, vencimento, observacoes, responsavel, email, telefone) 
-				VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12)
+				INSERT INTO empresas (nome_fantasia, razao_social, cnpj, subdominio, criado_em, plano_id, status, vencimento, observacoes, responsavel, email, telefone) 
+				VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11)
 				RETURNING id;
 			`, 
 				"sge-gestaoEpi", "radaptech", "53563447", "painel-homologacao", 
-				planoid, "Ativa", 1000.00, "2099-03-14", "testes", "radaptech", 
+				planoid, "Ativa", "2099-03-14", "testes", "radaptech", 
 				"radaptech@gmail.com", "34998972788",
 			).Scan(&empresaID)
 
