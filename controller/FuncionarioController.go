@@ -83,6 +83,16 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 				return
 			}
 
+			if errors.Is(err, helper.ErrLimiteExcedido){
+
+				ctx.JSON(http.StatusForbidden, gin.H{
+
+					"error":"Limite de funcionarios atingido",
+					"detalhes": err.Error(),
+				})
+				return 
+			}
+
 			if errors.Is(err, helper.ErrConflitoIntegridade) {
 
 				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
