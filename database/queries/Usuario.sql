@@ -75,3 +75,7 @@ UPDATE usuarios
 SET 
     ativo = @ativo
 WHERE id = @id;
+
+
+-- name: TotalDeUsuario :one
+select count(id) from usuarios where tenant_id = @id::int;

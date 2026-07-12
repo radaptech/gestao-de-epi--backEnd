@@ -20,9 +20,9 @@ func NewUsuarioRepository(pool *pgxpool.Pool) *UsuarioRepository {
 	return &UsuarioRepository{q: New(pool), db: pool}
 }
 
-func (u *UsuarioRepository) Cadastrar(ctx context.Context, user CreateUserParams) error {
+func (u *UsuarioRepository) Cadastrar(ctx context.Context, qtx *Queries ,user CreateUserParams) error {
 
-	err:= u.q.CreateUser(ctx, user)
+	err:= qtx.CreateUser(ctx, user)
 	if err != nil {
 
 		return helper.TraduzErroPostgres(err)

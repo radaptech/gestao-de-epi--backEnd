@@ -319,6 +319,17 @@ func (q *Queries) SalvarTokenRecuperacao(ctx context.Context, arg SalvarTokenRec
 	return result.RowsAffected(), nil
 }
 
+const totalDeUsuario = `-- name: TotalDeUsuario :one
+select count(id) from usuarios where tenant_id = $1::int
+`
+
+func (q *Queries) TotalDeUsuario(ctx context.Context, id int32) (int64, error) {
+	row := q.db.QueryRow(ctx, totalDeUsuario, id)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const updateSenha = `-- name: UpdateSenha :execrows
 update usuarios
 set senha_hash = $1,

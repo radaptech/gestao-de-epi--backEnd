@@ -15,34 +15,63 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UsuarioRepository interface {
-	Cadastrar(ctx context.Context, user repository.CreateUserParams) error
+	Cadastrar(ctx context.Context, qtx *repository.Queries, user repository.CreateUserParams) error
 	Listar(ctx context.Context, tenantId int32) ([]repository.BuscarTodosUsuariosRow, error)
 	BuscarPorEmail(ctx context.Context, email repository.BuscarUsuarioPorEmailParams) (repository.BuscarUsuarioPorEmailRow, error)
 	BuscarPoId(ctx context.Context, arg repository.BuscarPorIdUsuarioParams) (repository.BuscarPorIdUsuarioRow, error)
 	RecuperaLogin(ctx context.Context, arg repository.RecuperaLoginParams) (int32, error)
 	SalvarToken(ctx context.Context, agr repository.SalvarTokenRecuperacaoParams) (int64, error)
 	AtualizarSenha(ctx context.Context, arg repository.UpdateSenhaParams) (int64, error)
-	RedefinirSenha(ctx context.Context, arg repository.UpdateSenhaParams)(int64,error)
-	UltimoAcesso(ctx context.Context, arg repository.AtualizarUltimoAcessoParams)(error)
-	MostrarUsuariosPainel(ctx context.Context)([]repository.MostrarUsuariosPainelRow, error)
-	EditarUsuario(ctx context.Context ,args repository.EditarUsuarioParams)(error)
-	EditarStatusUsuario(ctx context.Context, arg repository.EditarStatusUsuarioParams) (error)
+	RedefinirSenha(ctx context.Context, arg repository.UpdateSenhaParams) (int64, error)
+	UltimoAcesso(ctx context.Context, arg repository.AtualizarUltimoAcessoParams) error
+	MostrarUsuariosPainel(ctx context.Context) ([]repository.MostrarUsuariosPainelRow, error)
+	EditarUsuario(ctx context.Context, args repository.EditarUsuarioParams) error
+	EditarStatusUsuario(ctx context.Context, arg repository.EditarStatusUsuarioParams) error
 }
 
 type UsuarioService struct {
 	repo         UsuarioRepository
 	emailService EmailService
+	db           *pgxpool.Pool
+	queries      *repository.Queries
 }
 
-func NewUsuarioService(repo UsuarioRepository, emailSrv EmailService) *UsuarioService {
+func NewUsuarioService(repo UsuarioRepository, emailSrv EmailService, db *pgxpool.Pool) *UsuarioService {
 
-	return &UsuarioService{repo: repo, emailService: emailSrv}
+	return &UsuarioService{
+		repo: repo, 
+		db: db,
+		emailService: emailSrv,}
 }
 
 func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario) error {
+
+	tx, err := u.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	qtx := u.queries.WithTx(tx)
+
+	totalUsuariosPlanos, err := qtx.ValidaTotalUsuarios(ctx, int32(*model.EmpresaID))
+	if err != nil {
+		return err
+	}
+	totalUsuarioAtual, err := qtx.TotalDeUsuario(ctx, int32(*model.EmpresaID))
+	if err != nil {
+		return err
+	}
+
+	if totalUsuarioAtual >= int64(totalUsuariosPlanos.LimiteUsuarios.Int32) {
+
+		return helper.ErrLimiteExcedido
+	}
 
 	model.Email = strings.TrimSpace(model.Email)
 	model.Nome = strings.TrimSpace(model.Nome)
@@ -55,7 +84,7 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario) err
 	}
 
 	var tenantID int32
-	
+
 	// extrai o valor do ponteiro se ele NÃO for nulo
 	if model.EmpresaID != nil {
 		tenantID = int32(*model.EmpresaID)
@@ -69,7 +98,7 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario) err
 		Role:      pgtype.Text{String: model.Role, Valid: model.Role != ""},
 	}
 
-	err = u.repo.Cadastrar(ctx, arg)
+	err = u.repo.Cadastrar(ctx, qtx ,arg)
 	if err != nil {
 
 		if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -80,7 +109,7 @@ func (u *UsuarioService) Registrar(ctx context.Context, model model.Usuario) err
 		return err
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (u *UsuarioService) FazerLogin(ctx context.Context, email, senha string, tenantId int32) (string, repository.BuscarUsuarioPorEmailRow, error) {
@@ -201,17 +230,16 @@ func (u *UsuarioService) RecuperacaoSenha(ctx context.Context, rl model.Recupera
 
 func (u *UsuarioService) RedefinirSenha(ctx context.Context, rs model.RedefinirSenha) error {
 
-	senhaByte, err:= auth.HashPassword(rs.NovaSenha)
+	senhaByte, err := auth.HashPassword(rs.NovaSenha)
 	if err != nil {
 		log.Printf("erro ao gerar hars da senha: %v", err)
 		return fmt.Errorf("erro ao gerar hash da senha")
 	}
 
-
-	linha, err:= u.repo.RedefinirSenha(ctx, repository.UpdateSenhaParams{
-		SenhaHash: string(senhaByte),
+	linha, err := u.repo.RedefinirSenha(ctx, repository.UpdateSenhaParams{
+		SenhaHash:             string(senhaByte),
 		TokenRecuperacaoSenha: pgtype.Text{String: rs.Token, Valid: true},
-		TenantID:pgtype.Int4{Int32: int32(rs.TenantId), Valid: true},
+		TenantID:              pgtype.Int4{Int32: int32(rs.TenantId), Valid: true},
 	})
 
 	if linha == 0 {
@@ -222,74 +250,70 @@ func (u *UsuarioService) RedefinirSenha(ctx context.Context, rs model.RedefinirS
 	return nil
 }
 
-func (u *UsuarioService) UltimoAcesso(ctx context.Context, id, tenantId int32)(error) {
+func (u *UsuarioService) UltimoAcesso(ctx context.Context, id, tenantId int32) error {
 
-  	err:= u.repo.UltimoAcesso(ctx, repository.AtualizarUltimoAcessoParams{
-		ID: id,
+	err := u.repo.UltimoAcesso(ctx, repository.AtualizarUltimoAcessoParams{
+		ID:       id,
 		TenantID: pgtype.Int4{Int32: tenantId, Valid: true},
 	})
 	if err != nil {
 
-		return  err
+		return err
 	}
 
 	return nil
 }
 
-func (u *UsuarioService) MostrarUsuariosPainel(ctx context.Context)([]model.UsuarioResponsePainel, error){
+func (u *UsuarioService) MostrarUsuariosPainel(ctx context.Context) ([]model.UsuarioResponsePainel, error) {
 
-	usuarios, err:= u.repo.MostrarUsuariosPainel(ctx)
+	usuarios, err := u.repo.MostrarUsuariosPainel(ctx)
 	if err != nil {
 
-		return  []model.UsuarioResponsePainel{}, err
+		return []model.UsuarioResponsePainel{}, err
 	}
 
-	dto:= make([]model.UsuarioResponsePainel, 0, len(usuarios))
+	dto := make([]model.UsuarioResponsePainel, 0, len(usuarios))
 
-	for _, usuario:= range usuarios{
+	for _, usuario := range usuarios {
 
-		uu:= model.UsuarioResponsePainel{
-			ID: int(usuario.ID),
-			Nome: usuario.Nome,
-			Email: usuario.Email,
-			Empresa: usuario.Empresa,
-			Tipo: usuario.Tipo.String,
-			Status: usuario.Ativo.Bool,
+		uu := model.UsuarioResponsePainel{
+			ID:           int(usuario.ID),
+			Nome:         usuario.Nome,
+			Email:        usuario.Email,
+			Empresa:      usuario.Empresa,
+			Tipo:         usuario.Tipo.String,
+			Status:       usuario.Ativo.Bool,
 			UltimoAcesso: usuario.UltimoAcesso.Time.Format("02/01/2006 15:04"),
 		}
-		
+
 		dto = append(dto, uu)
 	}
-
 
 	return dto, nil
 }
 
+func (u *UsuarioService) EditarUsuario(ctx context.Context, id int32, model model.EditarUsuarioRequest) error {
 
-func (u *UsuarioService) EditarUsuario(ctx context.Context, id int32, model model.EditarUsuarioRequest)(error){
-
-	err:= u.repo.EditarUsuario(ctx, repository.EditarUsuarioParams{
-		Nome: model.Nome,
+	err := u.repo.EditarUsuario(ctx, repository.EditarUsuarioParams{
+		Nome:  model.Nome,
 		Email: model.Email,
-		Role: pgtype.Text{String: model.Role, Valid: model.Role != ""},
-		ID: id,
+		Role:  pgtype.Text{String: model.Role, Valid: model.Role != ""},
+		ID:    id,
 	})
-
 
 	if err != nil {
 
 		return err
 	}
 
-
 	return nil
 }
 
-func (u *UsuarioService) EditarStatusUsuario(ctx context.Context, id int32, model model.AlterarStatusRequest)(error){
+func (u *UsuarioService) EditarStatusUsuario(ctx context.Context, id int32, model model.AlterarStatusRequest) error {
 
-	err:= u.repo.EditarStatusUsuario(ctx, repository.EditarStatusUsuarioParams{
+	err := u.repo.EditarStatusUsuario(ctx, repository.EditarStatusUsuarioParams{
 		Ativo: pgtype.Bool{Bool: *model.Status, Valid: true},
-		ID: id,
+		ID:    id,
 	})
 	if err != nil {
 

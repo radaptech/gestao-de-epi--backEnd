@@ -97,3 +97,18 @@ SET
     vencimento = @vencimento,
     observacoes = @observacoes
 where id = @id;
+
+-- name: ValidaTotalFuncionarios :one
+select e.nome_fantasia, p.limite_funcionarios
+from empresas e
+inner join planos p on e.plano_id = p.id
+where e.id = @id
+FOR UPDATE;
+
+
+-- name: ValidaTotalUsuarios :one
+select e.nome_fantasia, p.limite_usuarios
+from empresas e
+inner join planos p on e.plano_id = p.id
+where e.id = @id
+FOR UPDATE;
