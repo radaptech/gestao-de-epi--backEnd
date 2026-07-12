@@ -139,3 +139,16 @@ func (e *EmpresaRepository) EditarEmpresa(ctx context.Context, arg EditarEmpresa
 
 	return nil
 }
+
+func (e *EmpresaRepository) ValidaTotalFuncionario(ctx context.Context, id int32) (ValidaTotalFuncionariosRow, error) {
+
+	total, err:= e.q.ValidaTotalFuncionarios(ctx, id)
+	if err != nil {
+
+		return ValidaTotalFuncionariosRow{},helper.TraduzErroPostgres(err)
+	}
+
+
+	return total, nil
+
+}

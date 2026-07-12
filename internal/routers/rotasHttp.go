@@ -51,7 +51,7 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEmpresas := repository.NewEmpresaRepository(db)
 
 	ServiceEmail := service.NewEmail()
-	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
+	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail, db)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
 	funcaoService := service.NewFuncaoService(repoFuncao)
 	FornecedorService := service.NewFornecedorService(repoFornecedor)

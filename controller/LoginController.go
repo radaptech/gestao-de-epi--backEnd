@@ -75,6 +75,15 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 
 				return
 			}
+
+			if errors.Is(err, helper.ErrLimiteExcedido) {
+				ctx.JSON(http.StatusForbidden, gin.H{
+
+					"error":"limite de usuarios excedidos",
+					"detalhes":err.Error(),
+				})
+				return 
+			}
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),

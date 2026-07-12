@@ -339,3 +339,43 @@ func (q *Queries) TotalFuncionarios(ctx context.Context) (int64, error) {
 	err := row.Scan(&count)
 	return count, err
 }
+
+const validaTotalFuncionarios = `-- name: ValidaTotalFuncionarios :one
+select e.nome_fantasia, p.limite_funcionarios
+from empresas e
+inner join planos p on e.plano_id = p.id
+where e.id = $1
+FOR UPDATE
+`
+
+type ValidaTotalFuncionariosRow struct {
+	NomeFantasia       string
+	LimiteFuncionarios pgtype.Int4
+}
+
+func (q *Queries) ValidaTotalFuncionarios(ctx context.Context, id int32) (ValidaTotalFuncionariosRow, error) {
+	row := q.db.QueryRow(ctx, validaTotalFuncionarios, id)
+	var i ValidaTotalFuncionariosRow
+	err := row.Scan(&i.NomeFantasia, &i.LimiteFuncionarios)
+	return i, err
+}
+
+const validaTotalUsuarios = `-- name: ValidaTotalUsuarios :one
+select e.nome_fantasia, p.limite_usuarios
+from empresas e
+inner join planos p on e.plano_id = p.id
+where e.id = $1
+FOR UPDATE
+`
+
+type ValidaTotalUsuariosRow struct {
+	NomeFantasia   string
+	LimiteUsuarios pgtype.Int4
+}
+
+func (q *Queries) ValidaTotalUsuarios(ctx context.Context, id int32) (ValidaTotalUsuariosRow, error) {
+	row := q.db.QueryRow(ctx, validaTotalUsuarios, id)
+	var i ValidaTotalUsuariosRow
+	err := row.Scan(&i.NomeFantasia, &i.LimiteUsuarios)
+	return i, err
+}
