@@ -333,6 +333,17 @@ func (q *Queries) DeletarFuncionario(ctx context.Context, arg DeletarFuncionario
 	return result.RowsAffected(), nil
 }
 
+const totalDeFuncionarios = `-- name: TotalDeFuncionarios :one
+select count(id) from funcionario where tenant_id= $1
+`
+
+func (q *Queries) TotalDeFuncionarios(ctx context.Context, id int32) (int64, error) {
+	row := q.db.QueryRow(ctx, totalDeFuncionarios, id)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const updateFuncionarioDepartamento = `-- name: UpdateFuncionarioDepartamento :execrows
 UPDATE funcionario
 SET IdDepartamento = $2

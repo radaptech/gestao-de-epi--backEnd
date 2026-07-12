@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -18,7 +19,7 @@ import (
 )
 
 type FuncionarioRepository interface {
-	Adicionar(ctx context.Context, args repository.AddFuncionarioParams) error
+	Adicionar(ctx context.Context, qtx *repository.Queries, args repository.AddFuncionarioParams) error
 	ListarFuncionario(ctx context.Context, arg repository.BuscaFuncionarioParams) (repository.BuscaFuncionarioRow, error)
 	ListarFuncionarios(ctx context.Context, args repository.BuscarTodosFuncionariosParams) ([]repository.BuscarTodosFuncionariosRow, error)
 	CancelarFuncionario(ctx context.Context, arg repository.DeletarFuncionarioParams) (int64, error)
@@ -27,6 +28,7 @@ type FuncionarioRepository interface {
 	AtualizarFuncionarioFuncao(ctx context.Context, arg repository.UpdateFuncionarioFuncaoParams, qtx *repository.Queries) (int64, error)
 	BuscarFuncionarioDashbord(ctx context.Context, tenant int32) ([]repository.BuscaFuncionarioDashbordRow, error)
 	BuscaFuncionarioCompleto(ctx context.Context, tenant int32) ([]repository.BuscaFuncionarioCompletoRow, error)
+	TotalFuncionarios(ctx context.Context, qtx *repository.Queries, id int32) (int64, error)
 }
 
 type FuncionarioService struct {
@@ -37,8 +39,8 @@ type FuncionarioService struct {
 	queries     *repository.Queries
 }
 
-func NewFuncionarioService(f FuncionarioRepository, e EntregaRepository, ep EpiRepository ,pool *pgxpool.Pool) *FuncionarioService {
-	return &FuncionarioService{repo: f,repoEntrega: e ,repoEpi: ep,db: pool, queries: repository.New(pool)}
+func NewFuncionarioService(f FuncionarioRepository, e EntregaRepository, ep EpiRepository, pool *pgxpool.Pool) *FuncionarioService {
+	return &FuncionarioService{repo: f, repoEntrega: e, repoEpi: ep, db: pool, queries: repository.New(pool)}
 }
 
 func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.FuncionarioInserir, tenantId int32) error {
@@ -51,7 +53,33 @@ func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.
 		Idfuncao:       int32(model.ID_funcao),
 		TenantID:       tenantId,
 	}
-	err := f.repo.Adicionar(ctx, args)
+
+	tx, err := f.db.Begin(ctx)
+	if err != nil {
+		log.Println("erro ao iniciar transação em funcionarios para adicionar")
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	qtx := f.queries.WithTx(tx)
+	
+	totalFuncionarioPlano, err := qtx.ValidaTotalFuncionarios(ctx, tenantId)
+	if err != nil {
+		return err
+	}
+
+	totalFuncionarioAtual, err := f.repo.TotalFuncionarios(ctx, qtx, tenantId)
+	if err != nil {
+		return err
+	}
+
+	if totalFuncionarioAtual >= int64(totalFuncionarioPlano.LimiteFuncionarios.Int32) {
+
+		return helper.ErrLimiteExcedido
+	}
+	
+	err = f.repo.Adicionar(ctx, qtx, args)
 	if err != nil {
 
 		if errors.Is(err, helper.ErrConflitoIntegridade) {
@@ -69,7 +97,7 @@ func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.
 
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula string, tenantId int32) (model.Funcionario_Dto, error) {

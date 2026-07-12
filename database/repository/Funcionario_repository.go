@@ -5,6 +5,7 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/jackc/pgx/v5/pgxpool"
+	
 )
 
 
@@ -23,9 +24,9 @@ func NewFuncionarioRepository(pool *pgxpool.Pool) *FuncionarioRepository {
 	}
 }
 
-func (f *FuncionarioRepository) Adicionar(ctx context.Context, args AddFuncionarioParams) error {
+func (f *FuncionarioRepository) Adicionar(ctx context.Context, qtx *Queries,args AddFuncionarioParams) error {
 
-	err :=f.q.AddFuncionario(ctx, args)
+	err :=qtx.AddFuncionario(ctx, args)
 	if err != nil {
 
 		return helper.TraduzErroPostgres(err)
@@ -118,3 +119,14 @@ func (f *FuncionarioRepository) BuscaFuncionarioCompleto(ctx context.Context, te
 }
 
 
+func (f *FuncionarioRepository) TotalFuncionarios(ctx context.Context, qtx *Queries ,id int32) (int64, error){
+
+	total, err:= qtx.TotalDeFuncionarios(ctx, id)
+	if err != nil {
+
+		return  0, helper.TraduzErroPostgres(err)
+	}
+
+
+	return total, nil
+}

@@ -122,3 +122,5 @@ INNER JOIN funcao f ON fn.IdFuncao = f.id
 WHERE fn.tenant_id = $1 
   AND fn.ativo = TRUE;
 
+-- name: TotalDeFuncionarios :one
+select count(id) from funcionario where tenant_id= @id;
