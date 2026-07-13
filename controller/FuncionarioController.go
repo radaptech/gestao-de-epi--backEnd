@@ -65,6 +65,7 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			Nome:            input.Nome,
 			ID_departamento: input.ID_departamento,
 			ID_funcao:       input.ID_funcao,
+			Cpf: input.Cpf,
 		}
 		tenantID, ok := middleware.GetTenantID(ctx)
 		if !ok {

@@ -96,6 +96,17 @@ func (f *FuncionarioRepository) AtualizarFuncionarioFuncao(ctx context.Context, 
 	return linhasAfetadas, nil
 }
 
+func (f *FuncionarioRepository) AtualizarFuncionarioCpf(ctx context.Context, arg UpdateFuncionarioCpfParams, qtx *Queries) (int64, error){
+
+	linhasAfetadas,err:= qtx.UpdateFuncionarioCpf(ctx, arg)
+	if err != nil {
+
+		return 0, helper.TraduzErroPostgres(err)
+	}
+
+	return linhasAfetadas, nil
+}
+
 func (f *FuncionarioRepository) BuscarFuncionarioDashbord(ctx context.Context, tenant int32)([]BuscaFuncionarioDashbordRow, error){
 
 	funcionarios, err:= f.q.BuscaFuncionarioDashbord(ctx, tenant)

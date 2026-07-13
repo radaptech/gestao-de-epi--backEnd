@@ -155,6 +155,7 @@ type Funcionario struct {
 	Iddepartamento int32
 	Ativo          bool
 	DeletadoEm     pgtype.Timestamp
+	Cpf            pgtype.Text
 }
 
 type MotivoDevolucao struct {

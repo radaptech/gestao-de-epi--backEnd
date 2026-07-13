@@ -12,8 +12,8 @@ import (
 )
 
 const addFuncionario = `-- name: AddFuncionario :exec
-INSERT INTO funcionario (tenant_id, nome, IdDepartamento, IdFuncao) 
-VALUES ($1, $2, $3, $4)
+INSERT INTO funcionario (tenant_id, nome, IdDepartamento, IdFuncao, cpf) 
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type AddFuncionarioParams struct {
@@ -21,6 +21,7 @@ type AddFuncionarioParams struct {
 	Nome           string
 	Iddepartamento int32
 	Idfuncao       int32
+	Cpf            pgtype.Text
 }
 
 func (q *Queries) AddFuncionario(ctx context.Context, arg AddFuncionarioParams) error {
@@ -29,6 +30,7 @@ func (q *Queries) AddFuncionario(ctx context.Context, arg AddFuncionarioParams) 
 		arg.Nome,
 		arg.Iddepartamento,
 		arg.Idfuncao,
+		arg.Cpf,
 	)
 	return err
 }
@@ -38,6 +40,7 @@ SELECT
     fn.id, 
     fn.nome, 
     fn.matricula, 
+    fn.cpf,
     fn.IdDepartamento, 
     d.nome as departamento_nome,
     fn.IdFuncao, 
@@ -59,6 +62,7 @@ type BuscaFuncionarioRow struct {
 	ID               int32
 	Nome             string
 	Matricula        int32
+	Cpf              pgtype.Text
 	Iddepartamento   int32
 	DepartamentoNome string
 	Idfuncao         int32
@@ -72,6 +76,7 @@ func (q *Queries) BuscaFuncionario(ctx context.Context, arg BuscaFuncionarioPara
 		&i.ID,
 		&i.Nome,
 		&i.Matricula,
+		&i.Cpf,
 		&i.Iddepartamento,
 		&i.DepartamentoNome,
 		&i.Idfuncao,
@@ -86,6 +91,7 @@ SELECT
     fn.nome, 
     fn.matricula, 
     fn.IdFuncao, 
+    fn.cpf,
     f.nome as funcao_nome,
     fn.IdDepartamento, 
     d.nome as departamento_nome
@@ -101,6 +107,7 @@ type BuscaFuncionarioCompletoRow struct {
 	Nome             string
 	Matricula        int32
 	Idfuncao         int32
+	Cpf              pgtype.Text
 	FuncaoNome       string
 	Iddepartamento   int32
 	DepartamentoNome string
@@ -120,6 +127,7 @@ func (q *Queries) BuscaFuncionarioCompleto(ctx context.Context, tenantID int32) 
 			&i.Nome,
 			&i.Matricula,
 			&i.Idfuncao,
+			&i.Cpf,
 			&i.FuncaoNome,
 			&i.Iddepartamento,
 			&i.DepartamentoNome,
@@ -135,7 +143,7 @@ func (q *Queries) BuscaFuncionarioCompleto(ctx context.Context, tenantID int32) 
 }
 
 const buscaFuncionarioDashbord = `-- name: BuscaFuncionarioDashbord :many
-SELECT id, nome, matricula
+SELECT id, nome, matricula, cpf
 FROM funcionario
 WHERE tenant_id = $1 
   AND ativo = TRUE 
@@ -146,6 +154,7 @@ type BuscaFuncionarioDashbordRow struct {
 	ID        int32
 	Nome      string
 	Matricula int32
+	Cpf       pgtype.Text
 }
 
 func (q *Queries) BuscaFuncionarioDashbord(ctx context.Context, tenantID int32) ([]BuscaFuncionarioDashbordRow, error) {
@@ -157,7 +166,12 @@ func (q *Queries) BuscaFuncionarioDashbord(ctx context.Context, tenantID int32) 
 	var items []BuscaFuncionarioDashbordRow
 	for rows.Next() {
 		var i BuscaFuncionarioDashbordRow
-		if err := rows.Scan(&i.ID, &i.Nome, &i.Matricula); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nome,
+			&i.Matricula,
+			&i.Cpf,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -219,6 +233,7 @@ const buscarTodosFuncionarios = `-- name: BuscarTodosFuncionarios :many
 SELECT 
     fn.id, 
     fn.nome, 
+    fn.cpf,
     -- Formatação para exibição
     CASE 
         WHEN fn.matricula < 10000 THEN LPAD(fn.matricula::text, 4, '0') 
@@ -266,6 +281,7 @@ type BuscarTodosFuncionariosParams struct {
 type BuscarTodosFuncionariosRow struct {
 	ID               int32
 	Nome             string
+	Cpf              pgtype.Text
 	Matricula        string
 	Iddepartamento   int32
 	DepartamentoNome string
@@ -294,6 +310,7 @@ func (q *Queries) BuscarTodosFuncionarios(ctx context.Context, arg BuscarTodosFu
 		if err := rows.Scan(
 			&i.ID,
 			&i.Nome,
+			&i.Cpf,
 			&i.Matricula,
 			&i.Iddepartamento,
 			&i.DepartamentoNome,
@@ -342,6 +359,28 @@ func (q *Queries) TotalDeFuncionarios(ctx context.Context, id int32) (int64, err
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const updateFuncionarioCpf = `-- name: UpdateFuncionarioCpf :execrows
+UPDATE funcionario
+SET cpf = $2
+WHERE id = $1 
+  AND tenant_id = $3 -- SEGURANÇA
+  AND ativo = TRUE
+`
+
+type UpdateFuncionarioCpfParams struct {
+	ID       int32
+	Cpf      pgtype.Text
+	TenantID int32
+}
+
+func (q *Queries) UpdateFuncionarioCpf(ctx context.Context, arg UpdateFuncionarioCpfParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateFuncionarioCpf, arg.ID, arg.Cpf, arg.TenantID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateFuncionarioDepartamento = `-- name: UpdateFuncionarioDepartamento :execrows
