@@ -67,3 +67,16 @@ func (f *FuncaoRepository) AtualizarFuncao(ctx context.Context, arg UpdateFuncao
 
 	return linhasAfetadas, nil
 }
+
+
+func (f *FuncaoRepository) MapDepartamentosParaFuncao(ctx context.Context, tenantId int32) ([]BuscaDepartamentosMapRow, error){
+
+	deps, err:= f.q.BuscaDepartamentosMap(ctx, tenantId)
+	if err != nil {
+
+		return  []BuscaDepartamentosMapRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return deps, nil
+
+}

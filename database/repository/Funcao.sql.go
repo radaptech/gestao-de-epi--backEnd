@@ -14,6 +14,7 @@ import (
 const addFuncao = `-- name: AddFuncao :exec
 INSERT INTO funcao (tenant_id, nome, IdDepartamento) 
 VALUES ($1, $2, $3)
+ON CONFLICT (tenant_id, nome, IdDepartamento) DO NOTHING
 `
 
 type AddFuncaoParams struct {
@@ -25,6 +26,37 @@ type AddFuncaoParams struct {
 func (q *Queries) AddFuncao(ctx context.Context, arg AddFuncaoParams) error {
 	_, err := q.db.Exec(ctx, addFuncao, arg.TenantID, arg.Nome, arg.Iddepartamento)
 	return err
+}
+
+const buscaDepartamentosMap = `-- name: BuscaDepartamentosMap :many
+SELECT id, nome
+from departamento
+where tenant_id = $1 and deletado_em IS NULL
+`
+
+type BuscaDepartamentosMapRow struct {
+	ID   int32
+	Nome string
+}
+
+func (q *Queries) BuscaDepartamentosMap(ctx context.Context, id int32) ([]BuscaDepartamentosMapRow, error) {
+	rows, err := q.db.Query(ctx, buscaDepartamentosMap, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BuscaDepartamentosMapRow
+	for rows.Next() {
+		var i BuscaDepartamentosMapRow
+		if err := rows.Scan(&i.ID, &i.Nome); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const buscarFuncao = `-- name: BuscarFuncao :one
