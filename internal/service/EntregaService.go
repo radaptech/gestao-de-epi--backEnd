@@ -359,9 +359,14 @@ func (e *EntregaService) GerarDadosPdfService(ctx context.Context, matricula str
 
 	primeira := entregas[0]
 	return helper.DadosPdf{
-		NomeEmpresa: primeira.RazaoSocial, NomeFuncionario: primeira.FuncNome,
-		Matricula: strconv.Itoa(int(primeira.Matricula)), Setor: primeira.DepNome,
-		Cargo: primeira.FuncaoNome, Assinatura: primeira.Assinatura, Epi: epis,
+		NomeEmpresa: primeira.RazaoSocial,
+		NomeFuncionario: primeira.FuncNome,
+		Cpf: primeira.Cpf.String,
+		Matricula: strconv.Itoa(int(primeira.Matricula)),
+		Setor: primeira.DepNome,
+		Cargo: primeira.FuncaoNome,
+		Assinatura: primeira.Assinatura,
+		Epi: epis,
 	}, nil
 }
 

@@ -89,7 +89,7 @@ RETURNING id;
 -- name: ListarHistoricoEntregasPorMatricula :many
 SELECT 
     emp.razao_social as razao_social,
-    f.id as func_id, f.nome as func_nome, f.matricula,
+    f.id as func_id, f.nome as func_nome, f.cpf ,f.matricula,
     d.id as dep_id, d.nome as dep_nome,
     ff.id as funcao_id, ff.nome as funcao_nome,
     ee.data_entrega, i.quantidade, e.ca, e.nome AS epi_nome, e.descricao,
