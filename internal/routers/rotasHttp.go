@@ -213,11 +213,13 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			rotasAdm.DELETE("/departamento/:id", c.Departamento.DeletarDepartamento())
 			rotasAdm.PUT("/departamento/:id", c.Departamento.AtualizarDepartamento())
 			rotasAdm.POST("/cadastro-departamento", c.Departamento.RegistraDepartamento())
+			rotasAdm.POST("/importar-departamentos",c.Departamento.ImportDepartamentoXLSX())
 
 			//funçoes
 			rotasAdm.DELETE("/funcao/:id", c.Funcao.DeletarFuncao())
 			rotasAdm.PUT("/funcao/:id", c.Funcao.AtualizarFuncao())
 			rotasAdm.POST("/cadastro-funcao", c.Funcao.RegistraFuncao())
+			rotasAdm.POST("/importar-funcoes", c.Funcao.ImportarFuncaoXLSX())
 
 			//funcionarios
 			rotasAdm.DELETE("/funcionario/:id", c.Funcionario.DeletarFuncionaioId())
