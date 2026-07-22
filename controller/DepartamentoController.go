@@ -5,12 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
 )
 
 type DepartamentoService interface {
@@ -27,6 +29,124 @@ type DepartamentoController struct {
 func NewDepartamentoController(service DepartamentoService) *DepartamentoController {
 
 	return &DepartamentoController{service: service}
+}
+
+func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		fileHearder, err := ctx.FormFile("file")
+		if err != nil {
+
+			ctx.JSON(http.StatusBadRequest, gin.H{
+
+				"erro:":     "selecione um arquivo de planilhas valido",
+				"detalhes:": err.Error(),
+			})
+			return
+		}
+
+		//Abre o arquivo diretamente do stream da requisição
+		filer, err := fileHearder.Open()
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"erro":     "erro ao ler a planilha",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+		defer filer.Close()
+
+		// Inicializa o leitor do Excelize a partir do buffer na memória
+		f, err := excelize.OpenReader(filer)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+
+				"erro":     "O arquivo enviado não é uma planilha Excel (.xlsx) válida.",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+		defer f.Close()
+
+		NomeDaPlanilha := f.GetSheetName(0)
+		linhas, err := f.GetRows(NomeDaPlanilha)
+		if err != nil || len(linhas) == 0 {
+
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message":  "A planilha selecionada está vazia.",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		var deps []string
+		cabecalho := false
+
+		for _, linha := range linhas {
+			if len(linha) == 0 {
+				continue
+			}
+
+			valorColuna := strings.TrimSpace(linha[0])
+			if valorColuna == "" {
+				continue
+			}
+
+			if strings.EqualFold(valorColuna, "Nome do Departamento") {
+				cabecalho = true
+				continue // Pula a linha do próprio cabeçalho
+			}
+			if !cabecalho {
+				continue
+			}
+
+			deps = append(deps, valorColuna)
+
+		}
+
+		if len(deps) == 0 {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Nenhum departamento válido foi encontrado na planilha.",
+			})
+
+			return
+		}
+
+		tenantID, exists := middleware.GetTenantID(ctx)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sessão inválida ou expirada."})
+			return
+		}
+		for _, dep := range deps {
+
+			var departamento model.Departamento
+
+			departamento.Departamento = dep
+
+			_, err := d.service.SalvarDepartamento(ctx, tenantID, departamento)
+			if err != nil {
+
+				if errors.Is(err, helper.ErrDadoDuplicado) {
+				ctx.JSON(http.StatusConflict, gin.H{
+
+					"error":    "departamento ja existe no sistema",
+					"detalhes": err.Error(),
+				})
+				return 
+				}
+				ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Erro ao registrar os departamentos no banco de dados."})
+				return
+				
+			}
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Importação concluída com sucesso!",
+			"total":   len(deps),
+		})
+	}
 }
 
 // RegistraDepartamento godoc
@@ -65,7 +185,7 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 			return
 		}
 
-		depStts,err:= d.service.SalvarDepartamento(c, tenantID, novoDep)
+		depStts, err := d.service.SalvarDepartamento(c, tenantID, novoDep)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -85,7 +205,7 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 
 		c.JSON(http.StatusCreated, gin.H{
 
-			"mensagem": "departamento cadastrado",
+			"mensagem":     "departamento cadastrado",
 			"departamento": depStts,
 		})
 	}
@@ -131,10 +251,9 @@ func (d *DepartamentoController) ListarDepartamentos() gin.HandlerFunc {
 		deps, err := d.service.ListarTodosDepartamentos(ctx, filtro, tenantID)
 		if err != nil {
 
-
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-				"error": "erro ao realizar buscar dos departamentos",
+				"error":    "erro ao realizar buscar dos departamentos",
 				"detalhes": err.Error(),
 			})
 			return
@@ -145,7 +264,6 @@ func (d *DepartamentoController) ListarDepartamentos() gin.HandlerFunc {
 
 	}
 }
-
 
 // DeletarDepartamento godoc
 // @Summary      Deletar departamento

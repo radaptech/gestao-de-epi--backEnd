@@ -1,6 +1,7 @@
 -- name: CriaDepartamento :one
 INSERT INTO departamento (tenant_id, nome) 
 VALUES ($1, $2)
+ON CONFLICT (tenant_id, nome) DO NOTHING
 RETURNING *;
 
 -- name: BuscarDepartamento :one
