@@ -27,21 +27,20 @@ func TestEntrega(t *testing.T) {
 
 	// 1. CENÁRIO SAAS: CRIAR TENANT
 
-	empresa:= CreateEmpresa(t, db)
-	user:= CreateUser(t, db, empresa)
-	dep:= CreateDepartamento(t, db,empresa)
-	funcc:= CreateFuncao(t, db, dep, empresa)
-	funcionario:= CreateFuncionario(t, db, dep, funcc, empresa)
-	protec:= CreateProtecao(t, db, empresa)
-	tamanho:= CreateTamanho(t, db, empresa)
-	epi:= CreateEpi(t, db, protec, empresa)
-	fornecedor:= CreateFornecedor(t, db,empresa)
-	entradaNf:= CreateEntradaNfEpi(t, db,empresa,fornecedor)
-	entradaEpi:= CreateEntradaEpi(t,db,empresa,epi,tamanho,user,entradaNf)
-	entrega:= CreateEntregaEpi(t, db,funcionario, user,empresa)
-	_ = CreateEpiEntregues(t, db,entrega,entradaEpi,epi,tamanho, empresa)
-
-
+	planos:= CreatePlanos(t, db)
+	empresa := CreateEmpresa(t, db, planos)
+	user := CreateUser(t, db, empresa)
+	dep := CreateDepartamento(t, db, empresa)
+	funcc := CreateFuncao(t, db, dep, empresa)
+	funcionario := CreateFuncionario(t, db, dep, funcc, empresa)
+	protec := CreateProtecao(t, db, empresa)
+	tamanho := CreateTamanho(t, db, empresa)
+	epi := CreateEpi(t, db, protec, empresa)
+	fornecedor := CreateFornecedor(t, db, empresa)
+	entradaNf := CreateEntradaNfEpi(t, db, empresa, user,fornecedor)
+	entradaEpi := CreateEntradaEpi(t, db, empresa, epi, tamanho, user, entradaNf)
+	entrega := CreateEntregaEpi(t, db, funcionario, user, empresa)
+	_ = CreateEpiEntregues(t, db, entrega, entradaEpi, epi, tamanho, empresa)
 
 	entregas := []model.EntregaParaInserir{
 		{
@@ -104,12 +103,12 @@ func TestEntrega(t *testing.T) {
 
 				// Adicionado TenantID ao registrar o item entregue
 				itemAdd := repository.AddItemEntregueParams{
-					TenantID:   int32(empresa),
-					IDEntregaCabecalho:  identrega,
-					IDEpi:      int32(item.ID_epi),
-					IDTamanho:  int32(item.ID_tamanho),
-					Quantidade: quantidadeAbater,
-					IDEntradaItem:  entradaLote.ID,
+					TenantID:           int32(empresa),
+					IDEntregaCabecalho: identrega,
+					IDEpi:              int32(item.ID_epi),
+					IDTamanho:          int32(item.ID_tamanho),
+					Quantidade:         quantidadeAbater,
+					IDEntradaItem:      entradaLote.ID,
 				}
 
 				// Abate no estoque (Valida tenant se sua query pedir, ou apenas ID)
@@ -176,7 +175,7 @@ func TestEntrega(t *testing.T) {
 		require.Equal(t, 0, count, "A entrega não deveria ter sido salva no banco")
 	})
 
-	t.Run("teste de concorrencia (nao deixar 2 usuarios fazer uma entrega do mesmo lote de uma vez)", func(t *testing.T) {
+	 t.Run("teste de concorrencia (nao deixar 2 usuarios fazer uma entrega do mesmo lote de uma vez)", func(t *testing.T) {
 		// Setup Específico para garantir isolamento deste teste
 		db2 := SetupTestDB(t)
 		defer db2.Close()
@@ -184,7 +183,8 @@ func TestEntrega(t *testing.T) {
 		repo2 := repository.NewEntregaRepository(db2)
 		serv2 := NewEntregaService(repo2, db2)
 
-		idEmpresa2 := CreateEmpresa(t, db2)
+		planos2:= CreatePlanos(t, db2)
+		idEmpresa2 := CreateEmpresa(t, db2, planos2)
 		iduser2 := CreateUser(t, db2, idEmpresa2)
 		iddep2 := CreateDepartamento(t, db2, idEmpresa2)
 		IdFuncao2 := CreateFuncao(t, db2, iddep2, idEmpresa2)
@@ -194,10 +194,9 @@ func TestEntrega(t *testing.T) {
 		idfuncionarioC := CreateFuncionario(t, db2, iddep2, IdFuncao2, idEmpresa2)
 		//fornecedores
 		Idfornecedor1 := CreateFornecedor(t, db2, idEmpresa2)
-		entrada2:= CreateEntradaNfEpi(t, db2,idEmpresa2,Idfornecedor1)
-		entradaEpi2:= CreateEntradaEpi1(t, db2,idEmpresa2,idepi2,idtam2, iduser2,entrada2)
+		entrada2 := CreateEntradaNfEpi(t, db2, idEmpresa2, iduser2,Idfornecedor1)
+		entradaEpi2 := CreateEntradaEpi1(t, db2, idEmpresa2, idepi2, idtam2, iduser2, entrada2)
 
-		
 		var wg sync.WaitGroup
 		numRequisicoes := 2
 		wg.Add(numRequisicoes)
@@ -218,7 +217,7 @@ func TestEntrega(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				// Passando TenantID
-				err := serv2.Salvar(ctx, entrega, int32(idEmpresa2),"1235edgd")
+				err := serv2.Salvar(ctx, entrega, int32(idEmpresa2), "1235edgd")
 				if err != nil {
 					fmt.Printf("Falha na goroutine: %v\n", err)
 				} else {
@@ -246,7 +245,7 @@ func TestEntrega(t *testing.T) {
 		require.Equal(t, 1, falhas, "Uma entrega deveria ter falhado por falta de estoque")
 
 		var qtdFinal int32
-		db2.QueryRow(ctx, "SELECT quantidadeAtual FROM entrada_epi_item WHERE id = $1 AND tenant_id = $2", entradaEpi2, idEmpresa2).Scan(&qtdFinal)
+		db2.QueryRow(ctx, "SELECT quantidade_atual FROM entrada_epi_item WHERE id = $1 AND tenant_id = $2", entradaEpi2, idEmpresa2).Scan(&qtdFinal)
 		require.Equal(t, int32(0), qtdFinal, "O estoque final deve ser zero e nunca negativo")
 	})
 
@@ -256,7 +255,8 @@ func TestEntrega(t *testing.T) {
 		db := SetupTestDB(t)
 		defer db.Close()
 		ctx := context.Background()
-		empresa := CreateEmpresa(t, db)
+		planos:= CreatePlanos(t, db)
+		empresa := CreateEmpresa(t, db, planos)
 		repo := repository.NewEntregaRepository(db)
 		serv := NewEntregaService(repo, db)
 
@@ -266,12 +266,11 @@ func TestEntrega(t *testing.T) {
 		idtam := CreateTamanho(t, db, empresa)
 		idprotec := CreateProtecao(t, db, empresa)
 		idepi := CreateEpi(t, db, idprotec, empresa)
-		_  = CreateFuncionario(t, db, iddep, IdFuncao, empresa)
+		_ = CreateFuncionario(t, db, iddep, IdFuncao, empresa)
 		//fornecedores
 		Idfornecedor := CreateFornecedor(t, db, empresa)
-		idEntrada2 := CreateEntradaNfEpi(t, db,empresa, Idfornecedor)
-		idEntradaEpi2:= CreateEntradaEpi(t, db,empresa,idepi, idtam, iduser, idEntrada2)
-
+		idEntrada2 := CreateEntradaNfEpi(t, db, empresa, iduser, Idfornecedor)
+		idEntradaEpi2 := CreateEntradaEpi(t, db, empresa, idepi, idtam, iduser, idEntrada2)
 
 		for i := range 4 {
 

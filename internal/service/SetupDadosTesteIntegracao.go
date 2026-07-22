@@ -33,26 +33,88 @@ func randomCNPJ() string {
 
 // --- 1. EMPRESA (TENANT) ---
 
-func CreateEmpresa(t *testing.T, db *pgxpool.Pool) int64 {
+func CreatePlanos(t *testing.T, db *pgxpool.Pool) int64 {
+
+	var id int64
+	query := `INSERT INTO planos (nome, mensalidade, limite_funcionarios, limite_usuarios, limite_epis, status, descricao)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING id;`
+
+	nome := "plano teste"
+	mensalidade := 1000
+	limite_funcionarios := 1000
+	limite_usuarios := 1000
+	limite_epis := 1000
+	status := "Ativo"
+	descricao := "teste descricao"
+
+	err := db.QueryRow(context.Background(), query,
+		nome, mensalidade, limite_funcionarios, limite_usuarios, limite_epis, status, descricao).Scan(&id)
+	if err != nil {
+		t.Fatalf("erro ao criar plano de teste: %v", err)
+
+	}
+
+	return id
+}
+
+func CreateEmpresa(t *testing.T, db *pgxpool.Pool, idplanos int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO empresas (nome_fantasia, razao_social, cnpj, subdominio, ativo) 
-		VALUES ($1, $2, $3, $4, $5) 
+		INSERT INTO empresas (
+			nome_fantasia,
+			razao_social,
+			cnpj,
+			responsavel,
+			email,
+			telefone,
+			plano_id,
+			status,
+			vencimento,
+			observacoes,
+			subdominio
+		) VALUES (
+		
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		$9,
+		$10,
+		$11
+		)
 		RETURNING id;
 	`
 	// Gera dados aleatórios para satisfazer as constraints UNIQUE
 	nano := time.Now().UnixNano()
 	nomeFantasia := fmt.Sprintf("Radap Client %d", nano)
 	razaoSocial := fmt.Sprintf("Radap Tech Clientes Ltda %d", nano)
-	cnpj := fmt.Sprintf("%d", nano)              // CNPJ único (fake)
+	cnpj := fmt.Sprintf("%d", nano) // CNPJ único (fake)
+	responsavel := fmt.Sprintf("responsavel%d", nano)
+	email := fmt.Sprintf("email%d", nano)
+	telefone := "1234567899"
+	planoisd := idplanos
+	status := "Ativa"
+	vencimentos := time.Now()
+	obsv := "vghjdfhjbf"
 	subdominio := fmt.Sprintf("cliente%d", nano) // Subdominio único
 
 	err := db.QueryRow(context.Background(), query,
 		nomeFantasia,
 		razaoSocial,
 		cnpj,
+		responsavel,
+		email,
+		telefone,
+		planoisd,
+		status,
+		vencimentos,
+		obsv,
 		subdominio,
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -66,7 +128,7 @@ func CreateEmpresa(t *testing.T, db *pgxpool.Pool) int64 {
 func CreateUser(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO usuarios (tenant_id, nome, email, senha_hash, ativo) 
+		INSERT INTO usuarios (tenant_id, nome, email, senha_hash, role) 
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id;
 	`
@@ -75,13 +137,14 @@ func CreateUser(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 	// O email deve ser único por tenant
 	email := fmt.Sprintf("user_%d@radap.com", time.Now().UnixNano())
 	senha := "hash_senha_segura"
+	role := "admin"
 
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		nome,
 		email,
 		senha,
-		true,
+		role,
 	).Scan(&id)
 
 	if err != nil {
@@ -95,14 +158,13 @@ func CreateUser(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 func CreateDepartamento(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO departamento (tenant_id, nome, ativo) 
-		VALUES ($1, $2, $3)
+		INSERT INTO departamento (tenant_id, nome) 
+		VALUES ($1, $2)
 		RETURNING id;
 	`
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		randomString("Dep"),
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -114,15 +176,14 @@ func CreateDepartamento(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 func CreateFuncao(t *testing.T, db *pgxpool.Pool, idDep, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO funcao (tenant_id, nome, IdDepartamento, ativo) 
-		VALUES ($1, $2, $3, $4) 
+		INSERT INTO funcao (tenant_id, nome, IdDepartamento) 
+		VALUES ($1, $2, $3) 
 		RETURNING id;
 	`
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		randomString("Func"),
 		idDep,
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -134,19 +195,22 @@ func CreateFuncao(t *testing.T, db *pgxpool.Pool, idDep, tenantID int64) int64 {
 func CreateFuncionario(t *testing.T, db *pgxpool.Pool, IdDepartamento, IdFuncao, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO funcionario (tenant_id, nome, IdFuncao, IdDepartamento, ativo) 
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO funcionario (tenant_id, nome, matricula,IdDepartamento, IdFuncao, cpf) 
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id;
 	`
 
 	nome := randomString("Funcionario")
+	matriculo:= randomInt()
+	cpf := "123456789012"
 
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		nome,
+		matriculo,
 		IdFuncao,
 		IdDepartamento,
-		true,
+		cpf,
 	).Scan(&id)
 
 	if err != nil {
@@ -160,14 +224,13 @@ func CreateFuncionario(t *testing.T, db *pgxpool.Pool, IdDepartamento, IdFuncao,
 func CreateProtecao(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO tipo_protecao (tenant_id, nome, ativo) 
-		VALUES ($1, $2, $3)
+		INSERT INTO tipo_protecao (tenant_id, nome) 
+		VALUES ($1, $2)
 		RETURNING id;
 	`
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		randomString("Protecao"),
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -179,14 +242,13 @@ func CreateProtecao(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 func CreateTamanho(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO tamanho (tenant_id, tamanho, ativo) 
-		VALUES ($1, $2, $3)
+		INSERT INTO tamanho (tenant_id, tamanho) 
+		VALUES ($1, $2)
 		RETURNING id;
 	`
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		randomString("Tam"),
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -200,9 +262,9 @@ func CreateEpi(t *testing.T, db *pgxpool.Pool, idTipoProtecao, tenantID int64) i
 	query := `
 		INSERT INTO epi (
 			tenant_id, nome, fabricante, CA, descricao, 
-			validade_CA, IdTipoProtecao, alerta_minimo, ativo
+			validade_CA, IdTipoProtecao, alerta_minimo
 		) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id;
 	`
 	r := randomInt()
@@ -222,7 +284,6 @@ func CreateEpi(t *testing.T, db *pgxpool.Pool, idTipoProtecao, tenantID int64) i
 		validade,
 		idTipoProtecao,
 		alertaMinimo,
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -233,18 +294,18 @@ func CreateEpi(t *testing.T, db *pgxpool.Pool, idTipoProtecao, tenantID int64) i
 
 // --- 5. ESTOQUE E MOVIMENTAÇÃO ---
 
-func CreateEntradaNfEpi(t *testing.T, db *pgxpool.Pool, tenantID int64, idfornecedor int64) int64 {
+func CreateEntradaNfEpi(t *testing.T, db *pgxpool.Pool, tenantID, iduser int64, idfornecedor int64) int64 {
 	var id int64
 
 	// Atenção: Adicionado id_usuario_criacao, nota_fiscal e tenant_id
 	query := `
-		INSERT INTO entrada_nf (tenant_id, nota_fiscal_numero, nota_fiscal_serie, data_emissao, data_registro,
-			ativo, id_usuario_criacao, Idfornecedor)
-		values ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO entrada_nf (tenant_id, nota_fiscal_numero, nota_fiscal_serie, data_emissao, id_usuario_criacao, Idfornecedor)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id;
 	`
 
 	nfAleatoria := randomInt()
+	iduserCriacao := iduser
 
 	// 2. Converta para string (VARCHAR)
 	notaFiscal := strconv.Itoa(int(nfAleatoria))
@@ -256,9 +317,7 @@ func CreateEntradaNfEpi(t *testing.T, db *pgxpool.Pool, tenantID int64, idfornec
 		notaFiscal,
 		notaFiscalSerie,
 		time.Now(), // Data Entrada (Tipo Date no banco, Driver converte)
-		time.Now(),
-		true, // Ativo
-		1,
+		iduserCriacao,
 		idfornecedor,
 	).Scan(&id)
 
@@ -273,9 +332,10 @@ func CreateEntradaEpi(t *testing.T, db *pgxpool.Pool, tenantid, idEpi, idTamanho
 	var id int64
 	query := `
 	
-		insert into entrada_epi_item (tenant_id, entrada_nf_id, id_epi, id_tamanho, quantidade, quantidade_atual, data_fabricacao, data_validade,
-			lote, valor_unitario,ativo, id_usuario_criacao)
-		VALUES($1, $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+		INSERT INTO entrada_epi_item (
+   		 tenant_id, entrada_nf_id, id_epi, id_tamanho, quantidade, 
+   		 quantidade_atual, data_fabricacao, data_validade, lote, valor_unitario,id_usuario_criacao
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id;
 	`
 
@@ -294,7 +354,6 @@ func CreateEntradaEpi(t *testing.T, db *pgxpool.Pool, tenantid, idEpi, idTamanho
 		time.Now().AddDate(3, 0, 0),
 		lote,
 		valor_unitario,
-		true,
 		iduser,
 	).Scan(&id)
 
@@ -309,9 +368,10 @@ func CreateEntradaEpi1(t *testing.T, db *pgxpool.Pool, tenantid, idEpi, idTamanh
 	var id int64
 	query := `
 	
-		insert into entrada_epi_item (tenant_id, entrada_nf_id, id_epi, id_tamanho, quantidade, quantidade_atual, data_fabricacao, data_validade,
-			lote, valor_unitario,ativo, id_usuario_criacao)
-		VALUES($1, $2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+		INSERT INTO entrada_epi_item (
+   		 tenant_id, entrada_nf_id, id_epi, id_tamanho, quantidade, 
+   		 quantidade_atual, data_fabricacao, data_validade, lote, valor_unitario,id_usuario_criacao
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id;
 	`
 
@@ -330,7 +390,6 @@ func CreateEntradaEpi1(t *testing.T, db *pgxpool.Pool, tenantid, idEpi, idTamanh
 		time.Now().AddDate(3, 0, 0),
 		lote,
 		valor_unitario,
-		true,
 		iduser,
 	).Scan(&id)
 
@@ -340,29 +399,29 @@ func CreateEntradaEpi1(t *testing.T, db *pgxpool.Pool, tenantid, idEpi, idTamanh
 	return id
 }
 
-
 func CreateEntregaEpi(t *testing.T, db *pgxpool.Pool, idFuncionario, idUserEntrega, tenantID int64) int64 {
 	var id int64
 	// Adicionado token_validacao e id_usuario_entrega
 	query := `
 		INSERT INTO entrega_epi (
-			tenant_id, IdFuncionario, data_entrega, assinatura, 
-			token_validacao, id_usuario_entrega, ativo
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id;
+		tenant_id, 
+		IdFuncionario, data_entrega, assinatura, IdTroca, token_validacao, id_usuario_entrega
+	)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id;
 	`
 	assinatura := randomString("AssinaturaBase64")
 	token := randomString("TokenValidacao")
+	idtroca:= 1
 
 	err := db.QueryRow(context.Background(), query,
 		tenantID,
 		idFuncionario,
 		time.Now(),
 		assinatura,
+		idtroca,
 		token,
 		idUserEntrega,
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -375,9 +434,9 @@ func CreateEpiEntregues(t *testing.T, db *pgxpool.Pool, IDEntregaCabecalho, idEn
 	var id int64
 	query := `
 		INSERT INTO epis_entregues (
-			tenant_id, id_entrega_cabecalho, id_entrada_item, id_epi, id_tamanho, quantidade, ativo
+			tenant_id, id_entrega_cabecalho, id_entrada_item, id_epi, id_tamanho, quantidade
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id;
 	`
 	quantidade := 10
@@ -389,7 +448,6 @@ func CreateEpiEntregues(t *testing.T, db *pgxpool.Pool, IDEntregaCabecalho, idEn
 		IdEpi,
 		IdTamanho,
 		quantidade,
-		true,
 	).Scan(&id)
 
 	if err != nil {
@@ -401,7 +459,7 @@ func CreateEpiEntregues(t *testing.T, db *pgxpool.Pool, IDEntregaCabecalho, idEn
 func CreateMotivoDevolucao(t *testing.T, db *pgxpool.Pool, motivo string, tenantID int64) int64 {
 	var id int64
 	query := `
-		INSERT INTO motivo_devolucao (tenant_id, motivo, ativo) 
+		INSERT INTO motivo_devolucao (tenant_id, motivo, gera_descarte) 
 		VALUES ($1, $2, $3)
 		RETURNING id;
 	`
@@ -427,10 +485,9 @@ func CreateFornecedor(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 			razao_social, 
 			nome_fantasia, 
 			cnpj, 
-			inscricao_estadual, 
-			ativo
+			inscricao_estadual
 		) 
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id;
 	`
 	razaoSocial := randomString("razao")
@@ -441,8 +498,7 @@ func CreateFornecedor(t *testing.T, db *pgxpool.Pool, tenantID int64) int64 {
 		razaoSocial, // $2: Razão Social
 		fantasia,    // $3: Nome Fantasia (repetido para facilitar)
 		cnpj,        // $4: CNPJ
-		"ISENTO",    // $5: Inscrição Estadual (valor padrão)
-		true,        // $6: Ativo
+		"ISENTO",    // $5: Inscrição Estadual (valor padrão     
 	).Scan(&id)
 
 	if err != nil {
