@@ -3,14 +3,17 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
 )
 
 type FornecedorService interface {
@@ -30,7 +33,117 @@ func NewFornecedorController(service FornecedorService) *FornecedorController {
 		service: service,
 	}
 }
+func (f *FornecedorController) ImportFornecedor() gin.HandlerFunc {
 
+	return func(ctx *gin.Context) {
+
+		fileHearder, err := ctx.FormFile("file")
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+
+				"erro":     "selecione um arquivo de planilas valido",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		file, err := fileHearder.Open()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"erro":     "erro ao ler a planilha",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		defer file.Close()
+
+		fi, err := excelize.OpenReader(file)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"erro":     "O arquivo enviado não é uma planilha Excel (.xlsx) válida.",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+		defer fi.Close()
+
+		NomeDaPlanilha := fi.GetSheetName(0)
+		linhas, err := fi.GetRows(NomeDaPlanilha)
+		if err != nil || len(linhas) == 0 {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message":  "A planilha selecionada está vazia.",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		tenantID, exists := middleware.GetTenantID(ctx)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sessão inválida ou expirada."})
+			return
+		}
+		var fornecedores []string
+		cabecalho := false
+
+		for _, linha := range linhas {
+
+			if len(linha) < 3 {
+				continue
+			}
+
+			razaoSocial := strings.TrimSpace(linha[0])
+			NomeFantasia := strings.TrimSpace(linha[1])
+			cnpj := strings.TrimSpace(linha[2])
+
+			inscricaoEstadual := ""
+			if len(linha) >= 4 {
+
+				inscricaoEstadual = strings.TrimSpace(linha[3])
+
+			}
+
+			if strings.EqualFold(razaoSocial, "Razão Social") {
+
+				cabecalho = true
+				continue
+			}
+
+			if !cabecalho || razaoSocial == "" || cnpj == "" {
+				continue
+			}
+
+			fornecedor := model.FornecedorInserir{
+				RazaoSocial:       razaoSocial,
+				NomeFantasia:      NomeFantasia,
+				CNPJ:              cnpj,
+				InscricaoEstadual: inscricaoEstadual,
+			}
+
+			err = f.service.Adicionar(ctx, fornecedor, tenantID)
+			if err != nil {
+				// Ignora duplicados e continua o loop (Opção B)
+				if errors.Is(err, helper.ErrDadoDuplicado) || errors.Is(err, helper.ErrConflitoIntegridade) {
+
+					continue
+				}
+
+				ctx.JSON(http.StatusInternalServerError, gin.H{
+					"message":  fmt.Sprintf("Erro ao salvar o fornecedor '%s'.", razaoSocial),
+					"detalhes": err.Error(),
+				})
+				return
+			}
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Importação concluída com sucesso!",
+			"total":   len(fornecedores),
+		})
+	}
+
+}
 func (f *FornecedorController) Adicionar() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -70,7 +183,7 @@ func (f *FornecedorController) Adicionar() gin.HandlerFunc {
 
 				"detalhes": err.Error(),
 			})
-			return 
+			return
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{

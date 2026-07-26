@@ -247,6 +247,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			rotasAdm.POST("/cadastro-fornecedores", c.Fornecedor.Adicionar())
 			rotasAdm.DELETE("/fornecedor/:id", c.Fornecedor.CancelarFornecedor())
 			rotasAdm.PATCH("/fornecedor/:id", c.Fornecedor.AtualizaFornecedor())
+			rotasAdm.POST("/importar-fornecedores", c.Fornecedor.ImportFornecedor())
 
 			//entregas
 			rotasAdm.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())
