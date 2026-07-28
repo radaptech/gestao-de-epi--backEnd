@@ -25,9 +25,12 @@ func CorsConfig() gin.HandlerFunc {
 			}
 
 			// Libera o domínio de produção/homologação
-			if strings.HasSuffix(origin, ".radaptech.com.br") || origin == "https://radaptech.com.br" {
+			if origin == "https://radaptech.com.br" ||
+			strings.HasSuffix(origin, ".radaptech.com.br") ||
+			strings.Contains(origin, ".radaptech.com.br:"){
 				return true
-			}
+			} 
+
 
 			return false
 		},
@@ -48,7 +51,7 @@ func CorsConfig() gin.HandlerFunc {
 			"x-tenant-id",
 		},
 
-		ExposeHeaders: []string{"Content-Length", "Content-Disposition"},
+		ExposeHeaders: []string{"Content-Length", "Content-Disposition","Set-Cookie"},
 
 		AllowCredentials: true,
 		// Garanta que o preflight permita repassar os headers na requisição OPTIONS

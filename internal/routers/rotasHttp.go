@@ -138,6 +138,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 		api.POST("/login", c.Usuario.Login())
 
+		api.POST("/logout", c.Usuario.Logout())
 		api.POST("/esqueci-minha-senha", c.Usuario.SalvarToken())
 		api.POST("/redefinir-senha", c.Usuario.RedefinirSenha())
 	}

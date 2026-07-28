@@ -99,6 +99,7 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 	}
 }
 
+//utilizando HTTP only
 func (l *LoginController) Login() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
@@ -151,9 +152,18 @@ func (l *LoginController) Login() gin.HandlerFunc {
 
 		}
 
-		c.JSON(http.StatusOK, gin.H{
+		c.SetSameSite(http.SameSiteNoneMode)
+		c.SetCookie(
+			"token",
+			token,
+			86400,
+			"/",
+			"",
+			true, // botar para true depois
+			true,
+		)
 
-			"token": token,
+		c.JSON(http.StatusOK, gin.H{
 			"usuario": gin.H{
 				"id":    user.ID,
 				"nome":  user.Nome,
@@ -161,6 +171,26 @@ func (l *LoginController) Login() gin.HandlerFunc {
 				"role":  user.Role.String,
 			},
 		})
+	}
+}
+
+func (l *LoginController) Logout() gin.HandlerFunc {
+
+	return  func(ctx *gin.Context) {
+
+		ctx.SetCookie(
+			"token",
+			"",
+			-1,
+			"/",
+			"localhost",
+			false,
+			true,
+		)
+
+		ctx.JSON(http.StatusOK, gin.H{
+            "message": "Logout realizado com sucesso",
+        })
 	}
 }
 
@@ -183,7 +213,8 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 			return
 		}
 
-		usuario, err := l.service.BuscarPorId(c, id.(uint), tenantID)
+		idConvertid:=uint(id.(int32)) 
+		usuario, err := l.service.BuscarPorId(c, idConvertid, tenantID)
 		if err != nil {
 
 			c.JSON(404, gin.H{"error": "Usuário não encontrado"})
