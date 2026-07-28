@@ -89,7 +89,7 @@ RETURNING id;
 -- name: ListarHistoricoEntregasPorMatricula :many
 SELECT 
     emp.razao_social as razao_social,
-    f.id as func_id, f.nome as func_nome, f.matricula,
+    f.id as func_id, f.nome as func_nome, f.cpf ,f.matricula,
     d.id as dep_id, d.nome as dep_nome,
     ff.id as funcao_id, ff.nome as funcao_nome,
     ee.data_entrega, i.quantidade, e.ca, e.nome AS epi_nome, e.descricao,
@@ -113,16 +113,13 @@ SELECT
     id, IdFuncionario, data_entrega,
     assinatura, token_validacao
 FROM entrega_epi
-WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC;
+WHERE tenant_id = $1 AND ativo = TRUE;
 
 -- name: EntregaItensDashbord :many
 SELECT
     id, id_entrega_cabecalho, id_epi, id_tamanho, quantidade
 FROM epis_entregues
-WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY id DESC;
-
+WHERE tenant_id = $1 AND ativo = TRUE;
 -- name: BuscaTodasEntregasDoTenant :many
 SELECT 
     id, 
@@ -130,5 +127,4 @@ SELECT
     data_entrega, 
     assinatura
 FROM entrega_epi
-WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC;
+WHERE tenant_id = $1 AND ativo = TRUE;

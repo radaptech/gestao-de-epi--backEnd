@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const atualizarUltimoAcesso = `-- name: AtualizarUltimoAcesso :execrows
+UPDATE usuarios
+SET ultimo_acesso = now() AT TIME ZONE 'America/Sao_Paulo'
+WHERE id = $1 AND tenant_id = $2
+`
+
+type AtualizarUltimoAcessoParams struct {
+	ID       int32
+	TenantID pgtype.Int4
+}
+
+func (q *Queries) AtualizarUltimoAcesso(ctx context.Context, arg AtualizarUltimoAcessoParams) (int64, error) {
+	result, err := q.db.Exec(ctx, atualizarUltimoAcesso, arg.ID, arg.TenantID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const buscarPorIdUsuario = `-- name: BuscarPorIdUsuario :one
 SELECT id, nome, email, ativo, role
 FROM usuarios
@@ -22,7 +41,7 @@ LIMIT 1
 
 type BuscarPorIdUsuarioParams struct {
 	ID       int32
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 type BuscarPorIdUsuarioRow struct {
@@ -60,7 +79,7 @@ type BuscarTodosUsuariosRow struct {
 	Cargo pgtype.Text
 }
 
-func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID int32) ([]BuscarTodosUsuariosRow, error) {
+func (q *Queries) BuscarTodosUsuarios(ctx context.Context, tenantID pgtype.Int4) ([]BuscarTodosUsuariosRow, error) {
 	rows, err := q.db.Query(ctx, buscarTodosUsuarios, tenantID)
 	if err != nil {
 		return nil, err
@@ -96,7 +115,7 @@ LIMIT 1
 
 type BuscarUsuarioPorEmailParams struct {
 	Email    string
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 type BuscarUsuarioPorEmailRow struct {
@@ -104,7 +123,7 @@ type BuscarUsuarioPorEmailRow struct {
 	Nome      string
 	Email     string
 	SenhaHash string
-	TenantID  int32
+	TenantID  pgtype.Int4
 	Role      pgtype.Text
 }
 
@@ -129,7 +148,7 @@ VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateUserParams struct {
-	TenantID  int32
+	TenantID  pgtype.Int4
 	Nome      string
 	Email     string
 	SenhaHash string
@@ -157,7 +176,7 @@ WHERE id = $1
 
 type DeletarUsuarioParams struct {
 	ID       int32
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) (int64, error) {
@@ -168,6 +187,95 @@ func (q *Queries) DeletarUsuario(ctx context.Context, arg DeletarUsuarioParams) 
 	return result.RowsAffected(), nil
 }
 
+const editarStatusUsuario = `-- name: EditarStatusUsuario :exec
+UPDATE usuarios
+SET 
+    ativo = $1
+WHERE id = $2
+`
+
+type EditarStatusUsuarioParams struct {
+	Ativo pgtype.Bool
+	ID    int32
+}
+
+func (q *Queries) EditarStatusUsuario(ctx context.Context, arg EditarStatusUsuarioParams) error {
+	_, err := q.db.Exec(ctx, editarStatusUsuario, arg.Ativo, arg.ID)
+	return err
+}
+
+const editarUsuario = `-- name: EditarUsuario :exec
+UPDATE usuarios
+SET 
+    nome = $1,
+    email = $2,
+    role = $3
+WHERE id = $4
+`
+
+type EditarUsuarioParams struct {
+	Nome  string
+	Email string
+	Role  pgtype.Text
+	ID    int32
+}
+
+func (q *Queries) EditarUsuario(ctx context.Context, arg EditarUsuarioParams) error {
+	_, err := q.db.Exec(ctx, editarUsuario,
+		arg.Nome,
+		arg.Email,
+		arg.Role,
+		arg.ID,
+	)
+	return err
+}
+
+const mostrarUsuariosPainel = `-- name: MostrarUsuariosPainel :many
+select u.id, tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
+from usuarios u
+inner join empresas e on u.tenant_id = e.id
+`
+
+type MostrarUsuariosPainelRow struct {
+	ID           int32
+	TenantID     pgtype.Int4
+	Nome         string
+	Email        string
+	Empresa      string
+	Tipo         pgtype.Text
+	Ativo        pgtype.Bool
+	UltimoAcesso pgtype.Timestamp
+}
+
+func (q *Queries) MostrarUsuariosPainel(ctx context.Context) ([]MostrarUsuariosPainelRow, error) {
+	rows, err := q.db.Query(ctx, mostrarUsuariosPainel)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MostrarUsuariosPainelRow
+	for rows.Next() {
+		var i MostrarUsuariosPainelRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Nome,
+			&i.Email,
+			&i.Empresa,
+			&i.Tipo,
+			&i.Ativo,
+			&i.UltimoAcesso,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recuperaLogin = `-- name: RecuperaLogin :one
 select id from usuarios 
 where email = $1 and tenant_id = $2 limit 1
@@ -175,7 +283,7 @@ where email = $1 and tenant_id = $2 limit 1
 
 type RecuperaLoginParams struct {
 	Email    string
-	TenantID int32
+	TenantID pgtype.Int4
 }
 
 func (q *Queries) RecuperaLogin(ctx context.Context, arg RecuperaLoginParams) (int32, error) {
@@ -195,7 +303,7 @@ type SalvarTokenRecuperacaoParams struct {
 	TokenRecuperacaoSenha pgtype.Text
 	TokenExpiracao        pgtype.Timestamp
 	ID                    int32
-	TenantID              int32
+	TenantID              pgtype.Int4
 }
 
 func (q *Queries) SalvarTokenRecuperacao(ctx context.Context, arg SalvarTokenRecuperacaoParams) (int64, error) {
@@ -211,6 +319,17 @@ func (q *Queries) SalvarTokenRecuperacao(ctx context.Context, arg SalvarTokenRec
 	return result.RowsAffected(), nil
 }
 
+const totalDeUsuario = `-- name: TotalDeUsuario :one
+select count(id) from usuarios where tenant_id = $1::int
+`
+
+func (q *Queries) TotalDeUsuario(ctx context.Context, id int32) (int64, error) {
+	row := q.db.QueryRow(ctx, totalDeUsuario, id)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const updateSenha = `-- name: UpdateSenha :execrows
 update usuarios
 set senha_hash = $1,
@@ -222,7 +341,7 @@ where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now(
 type UpdateSenhaParams struct {
 	SenhaHash             string
 	TokenRecuperacaoSenha pgtype.Text
-	TenantID              int32
+	TenantID              pgtype.Int4
 }
 
 func (q *Queries) UpdateSenha(ctx context.Context, arg UpdateSenhaParams) (int64, error) {

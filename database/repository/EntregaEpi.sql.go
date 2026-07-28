@@ -90,7 +90,6 @@ SELECT
     assinatura
 FROM entrega_epi
 WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC
 `
 
 type BuscaTodasEntregasDoTenantRow struct {
@@ -288,7 +287,6 @@ SELECT
     assinatura, token_validacao
 FROM entrega_epi
 WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY data_entrega DESC
 `
 
 type EntregaDashbordRow struct {
@@ -330,7 +328,6 @@ SELECT
     id, id_entrega_cabecalho, id_epi, id_tamanho, quantidade
 FROM epis_entregues
 WHERE tenant_id = $1 AND ativo = TRUE
-ORDER BY id DESC
 `
 
 type EntregaItensDashbordRow struct {
@@ -459,7 +456,7 @@ func (q *Queries) ListarEntregas(ctx context.Context, arg ListarEntregasParams) 
 const listarHistoricoEntregasPorMatricula = `-- name: ListarHistoricoEntregasPorMatricula :many
 SELECT 
     emp.razao_social as razao_social,
-    f.id as func_id, f.nome as func_nome, f.matricula,
+    f.id as func_id, f.nome as func_nome, f.cpf ,f.matricula,
     d.id as dep_id, d.nome as dep_nome,
     ff.id as funcao_id, ff.nome as funcao_nome,
     ee.data_entrega, i.quantidade, e.ca, e.nome AS epi_nome, e.descricao,
@@ -489,6 +486,7 @@ type ListarHistoricoEntregasPorMatriculaRow struct {
 	RazaoSocial string
 	FuncID      int32
 	FuncNome    string
+	Cpf         pgtype.Text
 	Matricula   int32
 	DepID       int32
 	DepNome     string
@@ -517,6 +515,7 @@ func (q *Queries) ListarHistoricoEntregasPorMatricula(ctx context.Context, arg L
 			&i.RazaoSocial,
 			&i.FuncID,
 			&i.FuncNome,
+			&i.Cpf,
 			&i.Matricula,
 			&i.DepID,
 			&i.DepNome,

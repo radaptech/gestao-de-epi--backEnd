@@ -3,14 +3,17 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
 )
 
 type FuncaoService interface {
@@ -18,6 +21,7 @@ type FuncaoService interface {
 	ListasTodasFuncao(ctx context.Context, f service.FiltroFuncao, tenantId int32) (service.FuncaoPaginado, error)
 	DeletarFuncao(ctx context.Context, id int, tenantId int32) error
 	AtualizarFuncao(ctx context.Context, id int, funcao string, tenantId int32) error
+	BuscaDepartamentosParaFuncao(ctx context.Context, tenantId int32) (map[string]int, error)
 }
 
 type FuncaoController struct {
@@ -27,6 +31,149 @@ type FuncaoController struct {
 func NewFuncaoController(service FuncaoService) *FuncaoController {
 
 	return &FuncaoController{service: service}
+}
+
+func (f *FuncaoController) ImportarFuncaoXLSX() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		fileHearder, err := ctx.FormFile("file")
+		if err != nil {
+
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"erro":     "selecione um arquivo de planilha valido",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		file, err := fileHearder.Open()
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"erro":     "erro ao ler a planilha",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+		defer file.Close()
+
+		fi, err := excelize.OpenReader(file)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+
+				"erro":     "o arquivo enviado não é uma planilha Excel  valida",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+		defer fi.Close()
+
+		NomeDaPlanilha := fi.GetSheetName(0)
+		linhas, err := fi.GetRows(NomeDaPlanilha)
+		if err != nil || len(linhas) == 0 {
+
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"mensagem": "a planilha selecionada esta vazia",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		tenantID, exists := middleware.GetTenantID(ctx)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sessão inválida ou expirada."})
+			return
+		}
+
+		mapDep, err := f.service.BuscaDepartamentosParaFuncao(ctx, tenantID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message":  "Erro ao carregar departamentos para validação.",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		cabecalho := false
+		totalImportadas := 0
+		totalIgnoradas := 0
+
+		for indexLinha, linha := range linhas {
+			if len(linha) < 2 {
+				continue
+			}
+
+			colunaFuncao := strings.TrimSpace(linha[0])
+			colunaDepartamento := strings.TrimSpace(linha[1])
+
+			// Procura a linha do cabeçalho
+			if strings.EqualFold(colunaFuncao, "Nome da Função") {
+				cabecalho = true
+				continue
+			}
+
+			if !cabecalho || colunaDepartamento == "" || colunaFuncao == "" {
+				continue
+			}
+
+			// Busca o ID do departamento no mapa
+			depId, exist := mapDep[strings.ToLower(colunaDepartamento)]
+			if !exist {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"message": fmt.Sprintf("Erro na linha %d: O departamento '%s' não existe no sistema. Cadastre-o primeiro.", indexLinha+1, colunaDepartamento),
+				})
+				return
+			}
+
+			err = f.service.SalvarFuncao(ctx, model.Funcao{
+				Funcao:         colunaFuncao,
+				IdDepartamento: depId,
+			}, tenantID)
+
+			if err != nil {
+				// 👉 OPÇÃO B: Se for duplicada ou conflito de integridade, apenas ignora e pula para a próxima!
+				if errors.Is(err, helper.ErrDadoDuplicado) || errors.Is(err, helper.ErrConflitoIntegridade) {
+					totalIgnoradas++
+					continue // Pula para a próxima linha do loop
+				}
+
+				// Qualquer outro erro de banco (ex: conexão, query quebrada) aborta a requisição
+				ctx.JSON(http.StatusInternalServerError, gin.H{
+					"message":  fmt.Sprintf("Erro interno ao salvar a função '%s' na linha %d.", colunaFuncao, indexLinha+1),
+					"detalhes": err.Error(),
+				})
+				return
+			}
+
+			totalImportadas++
+		}
+
+		// Se nada foi importado porque tudo era duplicado ou inválido
+		if totalImportadas == 0 && totalIgnoradas == 0 {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Nenhuma função válida foi encontrada na planilha.",
+			})
+			return
+		}
+
+		// Resposta de sucesso informando quantos foram inseridos e quantos já existiam
+		mensagemSucesso := fmt.Sprintf("%d função(ões) importada(s) com sucesso!", totalImportadas)
+		if totalIgnoradas > 0 {
+			mensagemSucesso = fmt.Sprintf("%d função(ões) importada(s) e %d ignorada(s) por já existirem.", totalImportadas, totalIgnoradas)
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message":    mensagemSucesso,
+			"importados": totalImportadas,
+			"ignorados":  totalIgnoradas,
+		})
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Funções importadas com sucesso!",
+		})
+	}
 }
 
 // RegistraFuncao godoc
@@ -139,7 +286,7 @@ func (f *FuncaoController) ListarFuncoes() gin.HandlerFunc {
 			filtro.Quantidade = 1000 // Padrão de 10 itens se não informar
 		}
 
-		funcoes, err := f.service.ListasTodasFuncao(ctx,filtro ,tenantID)
+		funcoes, err := f.service.ListasTodasFuncao(ctx, filtro, tenantID)
 		if err != nil {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -151,7 +298,6 @@ func (f *FuncaoController) ListarFuncoes() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, funcoes)
 	}
 }
-
 
 // DeletarFuncao godoc
 // @Summary      Deletar funcao

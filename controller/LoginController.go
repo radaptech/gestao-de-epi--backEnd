@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strconv"
 
 	"net/http"
 
@@ -15,12 +16,17 @@ import (
 )
 
 type LoginService interface {
-	Registrar(ctx context.Context, model model.Usuario, tenantId int32) error
+	Registrar(ctx context.Context, model model.Usuario) error
 	FazerLogin(ctx context.Context, email, senha string, tenantId int32) (string, repository.BuscarUsuarioPorEmailRow, error)
 	BuscarPorId(ctx context.Context, id uint, tenantId int32) (model.RecuperaUser, error)
 	ListarUsuario(ctx context.Context, tenantId int32) ([]model.UsuarioResponse, error)
 	RecuperacaoSenha(ctx context.Context, rl model.RecuperaLogin) error
 	RedefinirSenha(ctx context.Context, rs model.RedefinirSenha) error
+	UltimoAcesso(ctx context.Context, id, tenantId int32) error
+	MostrarUsuariosPainel(ctx context.Context) ([]model.UsuarioResponsePainel, error)
+	EditarUsuario(ctx context.Context, id int32, model model.EditarUsuarioRequest) error
+	EditarStatusUsuario(ctx context.Context, id int32, model model.AlterarStatusRequest) error
+	
 }
 
 type LoginController struct {
@@ -50,18 +56,14 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 
 		novoUsuario := model.Usuario{
 
-			Nome:  input.Nome,
-			Email: input.Email,
-			Senha: input.Senha,
-			Role:  input.Role,
+			Nome:      input.Nome,
+			Email:     input.Email,
+			Senha:     input.Senha,
+			Role:      input.Role,
+			EmpresaID: input.EmpresaID,
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
-		if !ok {
-			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
-			return
-		}
-		err := l.service.Registrar(ctx, novoUsuario, tenantID)
+		err := l.service.Registrar(ctx, novoUsuario)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -72,6 +74,15 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 				})
 
 				return
+			}
+
+			if errors.Is(err, helper.ErrLimiteExcedido) {
+				ctx.JSON(http.StatusForbidden, gin.H{
+
+					"error":"limite de usuarios excedidos",
+					"detalhes":err.Error(),
+				})
+				return 
 			}
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
@@ -88,6 +99,7 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 	}
 }
 
+//utilizando HTTP only
 func (l *LoginController) Login() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
@@ -111,6 +123,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 		token, user, err := l.service.FazerLogin(c, input.Email, input.Senha, tenantID)
 		if err != nil {
 
+			log.Printf("erro ao realizar login: %v", err)
 			if err.Error() == "email ou senha inválidos" {
 
 				c.JSON(http.StatusUnauthorized, gin.H{
@@ -121,14 +134,36 @@ func (l *LoginController) Login() gin.HandlerFunc {
 			}
 
 			c.JSON(http.StatusInternalServerError, gin.H{
+
 				"error": "Erro interno ao realizar login",
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
+		err = l.service.UltimoAcesso(c, user.ID, tenantID)
+		if err != nil {
 
-			"token": token,
+			c.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "Erro interno ao realizar login",
+				"detalhes": err.Error(),
+			})
+			return
+
+		}
+
+		c.SetSameSite(http.SameSiteNoneMode)
+		c.SetCookie(
+			"token",
+			token,
+			86400,
+			"/",
+			"",
+			true, // botar para true depois
+			true,
+		)
+
+		c.JSON(http.StatusOK, gin.H{
 			"usuario": gin.H{
 				"id":    user.ID,
 				"nome":  user.Nome,
@@ -136,6 +171,26 @@ func (l *LoginController) Login() gin.HandlerFunc {
 				"role":  user.Role.String,
 			},
 		})
+	}
+}
+
+func (l *LoginController) Logout() gin.HandlerFunc {
+
+	return  func(ctx *gin.Context) {
+
+		ctx.SetCookie(
+			"token",
+			"",
+			-1,
+			"/",
+			"localhost",
+			false,
+			true,
+		)
+
+		ctx.JSON(http.StatusOK, gin.H{
+            "message": "Logout realizado com sucesso",
+        })
 	}
 }
 
@@ -158,7 +213,8 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 			return
 		}
 
-		usuario, err := l.service.BuscarPorId(c, id.(uint), tenantID)
+		idConvertid:=uint(id.(int32)) 
+		usuario, err := l.service.BuscarPorId(c, idConvertid, tenantID)
 		if err != nil {
 
 			c.JSON(404, gin.H{"error": "Usuário não encontrado"})
@@ -220,7 +276,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
- 
+
 		input.TenantId = int(tenantID)
 
 		err := l.service.RecuperacaoSenha(ctx, input)
@@ -229,8 +285,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 			log.Println("erro ao enviar email de recuperaçao: %w", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
-			 "error":    "erro interno do servidor",
-				
+				"error": "erro interno do servidor",
 			})
 			return
 		}
@@ -275,5 +330,101 @@ func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 			"mensagem": "Senha redefinida com sucesso! Você já pode fazer login.",
 		})
+	}
+}
+
+func (l *LoginController) MostrarUsuariosPainel() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		users, err := l.service.MostrarUsuariosPainel(ctx)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro interno do servidor",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, users)
+
+	}
+}
+
+func (l *LoginController) EditarUsuario() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		idParam := ctx.Param("id")
+		idUsuario, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "ID inválido",
+			})
+			return
+		}
+		log.Printf("[DEBUG] ID recebido para edição: %d", idUsuario)
+		var input model.EditarUsuarioRequest
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":    "dados invalidos",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		err = l.service.EditarUsuario(ctx, int32(idUsuario), input)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao atualizar usuario",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		ctx.Status(http.StatusNoContent)
+	}
+}
+
+func (l *LoginController) EditarStatusUsuario() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		idParam := ctx.Param("id")
+		idUsuario, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "ID inválido",
+			})
+			return
+		}
+		
+		var input model.AlterarStatusRequest
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error":    "dados invalidos",
+				"detalhes": err.Error(),
+			})
+			return
+		}
+
+		err = l.service.EditarStatusUsuario(ctx, int32(idUsuario), input)
+		if err != nil {
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+
+				"error":    "erro ao atualizar usuario",
+				"detalhes": err.Error(),
+			})
+			return 
+		}
+
+		ctx.Status(http.StatusNoContent)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -18,15 +19,17 @@ import (
 )
 
 type FuncionarioRepository interface {
-	Adicionar(ctx context.Context, args repository.AddFuncionarioParams) error
+	Adicionar(ctx context.Context, qtx *repository.Queries, args repository.AddFuncionarioParams) error
 	ListarFuncionario(ctx context.Context, arg repository.BuscaFuncionarioParams) (repository.BuscaFuncionarioRow, error)
 	ListarFuncionarios(ctx context.Context, args repository.BuscarTodosFuncionariosParams) ([]repository.BuscarTodosFuncionariosRow, error)
 	CancelarFuncionario(ctx context.Context, arg repository.DeletarFuncionarioParams) (int64, error)
 	AtualizarFuncionarioNome(ctx context.Context, arg repository.UpdateFuncionarioNomeParams, qtx *repository.Queries) (int64, error)
+	AtualizarFuncionarioCpf(ctx context.Context, arg repository.UpdateFuncionarioCpfParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioDepartamento(ctx context.Context, arg repository.UpdateFuncionarioDepartamentoParams, qtx *repository.Queries) (int64, error)
 	AtualizarFuncionarioFuncao(ctx context.Context, arg repository.UpdateFuncionarioFuncaoParams, qtx *repository.Queries) (int64, error)
 	BuscarFuncionarioDashbord(ctx context.Context, tenant int32) ([]repository.BuscaFuncionarioDashbordRow, error)
 	BuscaFuncionarioCompleto(ctx context.Context, tenant int32) ([]repository.BuscaFuncionarioCompletoRow, error)
+	TotalFuncionarios(ctx context.Context, qtx *repository.Queries, id int32) (int64, error)
 }
 
 type FuncionarioService struct {
@@ -37,8 +40,8 @@ type FuncionarioService struct {
 	queries     *repository.Queries
 }
 
-func NewFuncionarioService(f FuncionarioRepository, e EntregaRepository, ep EpiRepository ,pool *pgxpool.Pool) *FuncionarioService {
-	return &FuncionarioService{repo: f,repoEntrega: e ,repoEpi: ep,db: pool, queries: repository.New(pool)}
+func NewFuncionarioService(f FuncionarioRepository, e EntregaRepository, ep EpiRepository, pool *pgxpool.Pool) *FuncionarioService {
+	return &FuncionarioService{repo: f, repoEntrega: e, repoEpi: ep, db: pool, queries: repository.New(pool)}
 }
 
 func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.FuncionarioInserir, tenantId int32) error {
@@ -50,8 +53,35 @@ func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.
 		Iddepartamento: int32(model.ID_departamento),
 		Idfuncao:       int32(model.ID_funcao),
 		TenantID:       tenantId,
+		Cpf:            pgtype.Text{String: model.Cpf, Valid: model.Cpf != ""},
 	}
-	err := f.repo.Adicionar(ctx, args)
+
+	tx, err := f.db.Begin(ctx)
+	if err != nil {
+		log.Println("erro ao iniciar transação em funcionarios para adicionar")
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	qtx := f.queries.WithTx(tx)
+	
+	totalFuncionarioPlano, err := qtx.ValidaTotalFuncionarios(ctx, tenantId)
+	if err != nil {
+		return err
+	}
+
+	totalFuncionarioAtual, err := f.repo.TotalFuncionarios(ctx, qtx, tenantId)
+	if err != nil {
+		return err
+	}
+
+	if totalFuncionarioAtual >= int64(totalFuncionarioPlano.LimiteFuncionarios.Int32) {
+
+		return helper.ErrLimiteExcedido
+	}
+	
+	err = f.repo.Adicionar(ctx, qtx, args)
 	if err != nil {
 
 		if errors.Is(err, helper.ErrConflitoIntegridade) {
@@ -69,7 +99,7 @@ func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.
 
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (f *FuncionarioService) ListarFuncionario(ctx context.Context, matricula string, tenantId int32) (model.Funcionario_Dto, error) {
@@ -168,6 +198,7 @@ func (funcio *FuncionarioService) ListaTodosFuncionarios(ctx context.Context, f 
 					Departamento: funcionario.DepartamentoNome,
 				},
 			},
+			Cpf: funcionario.Cpf.String,
 		}
 
 		dto = append(dto, funcs)
@@ -229,6 +260,37 @@ func (f *FuncionarioService) AtualizaNomeFuncionario(ctx context.Context, id int
 	}
 
 	linha, err := f.repo.AtualizarFuncionarioNome(ctx, args, qtx)
+	if err != nil {
+
+		return fmt.Errorf("erro tecnico ao realizar o update: %w", err)
+	}
+
+	if linha == 0 {
+		return helper.ErrNaoEncontrado
+	}
+
+	return nil
+}
+
+func (f * FuncionarioService) AtualizaCpfFuncionario(ctx context.Context, id int, cpf string, tenantId int32, qtx *repository.Queries) error {
+
+	if id <= 0 {
+		return helper.ErrId
+	}
+
+	cpfLimpo := strings.TrimSpace(cpf)
+
+	if len(cpfLimpo) != 11 {
+
+		return helper.ErrCpfInvalido
+	}
+	args := repository.UpdateFuncionarioCpfParams{
+		ID:       int32(id),
+		Cpf:      pgtype.Text{String: cpfLimpo, Valid: cpfLimpo != ""},
+		TenantID: tenantId,
+	}
+
+	linha, err := f.repo.AtualizarFuncionarioCpf(ctx, args, qtx)
 	if err != nil {
 
 		return fmt.Errorf("erro tecnico ao realizar o update: %w", err)
@@ -323,6 +385,13 @@ func (f *FuncionarioService) AtualizarFuncionarioCompleto(ctx context.Context, i
 	// 3. Atualiza Função (se foi enviado)
 	if req.IdFuncao != nil {
 		err := f.AtualizaFuncaoFuncionario(ctx, id, int(*req.IdFuncao), tenantId, qtx)
+		if err != nil {
+			return err
+		}
+	}
+
+	if req.Cpf != nil {
+		err := f.AtualizaCpfFuncionario(ctx, id, *req.Cpf, int32(tenantId), qtx)
 		if err != nil {
 			return err
 		}
@@ -450,6 +519,7 @@ func (f *FuncionarioService) FuncionarioCompleto(ctx context.Context, tenantId i
 			ID:        int32(funcID),
 			Nome:      funcionario.Nome,
 			Matricula: matricula,
+			Cpf: funcionario.Cpf.String,
 			Funcao: model.FuncaoDto{
 				ID:     int(funcionario.Idfuncao),
 				Funcao: funcionario.FuncaoNome,

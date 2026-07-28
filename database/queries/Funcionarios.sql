@@ -1,12 +1,13 @@
 -- name: AddFuncionario :exec
-INSERT INTO funcionario (tenant_id, nome, IdDepartamento, IdFuncao) 
-VALUES ($1, $2, $3, $4);
+INSERT INTO funcionario (tenant_id, nome, IdDepartamento, IdFuncao, cpf) 
+VALUES ($1, $2, $3, $4, $5);
 
 -- name: BuscaFuncionario :one
 SELECT 
     fn.id, 
     fn.nome, 
     fn.matricula, 
+    fn.cpf,
     fn.IdDepartamento, 
     d.nome as departamento_nome,
     fn.IdFuncao, 
@@ -22,6 +23,7 @@ WHERE fn.matricula = $1
 SELECT 
     fn.id, 
     fn.nome, 
+    fn.cpf,
     -- Formatação para exibição
     CASE 
         WHEN fn.matricula < 10000 THEN LPAD(fn.matricula::text, 4, '0') 
@@ -70,6 +72,13 @@ WHERE id = $1
   AND tenant_id = $3 -- SEGURANÇA
   AND ativo = TRUE;
 
+-- name: UpdateFuncionarioCpf :execrows
+UPDATE funcionario
+SET cpf = $2
+WHERE id = $1 
+  AND tenant_id = $3 -- SEGURANÇA
+  AND ativo = TRUE;
+
 -- name: UpdateFuncionarioDepartamento :execrows
 UPDATE funcionario
 SET IdDepartamento = $2
@@ -83,6 +92,7 @@ SET IdFuncao = $2
 WHERE id = $1 
   AND tenant_id = $3 -- SEGURANÇA
   AND ativo = TRUE;
+
 
 -- name: BuscaFuncionarioPorId :one
 SELECT 
@@ -101,7 +111,7 @@ WHERE fn.id = $1
   AND fn.ativo = TRUE;
 
 -- name: BuscaFuncionarioDashbord :many
-SELECT id, nome, matricula
+SELECT id, nome, matricula, cpf
 FROM funcionario
 WHERE tenant_id = $1 
   AND ativo = TRUE 
@@ -113,6 +123,7 @@ SELECT
     fn.nome, 
     fn.matricula, 
     fn.IdFuncao, 
+    fn.cpf,
     f.nome as funcao_nome,
     fn.IdDepartamento, 
     d.nome as departamento_nome
@@ -122,3 +133,5 @@ INNER JOIN funcao f ON fn.IdFuncao = f.id
 WHERE fn.tenant_id = $1 
   AND fn.ativo = TRUE;
 
+-- name: TotalDeFuncionarios :one
+select count(id) from funcionario where tenant_id= @id;

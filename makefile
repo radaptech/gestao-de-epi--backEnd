@@ -6,3 +6,4 @@ migrate-up:
 migrate-down:
 	@go run main.go Down
 
+

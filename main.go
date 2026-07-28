@@ -19,7 +19,7 @@ import (
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name    Suporte API
-// @contact.url     http://www.seusaas.com.br
+// @contact.url     http://www.radaptech.com.br
 // @contact.email   suporte@seusaas.com.br
 
 // @license.name    Apache 2.0
@@ -49,6 +49,12 @@ func main() {
 	if err != nil {
 
 		log.Fatal(err)
+	}
+
+	log.Println("Verificando dados iniciais...")
+	err = SeedEmpresaMatriz(db)
+	if err != nil {
+		log.Fatalf("Falha ao criar a Empresa Matriz: %v", err)
 	}
 
 	// --- BLOCO DE REGISTRO DO VALIDATOR ---

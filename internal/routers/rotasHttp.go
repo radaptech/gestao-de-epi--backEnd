@@ -27,11 +27,12 @@ type Container struct {
 	Entrega         controller.EntregaController
 	Estoque         controller.EstoqueController
 	MotivoDevolucao controller.MotivoController
-	Devolucao controller.DevolucaoController
+	Devolucao       controller.DevolucaoController
+	Planos          controller.PlanosController
+	Empresas        controller.EmpresaController
 }
 
 func NewContainer(db *pgxpool.Pool) *Container {
-
 
 	repoUsuario := repository.NewUsuarioRepository(db)
 	repoDepartamento := repository.NewDepartamentoRepository(db)
@@ -45,10 +46,12 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	repoEntrega := repository.NewEntregaRepository(db)
 	repoEstoque := repository.NewEstoqueRepository(db)
 	repoMotivo := repository.NewMotivoDevolucaoRepository(db)
-	repoDevolucao:= repository.NewDevolucaoRepository(db)
+	repoDevolucao := repository.NewDevolucaoRepository(db)
+	repoPlanos := repository.NewPlanosRepository(db)
+	repoEmpresas := repository.NewEmpresaRepository(db)
 
 	ServiceEmail := service.NewEmail()
-	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail)
+	serviceUsuario := service.NewUsuarioService(repoUsuario, *ServiceEmail, db)
 	departamentoService := service.NewDepartamentoService(repoDepartamento)
 	funcaoService := service.NewFuncaoService(repoFuncao)
 	FornecedorService := service.NewFornecedorService(repoFornecedor)
@@ -60,7 +63,9 @@ func NewContainer(db *pgxpool.Pool) *Container {
 	entregaService := service.NewEntregaService(repoEntrega, db)
 	estoqueService := service.NewEstoqueService(repoEstoque)
 	motivoService := service.NewMotivoDevolucaoRepositoryServe(repoMotivo)
-	devolucaoService:= service.NewDevolucaoService(repoDevolucao, db,*entregaService, repoMotivo)
+	devolucaoService := service.NewDevolucaoService(repoDevolucao, db, *entregaService, repoMotivo)
+	planosService := service.NewPlanoService(repoPlanos)
+	empresaService := service.NewEmpresaService(repoEmpresas, repoPlanos)
 
 	return &Container{
 		Usuario:         *controller.NewLoginController(serviceUsuario),
@@ -75,7 +80,9 @@ func NewContainer(db *pgxpool.Pool) *Container {
 		Entrega:         *controller.NewEntregaController(entregaService),
 		Estoque:         *controller.NewEstoqueController(estoqueService),
 		MotivoDevolucao: *controller.NewMotivoController(motivoService),
-		Devolucao: 		 *controller.NewDevolucaoController(devolucaoService),
+		Devolucao:       *controller.NewDevolucaoController(devolucaoService),
+		Planos:          *controller.NewPlanoController(planosService),
+		Empresas:        *controller.NewEmpresaController(empresaService),
 	}
 }
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
@@ -99,14 +106,39 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 		})
 	})
 	api := r.Group("/api")
+	painel := r.Group("/api/painel")
+	painel.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	{
+
+		//empresas
+		painel.POST("/cadastrar-empresa", c.Empresas.Salvar())
+	}
+
+	master := r.Group("/api/master")
+	master.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	{
+		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
+		master.GET("/dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
+		master.GET("/dashboard/dados-empresas", c.Empresas.DadosEmpresas())
+		master.GET("/dashboard/dados-usuarios", c.Usuario.MostrarUsuariosPainel())
+		master.POST("/dashboard/salvar-usuarios", c.Usuario.Registrar())
+		master.PATCH("/dashboard/editar/:id", c.Usuario.EditarUsuario())
+		master.PATCH("/dashboard/usuario/:id/status", c.Usuario.EditarStatusUsuario())
+		master.GET("/dashboard/planos", c.Planos.MostrarPlanos())
+		master.PATCH("/dashboard/planos/:id", c.Planos.Atualizar())
+		master.POST("/dashboard/cadastrar-planos", c.Planos.SalvarPlano())
+		master.PATCH("/dashboard/planos/:id/status", c.Planos.AtualizaStatus())
+		master.PATCH("/dashboard/:id/empresa", c.Empresas.EditarEmpresa())
+	}
+
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
 	// Precisa do tenant Id para passar
 	api.Use(middleware.TenantMiddleware(queries))
 	{
 
 		api.POST("/login", c.Usuario.Login())
-		api.POST("/cadastro", c.Usuario.Registrar())
 
+		api.POST("/logout", c.Usuario.Logout())
 		api.POST("/esqueci-minha-senha", c.Usuario.SalvarToken())
 		api.POST("/redefinir-senha", c.Usuario.RedefinirSenha())
 	}
@@ -182,11 +214,13 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			rotasAdm.DELETE("/departamento/:id", c.Departamento.DeletarDepartamento())
 			rotasAdm.PUT("/departamento/:id", c.Departamento.AtualizarDepartamento())
 			rotasAdm.POST("/cadastro-departamento", c.Departamento.RegistraDepartamento())
+			rotasAdm.POST("/importar-departamentos",c.Departamento.ImportDepartamentoXLSX())
 
 			//funçoes
 			rotasAdm.DELETE("/funcao/:id", c.Funcao.DeletarFuncao())
 			rotasAdm.PUT("/funcao/:id", c.Funcao.AtualizarFuncao())
 			rotasAdm.POST("/cadastro-funcao", c.Funcao.RegistraFuncao())
+			rotasAdm.POST("/importar-funcoes", c.Funcao.ImportarFuncaoXLSX())
 
 			//funcionarios
 			rotasAdm.DELETE("/funcionario/:id", c.Funcionario.DeletarFuncionaioId())
@@ -214,6 +248,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 			rotasAdm.POST("/cadastro-fornecedores", c.Fornecedor.Adicionar())
 			rotasAdm.DELETE("/fornecedor/:id", c.Fornecedor.CancelarFornecedor())
 			rotasAdm.PATCH("/fornecedor/:id", c.Fornecedor.AtualizaFornecedor())
+			rotasAdm.POST("/importar-fornecedores", c.Fornecedor.ImportFornecedor())
 
 			//entregas
 			rotasAdm.DELETE("/entrega/:id", c.Entrega.CancelarEntrega())

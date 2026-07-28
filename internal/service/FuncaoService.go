@@ -19,6 +19,7 @@ type FuncaoRepository interface {
 	ListarFuncoes(ctx context.Context, args repository.BuscarTodasFuncoesParams) ([]repository.BuscarTodasFuncoesRow, error)
 	CancelarFuncao(ctx context.Context, arg repository.DeletarFuncaoParams) (int64, error)
 	AtualizarFuncao(ctx context.Context, arg repository.UpdateFuncaoParams) (int64, error)
+	MapDepartamentosParaFuncao(ctx context.Context, tenantId int32) ([]repository.BuscaDepartamentosMapRow, error)
 }
 
 type FuncaoService struct {
@@ -168,4 +169,30 @@ func (f *FuncaoService) AtualizarFuncao(ctx context.Context, id int, funcao stri
 	}
 
 	return nil
+}
+
+
+func (f *FuncaoService) BuscaDepartamentosParaFuncao(ctx context.Context, tenantId int32) (map[string]int, error){
+
+	deps, err:= f.repo.MapDepartamentosParaFuncao(ctx, tenantId)
+	if err != nil {
+
+		return nil, err
+	}
+
+	mapsDeps:= make(map[string]int, len(deps))
+
+
+	for _, dep:= range deps {
+
+		key:= strings.ToLower(strings.TrimSpace(dep.Nome))
+		if key != ""{
+			mapsDeps[key] = int(dep.ID)
+		}
+		
+	}
+
+
+	return mapsDeps, nil 
+
 }

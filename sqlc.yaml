@@ -8,3 +8,9 @@ sql:
         package: "repository"       # Nome do pacote Go gerado
         out: "database/repository"  # Pasta onde o código será salvo
         sql_package: "pgx/v5"       # Já configura para usar o seu pgx v5
+        overrides:
+          - db_type: numeric
+            go_type:
+              import: "github.com/shopspring/decimal"
+              type: "Decimal"
+              pointer: true

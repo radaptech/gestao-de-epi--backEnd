@@ -1,6 +1,7 @@
 -- name: AddFuncao :exec
 INSERT INTO funcao (tenant_id, nome, IdDepartamento) 
-VALUES ($1, $2, $3);
+VALUES ($1, $2, $3)
+ON CONFLICT (tenant_id, nome, IdDepartamento) DO NOTHING;
 
 -- name: BuscarFuncao :one
 SELECT 
@@ -48,3 +49,9 @@ SET nome = $2
 WHERE id = $1 
   AND tenant_id = $3 -- SEGURANÇA
   AND ativo = TRUE;
+
+
+-- name: BuscaDepartamentosMap :many
+SELECT id, nome
+from departamento
+where tenant_id = @id and deletado_em IS NULL;

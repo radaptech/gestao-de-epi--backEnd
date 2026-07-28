@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,9 +20,9 @@ func NewUsuarioRepository(pool *pgxpool.Pool) *UsuarioRepository {
 	return &UsuarioRepository{q: New(pool), db: pool}
 }
 
-func (u *UsuarioRepository) Cadastrar(ctx context.Context, user CreateUserParams) error {
+func (u *UsuarioRepository) Cadastrar(ctx context.Context, qtx *Queries ,user CreateUserParams) error {
 
-	err:= u.q.CreateUser(ctx, user)
+	err:= qtx.CreateUser(ctx, user)
 	if err != nil {
 
 		return helper.TraduzErroPostgres(err)
@@ -32,7 +33,8 @@ func (u *UsuarioRepository) Cadastrar(ctx context.Context, user CreateUserParams
 
 func (u *UsuarioRepository) Listar(ctx context.Context, tenantId int32) ([]BuscarTodosUsuariosRow, error){
 
-	usuarios, err:= u.q.BuscarTodosUsuarios(ctx, tenantId)
+	id := pgtype.Int4{Int32: tenantId, Valid: true}
+	usuarios, err:= u.q.BuscarTodosUsuarios(ctx, id)
 	if err != nil {
 		return []BuscarTodosUsuariosRow{}, helper.TraduzErroPostgres(err)
 	}
@@ -106,4 +108,51 @@ func (u *UsuarioRepository) RedefinirSenha(ctx context.Context, arg UpdateSenhaP
 	}
 
 	return result, nil
+}
+
+
+func (u *UsuarioRepository) UltimoAcesso(ctx context.Context, arg AtualizarUltimoAcessoParams)(error) {
+
+	_, err:= u.q.AtualizarUltimoAcesso(ctx, arg)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
+}
+
+func (u *UsuarioRepository) MostrarUsuariosPainel(ctx context.Context)([]MostrarUsuariosPainelRow, error){
+
+	usuarios, err:= u.q.MostrarUsuariosPainel(ctx)
+	if err != nil {
+
+		return []MostrarUsuariosPainelRow{}, helper.TraduzErroPostgres(err)
+	}
+
+	return usuarios, nil
+}
+
+func (u *UsuarioRepository) EditarUsuario(ctx context.Context ,args EditarUsuarioParams)(error) {
+
+
+	err:= u.q.EditarUsuario(ctx, args)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+
+	return nil
+}
+
+func (u *UsuarioRepository) EditarStatusUsuario(ctx context.Context, arg EditarStatusUsuarioParams) (error) {
+
+	err := u.q.EditarStatusUsuario(ctx, arg)
+	if err != nil {
+
+		return helper.TraduzErroPostgres(err)
+	}
+
+	return nil
 }

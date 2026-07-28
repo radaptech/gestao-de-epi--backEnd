@@ -7,12 +7,281 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const criarEmpresa = `-- name: CriarEmpresa :exec
+INSERT INTO empresas (
+    nome_fantasia,
+    razao_social,
+    cnpj,
+    responsavel,
+    email,
+    telefone,
+    plano_id,
+    status,
+    vencimento,
+    observacoes,
+    subdominio
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11
+)
+`
+
+type CriarEmpresaParams struct {
+	NomeFantasia string
+	RazaoSocial  string
+	Cnpj         string
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
+	PlanoID      pgtype.Int4
+	Status       string
+	Vencimento   pgtype.Date
+	Observacoes  pgtype.Text
+	Subdominio   string
+}
+
+func (q *Queries) CriarEmpresa(ctx context.Context, arg CriarEmpresaParams) error {
+	_, err := q.db.Exec(ctx, criarEmpresa,
+		arg.NomeFantasia,
+		arg.RazaoSocial,
+		arg.Cnpj,
+		arg.Responsavel,
+		arg.Email,
+		arg.Telefone,
+		arg.PlanoID,
+		arg.Status,
+		arg.Vencimento,
+		arg.Observacoes,
+		arg.Subdominio,
+	)
+	return err
+}
+
+const dadosEmpresas = `-- name: DadosEmpresas :many
+SELECT 
+    e.id, 
+    e.nome_fantasia as nome, 
+    e.cnpj,
+    e.responsavel,
+    e.email,
+    e.telefone, 
+    p.nome AS plano_nome, 
+    (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
+    (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis,
+    p.mensalidade::float8,
+    e.vencimento,
+    e.status,
+    e.observacoes    
+FROM empresas e
+INNER JOIN planos p ON e.plano_id = p.id
+`
+
+type DadosEmpresasRow struct {
+	ID           int32
+	Nome         string
+	Cnpj         string
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
+	PlanoNome    string
+	Funcionarios int32
+	Epis         int32
+	PMensalidade float64
+	Vencimento   pgtype.Date
+	Status       string
+	Observacoes  pgtype.Text
+}
+
+func (q *Queries) DadosEmpresas(ctx context.Context) ([]DadosEmpresasRow, error) {
+	rows, err := q.db.Query(ctx, dadosEmpresas)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DadosEmpresasRow
+	for rows.Next() {
+		var i DadosEmpresasRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nome,
+			&i.Cnpj,
+			&i.Responsavel,
+			&i.Email,
+			&i.Telefone,
+			&i.PlanoNome,
+			&i.Funcionarios,
+			&i.Epis,
+			&i.PMensalidade,
+			&i.Vencimento,
+			&i.Status,
+			&i.Observacoes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const editarEmpresa = `-- name: EditarEmpresa :exec
+UPDATE empresas
+SET
+    nome_fantasia = $1,
+    razao_social = $2,
+    cnpj = $3,
+    responsavel = $4,
+    email = $5,
+    telefone = $6,
+    plano_id = $7,
+    status = $8,
+    vencimento = $9,
+    observacoes = $10
+where id = $11
+`
+
+type EditarEmpresaParams struct {
+	NomeFantasia string
+	RazaoSocial  string
+	Cnpj         string
+	Responsavel  pgtype.Text
+	Email        pgtype.Text
+	Telefone     pgtype.Text
+	PlanoID      pgtype.Int4
+	Status       string
+	Vencimento   pgtype.Date
+	Observacoes  pgtype.Text
+	ID           int32
+}
+
+func (q *Queries) EditarEmpresa(ctx context.Context, arg EditarEmpresaParams) error {
+	_, err := q.db.Exec(ctx, editarEmpresa,
+		arg.NomeFantasia,
+		arg.RazaoSocial,
+		arg.Cnpj,
+		arg.Responsavel,
+		arg.Email,
+		arg.Telefone,
+		arg.PlanoID,
+		arg.Status,
+		arg.Vencimento,
+		arg.Observacoes,
+		arg.ID,
+	)
+	return err
+}
+
+const empresaEmTeste = `-- name: EmpresaEmTeste :one
+select count(*) from empresas where status = 'Em teste'
+`
+
+func (q *Queries) EmpresaEmTeste(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, empresaEmTeste)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const empresasAtivas = `-- name: EmpresasAtivas :one
+select count(*) from empresas where status = 'Ativa'
+`
+
+func (q *Queries) EmpresasAtivas(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, empresasAtivas)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const empresasBloqueadas = `-- name: EmpresasBloqueadas :one
+select count(*) from empresas where status = 'Bloqueada'
+`
+
+func (q *Queries) EmpresasBloqueadas(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, empresasBloqueadas)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const empresasRecentes = `-- name: EmpresasRecentes :many
+SELECT 
+    e.id, 
+    e.nome_fantasia, 
+    e.subdominio, 
+    e.responsavel,
+    e.status, 
+    p.nome AS plano_nome, 
+    p.mensalidade::float8,
+    -- As subqueries agora estão no lugar certo (no SELECT), separadas por vírgula
+    (SELECT COUNT(*)::int FROM funcionario f WHERE f.tenant_id = e.id) AS funcionarios,
+    (SELECT COUNT(*)::int FROM epi ep WHERE ep.tenant_id = e.id) AS epis
+FROM empresas e
+INNER JOIN planos p ON e.plano_id = p.id
+`
+
+type EmpresasRecentesRow struct {
+	ID           int32
+	NomeFantasia string
+	Subdominio   string
+	Responsavel  pgtype.Text
+	Status       string
+	PlanoNome    string
+	PMensalidade float64
+	Funcionarios int32
+	Epis         int32
+}
+
+func (q *Queries) EmpresasRecentes(ctx context.Context) ([]EmpresasRecentesRow, error) {
+	rows, err := q.db.Query(ctx, empresasRecentes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmpresasRecentesRow
+	for rows.Next() {
+		var i EmpresasRecentesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.NomeFantasia,
+			&i.Subdominio,
+			&i.Responsavel,
+			&i.Status,
+			&i.PlanoNome,
+			&i.PMensalidade,
+			&i.Funcionarios,
+			&i.Epis,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const getTenantBySubdomain = `-- name: GetTenantBySubdomain :one
 SELECT id, nome_fantasia 
 FROM empresas 
-WHERE subdominio = $1 AND ativo = TRUE
+WHERE subdominio = $1 
+  AND status IN ('Ativa', 'Em teste')
 `
 
 type GetTenantBySubdomainRow struct {
@@ -24,5 +293,89 @@ func (q *Queries) GetTenantBySubdomain(ctx context.Context, subdominio string) (
 	row := q.db.QueryRow(ctx, getTenantBySubdomain, subdominio)
 	var i GetTenantBySubdomainRow
 	err := row.Scan(&i.ID, &i.NomeFantasia)
+	return i, err
+}
+
+const receitaMensal = `-- name: ReceitaMensal :one
+SELECT COALESCE(SUM(mensalidade), 0)::float8 FROM planos
+`
+
+func (q *Queries) ReceitaMensal(ctx context.Context) (float64, error) {
+	row := q.db.QueryRow(ctx, receitaMensal)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const totalEntregas = `-- name: TotalEntregas :one
+SELECT COUNT(*) FROM entrega_epi
+`
+
+func (q *Queries) TotalEntregas(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalEntregas)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const totalEpis = `-- name: TotalEpis :one
+SELECT COUNT(*) FROM epi
+`
+
+func (q *Queries) TotalEpis(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalEpis)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const totalFuncionarios = `-- name: TotalFuncionarios :one
+SELECT COUNT(*) FROM funcionario
+`
+
+func (q *Queries) TotalFuncionarios(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, totalFuncionarios)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const validaTotalFuncionarios = `-- name: ValidaTotalFuncionarios :one
+select e.nome_fantasia, p.limite_funcionarios
+from empresas e
+inner join planos p on e.plano_id = p.id
+where e.id = $1
+FOR UPDATE
+`
+
+type ValidaTotalFuncionariosRow struct {
+	NomeFantasia       string
+	LimiteFuncionarios pgtype.Int4
+}
+
+func (q *Queries) ValidaTotalFuncionarios(ctx context.Context, id int32) (ValidaTotalFuncionariosRow, error) {
+	row := q.db.QueryRow(ctx, validaTotalFuncionarios, id)
+	var i ValidaTotalFuncionariosRow
+	err := row.Scan(&i.NomeFantasia, &i.LimiteFuncionarios)
+	return i, err
+}
+
+const validaTotalUsuarios = `-- name: ValidaTotalUsuarios :one
+select e.nome_fantasia, p.limite_usuarios
+from empresas e
+inner join planos p on e.plano_id = p.id
+where e.id = $1
+FOR UPDATE
+`
+
+type ValidaTotalUsuariosRow struct {
+	NomeFantasia   string
+	LimiteUsuarios pgtype.Int4
+}
+
+func (q *Queries) ValidaTotalUsuarios(ctx context.Context, id int32) (ValidaTotalUsuariosRow, error) {
+	row := q.db.QueryRow(ctx, validaTotalUsuarios, id)
+	var i ValidaTotalUsuariosRow
+	err := row.Scan(&i.NomeFantasia, &i.LimiteUsuarios)
 	return i, err
 }

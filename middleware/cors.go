@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -9,43 +10,52 @@ import (
 )
 
 func CorsConfig() gin.HandlerFunc {
-    return cors.New(cors.Config{
-        AllowOriginFunc: func(origin string) bool {
-            origin = strings.TrimSuffix(origin, "/")
+	return cors.New(cors.Config{
+		AllowOriginFunc: func(origin string) bool {
+			origin = strings.TrimSuffix(origin, "/")
 
-            // 👇 ADICIONE O LOCALHOST:5173 (ou a porta exata que seu Front está rodando)
-            if origin == "http://localhost:3000" ||
-                origin == "https://sgepi-homologacao.radaptech.com.br" ||
-                origin == "https://radaptech.com.br" ||
-                origin == "https://www.radaptech.com.br" {
-                return true
-            }
+			// Libera localhost (ex: http://localhost:3000, http://localhost)
+			if origin == "http://localhost" || strings.HasPrefix(origin, "http://localhost:") {
+				return true
+			}
 
-            if strings.HasSuffix(origin, ".radaptech.com.br") {
-                return true
-            }
+			// Libera subdomínios .localhost (ex: http://app.localhost, http://api.localhost)
+			if strings.HasSuffix(origin, ".localhost") || strings.Contains(origin, ".localhost:") {
+				return true
+			}
 
-            return false
-        },
+			// Libera o domínio de produção/homologação
+			if origin == "https://radaptech.com.br" ||
+			strings.HasSuffix(origin, ".radaptech.com.br") ||
+			strings.Contains(origin, ".radaptech.com.br:"){
+				return true
+			} 
 
-        AllowMethods: []string{"POST", "PUT", "GET", "PATCH", "DELETE", "OPTIONS"},
 
-        AllowHeaders: []string{
-            "Origin",
-            "Content-Type",
-            "Accept",
-            "Authorization",
-            "X-Requested-With",
-            "X-Tenant-ID", 
-            "X-tenant-id", 
-            "X-tenant-ID",
-            
-        },
+			return false
+		},
 
-        // 👇 ADICIONE Content-Disposition PARA DOWNLOADS DE ARQUIVO
-        ExposeHeaders: []string{"Content-Length", "Content-Disposition"},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 
-        AllowCredentials: true,
-        MaxAge: 12 * time.Hour,
-    })
+		// 👉 ADICIONADOS: Headers em minúsculo/maiúsculo e wildcard de content-type
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Content-Length",
+			"Accept",
+			"Authorization",
+			"X-Requested-With",
+			"X-Tenant-ID",
+			"X-tenant-id",
+			"X-tenant-ID",
+			"x-tenant-id",
+		},
+
+		ExposeHeaders: []string{"Content-Length", "Content-Disposition","Set-Cookie"},
+
+		AllowCredentials: true,
+		// Garanta que o preflight permita repassar os headers na requisição OPTIONS
+		OptionsResponseStatusCode: http.StatusNoContent, // 204
+		MaxAge:                    12 * time.Hour,
+	})
 }

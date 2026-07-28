@@ -48,3 +48,34 @@ set senha_hash = $1,
     token_recuperacao_senha = null,
     token_expiracao = null
 where token_recuperacao_senha = $2 and tenant_id = $3 and token_expiracao > now();
+
+
+-- name: AtualizarUltimoAcesso :execrows
+UPDATE usuarios
+SET ultimo_acesso = now() AT TIME ZONE 'America/Sao_Paulo'
+WHERE id = $1 AND tenant_id = $2;
+
+
+-- name: MostrarUsuariosPainel :many
+select u.id, tenant_id, nome, u.email, e.nome_fantasia as empresa,role as tipo,ativo, ultimo_acesso
+from usuarios u
+inner join empresas e on u.tenant_id = e.id;
+
+
+-- name: EditarUsuario :exec
+UPDATE usuarios
+SET 
+    nome = @nome,
+    email = @email,
+    role = @role
+WHERE id = @id;
+
+-- name: EditarStatusUsuario :exec
+UPDATE usuarios
+SET 
+    ativo = @ativo
+WHERE id = @id;
+
+
+-- name: TotalDeUsuario :one
+select count(id) from usuarios where tenant_id = @id::int;

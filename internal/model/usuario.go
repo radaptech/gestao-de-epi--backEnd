@@ -1,10 +1,14 @@
 package model
 
+import "time"
+
 type Usuario struct {
-	Nome  string `json:"nome" binding:"required,min=3,max=50"`
-	Email string `json:"email" binding:"required,email"`
-	Senha string `json:"senha" binding:"required,max=10"`
-	Role  string `json:"cargo" binding:"required"`
+	Nome         string     `json:"nome" binding:"required,min=3,max=50"`
+	Email        string     `json:"email" binding:"required,email"`
+	Senha        string     `json:"senha" binding:"required,max=10"`
+	Role         string     `json:"role" binding:"required"`
+	EmpresaID    *int       `json:"empresaId"`
+	UltimoAcesso *time.Time `json:"ultimoAcesso"`
 }
 
 // LoginResponse é o que o Front vai receber
@@ -39,6 +43,16 @@ type UsuarioResponse struct {
 	Cargo string `json:"cargo"`
 }
 
+type UsuarioResponsePainel struct {
+	ID           int    `json:"id"`
+	Nome         string `json:"nome"`
+	Email        string `json:"email"`
+	Empresa      string `json:"empresa"` // Aqui vai apenas o nome da empresa
+	Tipo         string `json:"tipo"`
+	Status       bool   `json:"status"`
+	UltimoAcesso string `json:"ultimoAcesso"` // Formatado como string "DD/MM/YYYY HH:MM"
+}
+
 type RecuperaLogin struct {
 	Empresa  string `json:"empresa" binding:"required"`
 	TenantId int    `json:"-"`
@@ -49,4 +63,14 @@ type RedefinirSenha struct {
 	Token     string `json:"token" binding:"required"`
 	NovaSenha string `json:"senha_nova" binding:"required,min=6"`
 	TenantId  int    `json:"-"`
+}
+
+type EditarUsuarioRequest struct {
+	Nome  string `json:"nome" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
+	Role  string `json:"role" binding:"required"`
+}
+
+type AlterarStatusRequest struct {
+	Status *bool `json:"ativo" binding:"required"`
 }

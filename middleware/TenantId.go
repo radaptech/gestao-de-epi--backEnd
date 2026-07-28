@@ -2,21 +2,21 @@ package middleware
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
-
+	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/gin-gonic/gin"
 )
-	const TenantId = "tenantId"
-	
 
+const TenantId = "tenantId"
 
-func TenantMiddleware(querie *repository.Queries)  gin.HandlerFunc {
+func TenantMiddleware(querie *repository.Queries) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
-		subdominio := c.GetHeader("X-tenant-ID")
+		subdominio := strings.TrimSpace(c.GetHeader("X-tenant-ID"))
 
 		if subdominio == "" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tenant não informado (X-Tenant-ID ausente)"})
@@ -30,13 +30,18 @@ func TenantMiddleware(querie *repository.Queries)  gin.HandlerFunc {
 		}
 
 		// Busca no banco (usando o Context da request para cancelamento/timeout)
-		empresa,err:= querie.GetTenantBySubdomain(c.Request.Context(), subdominio)
+		empresa, err := querie.GetTenantBySubdomain(c.Request.Context(), subdominio)
 		if err != nil {
+
+			log.Printf("subdominio: %s", subdominio)
+			log.Printf("erro: %v", err)
 			if err == sql.ErrNoRows {
 				c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Empresa não encontrada"})
 				return
 			}
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Erro interno ao validar empresa"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Erro interno ao validar empresa",
+
+				"detalhes": err.Error()})
 			return
 		}
 		// SUCESSO: Salva o ID dentro do contexto do GIN
@@ -55,8 +60,6 @@ func GetTenantID(c *gin.Context) (int32, bool) {
 		return 0, false
 	}
 	// Faz o cast para int32 (o tipo que o sqlc geralmente usa para IDs)
-	id, ok := val.(int32) 
+	id, ok := val.(int32)
 	return id, ok
 }
-
-

@@ -21,6 +21,8 @@ var (
 	ErrDataIgual           = errors.New("data de fabricacao e validade não podem ser iguais")
 	ErrDataMenor           = errors.New("A data de entrada não pode ser menor que hoje")
 	ErrDataMenorValidade   = errors.New("A data de validade não pode ser menor que a data de fabricação")
+	ErrLimiteExcedido      = errors.New("limite de funcionários e/ou de usuarios do plano excedido")
+	ErrCpfInvalido         = errors.New("CPF inválido")
 )
 
 // Códigos de Erro Oficiais do PostgreSQL
