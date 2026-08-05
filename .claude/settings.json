@@ -1,0 +1,19 @@
+{
+  "enabledPlugins": {
+    "claude-code-setup@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *database/repository/*.sql.go) block=1;; *docs/docs.go|*docs/swagger.json|*docs/swagger.yaml) block=1;; *) block=0;; esac; if [ \"$block\" = \"1\" ]; then jq -n --arg r 'Arquivo gerado automaticamente (sqlc/swag) - nao edite direto. Rode \"sqlc generate\" (para database/repository/*.sql.go) ou \"swag init\" (para docs/*), e edite a fonte real: database/queries/*.sql ou as anotacoes @Summary/@Router nos controllers.' '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:$r}}'; fi",
+            "statusMessage": "Checando se o arquivo é gerado automaticamente..."
+          }
+        ]
+      }
+    ]
+  }
+}
