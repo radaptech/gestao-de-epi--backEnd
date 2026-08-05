@@ -32,6 +32,19 @@ func NewDevolucaoController(service DevolucaoService) *DevolucaoController {
 	}
 }
 
+// Adicionar godoc
+// @Summary      Adicionar devolução
+// @Description  Registra uma nova devolução de EPI com assinatura digital
+// @Tags         Devoluções
+// @Accept       json
+// @Produce      json
+// @Param        devolucao body model.DevolucaoInserir true "Dados da devolução"
+// @Success      200  {object}  map[string]string "Sucesso"
+// @Failure      400  {object}  helper.HTTPError "Dados inválidos"
+// @Failure      422  {object}  helper.HTTPError "Entidade não processável"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /devolucao [post]
+// @Security     BearerAuth
 func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -93,6 +106,15 @@ func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 	}
 }
 
+// Listar godoc
+// @Summary      Listar devoluções
+// @Description  Retorna a lista de todas as devoluções registradas para o tenant
+// @Tags         Devoluções
+// @Produce      json
+// @Success      200  {array}   model.DevolucaoResponse
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /devolucoes [get]
+// @Security     BearerAuth
 func (d *DevolucaoController) Listar() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -120,6 +142,18 @@ func (d *DevolucaoController) Listar() gin.HandlerFunc {
 	}
 }
 
+// GerarFichaPDF godoc
+// @Summary      Gerar ficha de devolução PDF
+// @Description  Gera e faz o download da ficha de devolução em formato PDF
+// @Tags         Devoluções
+// @Param        id   path      int  true  "ID da devolução"
+// @Produce      application/pdf
+// @Success      200  {file}    binary
+// @Failure      400  {object}  helper.HTTPError "ID inválido"
+// @Failure      422  {object}  helper.HTTPError "Não encontrado"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /devolucao/pdf/{id} [get]
+// @Security     BearerAuth
 func (d *DevolucaoController) GerarFichaPDF() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

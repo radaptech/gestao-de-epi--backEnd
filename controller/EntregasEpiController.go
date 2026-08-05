@@ -42,6 +42,19 @@ func NewEntregaController(service EntregasService) *EntregaController {
 
 
 
+// Adicionar godoc
+// @Summary      Registrar entrega de EPI
+// @Description  Registra uma nova entrega de EPI com assinatura digital e auditoria
+// @Tags         Entregas
+// @Accept       json
+// @Produce      json
+// @Param        entrega body model.EntregaParaInserir true "Dados da entrega"
+// @Success      200  {object}  map[string]string "Entrega cadastrada"
+// @Failure      400  {object}  helper.HTTPError "Dados inválidos"
+// @Failure      422  {object}  helper.HTTPError "Erro de validação (Estoque, Funcionário)"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entregas [post]
+// @Security     BearerAuth
 func (e *EntregaController) Adicionar() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input model.EntregaParaInserir
@@ -112,6 +125,17 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 	}
 }
 
+// ListarEntregas godoc
+// @Summary      Listar entregas
+// @Description  Retorna uma lista paginada de entregas de EPIs
+// @Tags         Entregas
+// @Produce      json
+// @Param        pagina     query    int     false  "Página"
+// @Param        quantidade query    int     false  "Quantidade por página"
+// @Success      200  {object}  service.EntregaPaginada
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entregas [get]
+// @Security     BearerAuth
 func (e *EntregaController) ListarEntregas() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -157,6 +181,17 @@ func (e *EntregaController) ListarEntregas() gin.HandlerFunc {
 	}
 }
 
+// CancelarEntrega godoc
+// @Summary      Cancelar entrega
+// @Description  Cancela uma entrega de EPI pelo ID
+// @Tags         Entregas
+// @Param        id   path      int  true  "ID da entrega"
+// @Success      204  "Sem conteúdo"
+// @Failure      400  {object}  helper.HTTPError "ID inválido"
+// @Failure      404  {object}  helper.HTTPError "Entrega não encontrada"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entregas/{id} [delete]
+// @Security     BearerAu
 func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -210,6 +245,19 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 	}
 }
 
+// GerarFichaEpiPDF godoc
+// @Summary      Gerar ficha de entrega PDF
+// @Description  Gera e faz o download da ficha de entrega em formato PDF
+// @Tags         Entregas
+// @Param        id   path      int    true  "ID da entrega"
+// @Param        matricula path string true  "Matrícula do funcionário"
+// @Produce      application/pdf
+// @Success      200  {file}    binary
+// @Failure      400  {object}  helper.HTTPError "ID inválido"
+// @Failure      422  {object}  helper.HTTPError "Dados não encontrados"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entregas/pdf/{id}/{matricula} [get]
+// @Security     BearerAuth
 func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
@@ -273,6 +321,15 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 	}
 }
 
+// BuscarEntregaDashbord godoc
+// @Summary      Resumo das entregas para dashboard
+// @Description  Retorna estatísticas de entregas para visualização em dashboard
+// @Tags         Entregas
+// @Produce      json
+// @Success      200  {array}   model.EntregaDashbord
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entregas/dashboard [get]
+// @Security     BearerAuth
 func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -300,6 +357,15 @@ func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
 	}
 }
 
+// BuscarEntregaItenDashbord godoc
+// @Summary      Resumo dos itens entregues para dashboard
+// @Description  Retorna estatísticas detalhadas por item para o dashboard
+// @Tags         Entregas
+// @Produce      json
+// @Success      200  {array}   model.EntregaItensDashBord
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entregas/itens/dashboard [get]
+// @Security     BearerAuth
 func (e *EntregaController) BuscarEntregaItenDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
