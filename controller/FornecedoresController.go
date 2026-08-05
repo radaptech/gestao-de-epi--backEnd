@@ -135,6 +135,8 @@ func (f *FornecedorController) ImportFornecedor() gin.HandlerFunc {
 				})
 				return
 			}
+
+			fornecedores = append(fornecedores, razaoSocial)
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{
