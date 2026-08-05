@@ -251,11 +251,12 @@ func TestEntrega(t *testing.T) {
 
 	t.Run("testando sucesso ao cancelar uma entrega de epi", func(t *testing.T) {
 
-		// 1. SETUP (Banco, Services, Helpers)
+		// 1. SETUP (Banco, Services, Helpers) - tudo isolado neste subteste,
+		// para não depender de IDs criados em outro container/tenant.
 		db := SetupTestDB(t)
 		defer db.Close()
 		ctx := context.Background()
-		planos:= CreatePlanos(t, db)
+		planos := CreatePlanos(t, db)
 		empresa := CreateEmpresa(t, db, planos)
 		repo := repository.NewEntregaRepository(db)
 		serv := NewEntregaService(repo, db)
@@ -266,15 +267,27 @@ func TestEntrega(t *testing.T) {
 		idtam := CreateTamanho(t, db, empresa)
 		idprotec := CreateProtecao(t, db, empresa)
 		idepi := CreateEpi(t, db, idprotec, empresa)
-		_ = CreateFuncionario(t, db, iddep, IdFuncao, empresa)
+		idfuncionario := CreateFuncionario(t, db, iddep, IdFuncao, empresa)
 		//fornecedores
 		Idfornecedor := CreateFornecedor(t, db, empresa)
 		idEntrada2 := CreateEntradaNfEpi(t, db, empresa, iduser, Idfornecedor)
 		idEntradaEpi2 := CreateEntradaEpi(t, db, empresa, idepi, idtam, iduser, idEntrada2)
 
+		// Payload construído com as entidades LOCAIS deste subteste (não com
+		// "entregas[0]", que pertence ao tenant/container criado no topo do teste).
+		entregaCancelamento := model.EntregaParaInserir{
+			ID_funcionario:     int32(idfuncionario),
+			Id_user:            int32(iduser),
+			Data_entrega:       *configs.NewDataBrPtr(time.Now()),
+			Assinatura_Digital: "teste.pop",
+			Itens: []model.ItemParaInserir{
+				{ID_epi: int32(idepi), ID_tamanho: int32(idtam), Quantidade: 10},
+			},
+		}
+
 		for i := range 4 {
 
-			err := serv.Salvar(ctx, entregas[0], int32(empresa), "56262tdf")
+			err := serv.Salvar(ctx, entregaCancelamento, int32(empresa), "56262tdf")
 			require.NoError(t, err, "A entrega %d deveria ter funcionado", i+1)
 		}
 
@@ -289,6 +302,9 @@ func TestEntrega(t *testing.T) {
 
 		fmt.Printf("Estoque atual do lote antes de cancelar as entregas %d: %d\n", idEntrada2, q)
 
+		// Lote começou com 100 unidades (CreateEntradaEpi); 4 entregas de 10 = 40 abatidas.
+		require.Equal(t, int64(60), q, "o estoque deveria ter sido abatido em 40 unidades (4 entregas de 10) antes do cancelamento")
+
 		for y := range 4 {
 
 			err := serv.CancelarEntrega(ctx, int(empresa), y+1, int(iduser))
@@ -297,11 +313,11 @@ func TestEntrega(t *testing.T) {
 		}
 
 		var q1 int64
-		query = `SELECT quantidade_atual FROM entrada_epi_item WHERE id = $1`
 		err = db.QueryRow(ctx, query, idEntradaEpi2).Scan(&q1)
 		require.NoError(t, err)
 
 		fmt.Printf("Estoque atual do lote depois de cancelar as entregas %d: %d\n", idEntrada2, q1)
 
+		require.Equal(t, int64(100), q1, "o estoque deveria retornar ao valor original (100) depois de cancelar as 4 entregas")
 	})
 }
