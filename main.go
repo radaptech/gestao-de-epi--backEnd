@@ -38,6 +38,14 @@ func main() {
 
 	router := gin.Default()
 
+	// Só confia em requisições encaminhadas pela rede interna do proxy (Traefik).
+	// Sem isso, o Gin confia em QUALQUER X-Forwarded-For, permitindo que o
+	// cliente forje seu próprio IP e burle o rate limit por IP (ver middleware.LimitarPorIP).
+	// Ajuste o CIDR se a rede de produção do proxy reverso for diferente.
+	if err := router.SetTrustedProxies([]string{"172.16.0.0/12"}); err != nil {
+		log.Fatal(err)
+	}
+
 	router.Use(middleware.CorsConfig(), middleware.SecurityHeaders())
 
 	db, err := init.InitAplicattion()

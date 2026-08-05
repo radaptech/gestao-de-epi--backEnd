@@ -1,2 +1,25 @@
-# Ignorar variáveis de ambiente na pasta configs
+# Variáveis de ambiente
 .env
+
+# Binário da aplicação (gerado por `go build -o main .`)
+main
+
+# Binários e artefatos de build em geral
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+
+# Cobertura de testes
+coverage.out
+coverage.html
+
+# Arquivos temporários / de editor
+*.tmp
+*.log
+.DS_Store
