@@ -12,7 +12,7 @@ const docTemplate = `{
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
             "name": "Suporte API",
-            "url": "http://www.seusaas.com.br",
+            "url": "http://www.radaptech.com.br",
             "email": "suporte@seusaas.com.br"
         },
         "license": {
@@ -55,12 +55,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Departamento criado",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "additionalProperties": true
                         }
                     },
                     "400": {
@@ -151,7 +149,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Cadastra um novo funcionario no sistema",
+                "description": "Cadastra um novo funcionário no sistema",
                 "consumes": [
                     "application/json"
                 ],
@@ -159,17 +157,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "funcionarios"
+                    "Funcionários"
                 ],
-                "summary": "Cadastrar novo funcionarios",
+                "summary": "Cadastrar novo funcionário",
                 "parameters": [
                     {
-                        "description": "Dados do funcionario",
+                        "description": "Dados do funcionário",
                         "name": "funcionario",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.FuncionarioINserir"
+                            "$ref": "#/definitions/model.FuncionarioInserir"
                         }
                     }
                 ],
@@ -190,9 +188,40 @@ const docTemplate = `{
                         }
                     },
                     "409": {
-                        "description": "Departamento já existe",
+                        "description": "Matrícula/Dados duplicados",
                         "schema": {
                             "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna o resumo para o dashboard da empresa",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Dashboard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ResumoDashboard"
                         }
                     },
                     "500": {
@@ -211,7 +240,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove (ou inativa) um departamento pelo ID",
+                "description": "Remove um departamento pelo ID",
                 "tags": [
                     "Departamentos"
                 ],
@@ -227,7 +256,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "204": {
-                        "description": "Sem Conteúdo (Sucesso)"
+                        "description": "Sem Conteúdo"
                     },
                     "400": {
                         "description": "ID inválido",
@@ -257,22 +286,95 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna uma lista com todos os departamentos",
+                "description": "Retorna uma lista paginada de departamentos",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Departamentos"
                 ],
-                "summary": "Listar todos",
+                "summary": "Listar departamentos",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Página da lista",
+                        "name": "pagina",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade por página",
+                        "name": "quantidade",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.DepartamentoDto"
-                            }
+                            "$ref": "#/definitions/service.DepartamentoPaginado"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetros inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/departamentos/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Faz upload de uma planilha .xlsx para cadastrar múltiplos departamentos",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Departamentos"
+                ],
+                "summary": "Importar departamentos via XLSX",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Arquivo de planilha (.xlsx)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sucesso na importação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Arquivo inválido ou vazio",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "401": {
+                        "description": "Sessão inválida",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
                         }
                     },
                     "500": {
@@ -285,57 +387,12 @@ const docTemplate = `{
             }
         },
         "/departamentos/{id}": {
-            "get": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna os detalhes de um único departamento",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Departamentos"
-                ],
-                "summary": "Buscar por ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID do Departamento",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.DepartamentoDto"
-                        }
-                    },
-                    "400": {
-                        "description": "ID inválido",
-                        "schema": {
-                            "$ref": "#/definitions/helper.HTTPError"
-                        }
-                    },
-                    "404": {
-                        "description": "Não encontrado",
-                        "schema": {
-                            "$ref": "#/definitions/helper.HTTPError"
-                        }
-                    },
-                    "500": {
-                        "description": "Erro interno",
-                        "schema": {
-                            "$ref": "#/definitions/helper.HTTPError"
-                        }
-                    }
-                }
-            },
-            "put": {
                 "description": "Atualiza o nome de um departamento existente",
                 "consumes": [
                     "application/json"
@@ -356,7 +413,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Novo nome",
+                        "description": "Dados do departamento",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -376,7 +433,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Erro de validação (ID ou Nome curto)",
+                        "description": "Erro de validação",
                         "schema": {
                             "$ref": "#/definitions/helper.HTTPError"
                         }
@@ -396,25 +453,85 @@ const docTemplate = `{
                 }
             }
         },
-        "/funcao/{id}": {
+        "/devolucao": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registra uma nova devolução de EPI com assinatura digital",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Devoluções"
+                ],
+                "summary": "Adicionar devolução",
+                "parameters": [
+                    {
+                        "description": "Dados da devolução",
+                        "name": "devolucao",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.DevolucaoInserir"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Entidade não processável",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/devolucao/pdf/{id}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna os detalhes de uma unica funcao",
+                "description": "Gera e faz o download da ficha de devolução em formato PDF",
                 "produces": [
-                    "application/json"
+                    "application/pdf"
                 ],
                 "tags": [
-                    "funcao"
+                    "Devoluções"
                 ],
-                "summary": "Buscar por ID",
+                "summary": "Gerar ficha de devolução PDF",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID da funcao",
+                        "description": "ID da devolução",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -424,7 +541,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.FuncaoDto"
+                            "type": "file"
                         }
                     },
                     "400": {
@@ -433,7 +550,7 @@ const docTemplate = `{
                             "$ref": "#/definitions/helper.HTTPError"
                         }
                     },
-                    "404": {
+                    "422": {
                         "description": "Não encontrado",
                         "schema": {
                             "$ref": "#/definitions/helper.HTTPError"
@@ -446,7 +563,1048 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/devolucoes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista de todas as devoluções registradas para o tenant",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Devoluções"
+                ],
+                "summary": "Listar devoluções",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.DevolucaoResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/empresa": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cadastra uma nova empresa no sistema",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Criar empresa",
+                "parameters": [
+                    {
+                        "description": "Dados da empresa",
+                        "name": "empresa",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.EmpresaInserir"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Empresa criada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/empresa/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAut": []
+                    }
+                ],
+                "description": "Atualiza os dados de uma empresa existente",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Editar empresa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da empresa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados para atualização",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.EditarEmpresaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo (Sucesso)"
+                    },
+                    "400": {
+                        "description": "ID ou dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/empresas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna uma lista com todas as empresas",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Listar empresas",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Empresa"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/empresas/recentes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lista as empresas adicionadas recentemente",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Empresas"
+                ],
+                "summary": "Empresas recentes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EmpresaRecente"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entradas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAut": []
+                    }
+                ],
+                "description": "Retorna uma lista paginada de entradas de EPIs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entradas"
+                ],
+                "summary": "Listar entradas",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Página",
+                        "name": "pagina",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade por página",
+                        "name": "quantidade",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.EntradaPaginada"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetros inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
             },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registra a entrada de novos EPIs no estoque",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entradas"
+                ],
+                "summary": "Adicionar entrada de EPI",
+                "parameters": [
+                    {
+                        "description": "Dados da entrada",
+                        "name": "entrada",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.EntradaEpiInserir"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Entrada cadastrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação (Data, Conflito, Duplicidade)",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entradas/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna dados resumidos das entradas para o dashboard",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entradas"
+                ],
+                "summary": "Resumo das entradas para dashboard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EntradaDashbord"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entradas/estoque": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna entradas relevantes para consulta de estoque",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entradas"
+                ],
+                "summary": "Entradas para estoque",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EntradaEstoqueDto"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entradas/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cancela uma entrada de EPI pelo ID",
+                "tags": [
+                    "Entradas"
+                ],
+                "summary": "Cancelar entrada",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da entrada",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Entrada não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entregas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna uma lista paginada de entregas de EPIs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entregas"
+                ],
+                "summary": "Listar entregas",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Página",
+                        "name": "pagina",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade por página",
+                        "name": "quantidade",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.EntregaPaginada"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registra uma nova entrega de EPI com assinatura digital e auditoria",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entregas"
+                ],
+                "summary": "Registrar entrega de EPI",
+                "parameters": [
+                    {
+                        "description": "Dados da entrega",
+                        "name": "entrega",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.EntregaParaInserir"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Entrega cadastrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação (Estoque, Funcionário)",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entregas/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna estatísticas de entregas para visualização em dashboard",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entregas"
+                ],
+                "summary": "Resumo das entregas para dashboard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EntregaDashbord"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entregas/itens/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna estatísticas detalhadas por item para o dashboard",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Entregas"
+                ],
+                "summary": "Resumo dos itens entregues para dashboard",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EntregaItensDashBord"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entregas/pdf/{id}/{matricula}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gera e faz o download da ficha de entrega em formato PDF",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Entregas"
+                ],
+                "summary": "Gerar ficha de entrega PDF",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da entrega",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Matrícula do funcionário",
+                        "name": "matricula",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Dados não encontrados",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/entregas/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAu": []
+                    }
+                ],
+                "description": "Cancela uma entrega de EPI pelo ID",
+                "tags": [
+                    "Entregas"
+                ],
+                "summary": "Cancelar entrega",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID da entrega",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Entrega não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/epis": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna uma lista paginada de EPIs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "Listar EPIs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Página",
+                        "name": "pagina",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade por página",
+                        "name": "quantidade",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.EpiPaginado"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adiciona um novo EPI ao estoque da empresa",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "Cadastrar novo EPI",
+                "parameters": [
+                    {
+                        "description": "Dados do EPI",
+                        "name": "epi",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.EpiInserir"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "EPI cadastrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CA já registrado",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação (Data, Integridade)",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/epis/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna dados resumidos para o dashboard de EPIs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "Dashboard de EPIs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EpiDashBord"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/epis/funcionario/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista de EPIs vinculados a um funcionário específico",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "EPIs por funcionário",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do Funcionário",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.EpiDtoDevolucao"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/epis/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAut": []
+                    }
+                ],
+                "description": "Retorna os detalhes de um EPI específico",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "Buscar EPI por ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do EPI",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.EpiDto"
+                        }
+                    },
+                    "422": {
+                        "description": "EPI não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados de um EPI existente",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "Atualizar EPI",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do EPI",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados para atualização",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateEpiInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CA já cadastrado",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "422": {
+                        "description": "Erro de validação",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove um EPI do cadastro",
+                "tags": [
+                    "EPIs"
+                ],
+                "summary": "Deletar EPI",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID do EPI",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Sem conteúdo"
+                    },
+                    "404": {
+                        "description": "EPI não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/funcao/{id}": {
             "put": {
                 "description": "Atualiza o nome de uma funcao e seu departamento existente",
                 "consumes": [
@@ -559,15 +1717,15 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Remove (ou inativa) um funcionario pelo ID",
+                "description": "Remove um funcionário pelo ID",
                 "tags": [
-                    "funcionarios"
+                    "Funcionários"
                 ],
-                "summary": "Deletar funcionario",
+                "summary": "Deletar funcionário",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID do funcionario",
+                        "description": "ID do funcionário",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -575,7 +1733,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "204": {
-                        "description": "Sem Conteúdo (Sucesso)"
+                        "description": "Sem Conteúdo"
                     },
                     "400": {
                         "description": "ID inválido",
@@ -598,7 +1756,12 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Atualiza os dados de um funcionario existente",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados de um funcionário existente",
                 "consumes": [
                     "application/json"
                 ],
@@ -606,19 +1769,19 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "funcionarios"
+                    "Funcionários"
                 ],
-                "summary": "Atualizar funcionario",
+                "summary": "Atualizar funcionário",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID do funcionario",
+                        "description": "ID do funcionário",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "funcionario novos dados",
+                        "description": "Novos dados do funcionário",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -638,7 +1801,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Erro de validação (ID ou Nome curto)",
+                        "description": "Dados inválidos",
                         "schema": {
                             "$ref": "#/definitions/helper.HTTPError"
                         }
@@ -665,19 +1828,19 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna os detalhes de um único funcionario",
+                "description": "Retorna os detalhes de um único funcionário",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "funcionarios"
+                    "Funcionários"
                 ],
-                "summary": "Buscar por matricula",
+                "summary": "Buscar por matrícula",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "matricula do funcionario",
-                        "name": "id",
+                        "type": "string",
+                        "description": "Matrícula do funcionário",
+                        "name": "matricula",
                         "in": "path",
                         "required": true
                     }
@@ -687,12 +1850,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.Funcionario_Dto"
-                        }
-                    },
-                    "400": {
-                        "description": "ID inválido",
-                        "schema": {
-                            "$ref": "#/definitions/helper.HTTPError"
                         }
                     },
                     "404": {
@@ -717,21 +1874,100 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna uma lista com todos os funcionarios",
+                "description": "Retorna uma lista paginada de funcionários",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "funcionarios"
+                    "Funcionários"
                 ],
                 "summary": "Listar todos",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Página",
+                        "name": "pagina",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade por página",
+                        "name": "quantidade",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.FuncionarioPaginado"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/funcionarios/completo": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAut": []
+                    }
+                ],
+                "description": "Retorna uma lista detalhada de todos os funcionários",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Funcionários"
+                ],
+                "summary": "Listar funcionários completos",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.Funcionario_Dto"
+                                "$ref": "#/definitions/model.FuncionarioCompletoDto"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/helper.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/funcionarios/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna resumo dos funcionários para o dashboard",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Funcionários"
+                ],
+                "summary": "Dashboard de funcionários",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.FuncionarioDashbord"
                             }
                         }
                     },
@@ -815,6 +2051,817 @@ const docTemplate = `{
                 }
             }
         },
+        "model.DevolucaoInserir": {
+            "type": "object",
+            "required": [
+                "assinatura_digital",
+                "data_devolucao",
+                "idEpi",
+                "idFuncionario",
+                "idMotivo",
+                "idTamanho",
+                "quantidadeADevolver"
+            ],
+            "properties": {
+                "assinatura_digital": {
+                    "description": "Outros campos do Payload",
+                    "type": "string"
+                },
+                "data_devolucao": {
+                    "type": "string"
+                },
+                "houve_troca": {
+                    "type": "boolean"
+                },
+                "idEpi": {
+                    "type": "integer"
+                },
+                "idEpiNovo": {
+                    "description": "Campos de Troca (Podem ser nulos no JS)",
+                    "type": "integer"
+                },
+                "idFuncionario": {
+                    "description": "Campos Obrigatórios (binding:\"required\")",
+                    "type": "integer"
+                },
+                "idMotivo": {
+                    "type": "integer"
+                },
+                "idTamanho": {
+                    "type": "integer"
+                },
+                "idTamanhoNovo": {
+                    "type": "integer"
+                },
+                "observacao": {
+                    "type": "string"
+                },
+                "quantidadeADevolver": {
+                    "type": "integer"
+                },
+                "quantidadeNova": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.DevolucaoResponse": {
+            "type": "object",
+            "properties": {
+                "assinatura_digital": {
+                    "description": "Ponteiro pois pode estar pendente",
+                    "type": "string"
+                },
+                "data_devolucao": {
+                    "description": "Formato ISO ou DD/MM/YYYY",
+                    "type": "string"
+                },
+                "epiNome": {
+                    "type": "string"
+                },
+                "epiNovoNome": {
+                    "description": "Ponteiro pois pode ser null se não houver troca",
+                    "type": "string"
+                },
+                "funcionarioMatricula": {
+                    "type": "integer"
+                },
+                "funcionarioNome": {
+                    "type": "string"
+                },
+                "houveTroca": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "idFuncionario": {
+                    "type": "integer"
+                },
+                "motivoNome": {
+                    "type": "string"
+                },
+                "observacao": {
+                    "description": "Ponteiro pois é opcional",
+                    "type": "string"
+                },
+                "quantidadeADevolver": {
+                    "type": "integer"
+                },
+                "quantidadeNova": {
+                    "description": "Ponteiro pois pode ser null",
+                    "type": "integer"
+                },
+                "tamanhoNome": {
+                    "type": "string"
+                },
+                "tamanhoNovoNome": {
+                    "description": "Ponteiro pois pode ser null",
+                    "type": "string"
+                },
+                "token_validacao": {
+                    "description": "Ponteiro pois pode estar pendente",
+                    "type": "string"
+                }
+            }
+        },
+        "model.EditarEmpresaRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "nome",
+                "planoId",
+                "responsavel",
+                "status"
+            ],
+            "properties": {
+                "cnpj": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "planoId": {
+                    "type": "integer"
+                },
+                "responsavel": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "telefone": {
+                    "type": "string"
+                },
+                "vencimento": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Empresa": {
+            "type": "object",
+            "properties": {
+                "cnpj": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "epis": {
+                    "type": "integer"
+                },
+                "funcionarios": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mensalidade": {
+                    "type": "number"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "observacoes": {
+                    "type": "string"
+                },
+                "plano": {
+                    "type": "string"
+                },
+                "responsavel": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "telefone": {
+                    "type": "string"
+                },
+                "vencimento": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EmpresaInserir": {
+            "type": "object",
+            "required": [
+                "cnpj",
+                "email",
+                "nome_fantasia",
+                "plano",
+                "responsavel",
+                "status",
+                "vencimento"
+            ],
+            "properties": {
+                "cnpj": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "nome_fantasia": {
+                    "type": "string"
+                },
+                "observacoes": {
+                    "type": "string",
+                    "maxLength": 150
+                },
+                "plano": {
+                    "type": "string"
+                },
+                "responsavel": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "status": {
+                    "type": "string"
+                },
+                "telefone": {
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "vencimento": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EmpresaRecente": {
+            "type": "object",
+            "properties": {
+                "epis": {
+                    "type": "integer"
+                },
+                "funcionarios": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "mensalidade": {
+                    "type": "number"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "plano": {
+                    "type": "string"
+                },
+                "responsavel": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subdominio": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EntradaDashbord": {
+            "type": "object",
+            "properties": {
+                "dataEntrada": {
+                    "description": "Usa o helper para garantir o ponteiro da data formatada",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "idEpi": {
+                    "type": "integer"
+                },
+                "idTamanho": {
+                    "type": "integer"
+                },
+                "lote": {
+                    "type": "string"
+                },
+                "quantidade": {
+                    "type": "integer"
+                },
+                "quantidadeAtual": {
+                    "type": "integer"
+                },
+                "valorUnitario": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.EntradaEpiDto": {
+            "type": "object",
+            "properties": {
+                "data_entrada": {
+                    "description": "2. Linha do tempo",
+                    "type": "string"
+                },
+                "epi": {
+                    "description": "4. Objetos completos (Relacionamentos)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.EpiSimples"
+                        }
+                    ]
+                },
+                "fornecedor": {
+                    "$ref": "#/definitions/model.FornecedorSimples"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_epi": {
+                    "type": "integer"
+                },
+                "id_fornecedor": {
+                    "type": "integer"
+                },
+                "id_tamanho": {
+                    "type": "integer"
+                },
+                "lote": {
+                    "type": "string"
+                },
+                "nota_fiscal_numero": {
+                    "type": "string"
+                },
+                "nota_fiscal_serie": {
+                    "type": "string"
+                },
+                "quantidade": {
+                    "description": "3. Valores e informações da operação",
+                    "type": "integer"
+                },
+                "quantidade_atual": {
+                    "type": "integer"
+                },
+                "tamanho": {
+                    "$ref": "#/definitions/model.TamanhoSimples"
+                },
+                "usuario": {
+                    "type": "string"
+                },
+                "valor_unitario": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.EntradaEpiInserir": {
+            "type": "object",
+            "required": [
+                "data_emissao",
+                "idfornecedor",
+                "itens",
+                "nota_fiscal_numero",
+                "nota_fiscal_serie"
+            ],
+            "properties": {
+                "data_emissao": {
+                    "type": "string"
+                },
+                "idfornecedor": {
+                    "type": "integer"
+                },
+                "itens": {
+                    "description": "\"dive\" valida cada item da lista",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.EntradaEpiItemInserir"
+                    }
+                },
+                "nota_fiscal_numero": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "nota_fiscal_serie": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "model.EntradaEpiItemInserir": {
+            "type": "object",
+            "required": [
+                "data_fabricacao",
+                "data_validade",
+                "id_epi",
+                "id_tamanho",
+                "lote",
+                "quantidade",
+                "valor_unitario"
+            ],
+            "properties": {
+                "data_fabricacao": {
+                    "type": "string"
+                },
+                "data_validade": {
+                    "type": "string"
+                },
+                "id_epi": {
+                    "type": "integer"
+                },
+                "id_tamanho": {
+                    "type": "integer"
+                },
+                "lote": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "quantidade": {
+                    "type": "integer"
+                },
+                "valor_unitario": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.EntradaEstoqueDto": {
+            "type": "object",
+            "properties": {
+                "data_entrada": {
+                    "type": "string"
+                },
+                "data_validade": {
+                    "type": "string"
+                },
+                "epi": {
+                    "$ref": "#/definitions/model.EpiDtoEstoque"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lote": {
+                    "type": "string"
+                },
+                "quantidade_atual": {
+                    "type": "integer"
+                },
+                "quantidade_inicial": {
+                    "type": "integer"
+                },
+                "tamanho": {
+                    "$ref": "#/definitions/model.TamanhoDto"
+                },
+                "valor_unitario": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.EntregaDashbord": {
+            "type": "object",
+            "properties": {
+                "assinatura": {
+                    "type": "string"
+                },
+                "data_entrega": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_funcionario": {
+                    "type": "integer"
+                },
+                "token_validacao": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EntregaDoFuncionarioDto": {
+            "type": "object",
+            "properties": {
+                "assinatura_digital": {
+                    "type": "string"
+                },
+                "data_entrega": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "itens": {
+                    "description": "\u003c-- AQUI ELA!",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ItemEntregueDto"
+                    }
+                }
+            }
+        },
+        "model.EntregaDto": {
+            "type": "object",
+            "properties": {
+                "assinatura_digital": {
+                    "type": "string"
+                },
+                "data_entrega": {
+                    "type": "string"
+                },
+                "funcionario": {
+                    "$ref": "#/definitions/model.Funcionario_Dto"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "id_user": {
+                    "type": "integer"
+                },
+                "itens": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ItemEntregueDto"
+                    }
+                },
+                "token_validacao": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EntregaItensDashBord": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "id_entrega_cabecalho": {
+                    "type": "integer"
+                },
+                "id_epi": {
+                    "type": "integer"
+                },
+                "id_tamanho": {
+                    "type": "integer"
+                },
+                "quantidade": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.EntregaParaInserir": {
+            "type": "object",
+            "required": [
+                "assinatura_digital",
+                "data_entrega",
+                "id_funcionario",
+                "itens"
+            ],
+            "properties": {
+                "assinatura_digital": {
+                    "type": "string"
+                },
+                "data_entrega": {
+                    "type": "string"
+                },
+                "id_funcionario": {
+                    "type": "integer"
+                },
+                "id_troca": {
+                    "description": "Usei ponteiro para aceitar nulo",
+                    "type": "integer"
+                },
+                "id_user": {
+                    "type": "integer"
+                },
+                "itens": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.ItemParaInserir"
+                    }
+                }
+            }
+        },
+        "model.EpiDashBord": {
+            "type": "object",
+            "properties": {
+                "alerta_minimo": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EpiDto": {
+            "type": "object",
+            "properties": {
+                "alerta_minimo": {
+                    "type": "integer"
+                },
+                "ca": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "fabricante": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "protecao": {
+                    "$ref": "#/definitions/model.TipoProtecaoDto"
+                },
+                "tamanhos": {
+                    "description": "Slive de objetos Tamanho (id e nome)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TamanhoDto"
+                    }
+                },
+                "validade_ca": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EpiDtoDevolucao": {
+            "type": "object",
+            "properties": {
+                "alerta_minimo": {
+                    "type": "integer"
+                },
+                "ca": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "fabricante": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "protecao": {
+                    "$ref": "#/definitions/model.TipoProtecaoDto"
+                },
+                "saldoAtual": {
+                    "type": "integer"
+                },
+                "tamanhos": {
+                    "description": "Slive de objetos Tamanho (id e nome)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TamanhoDto"
+                    }
+                },
+                "validade_ca": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EpiDtoEstoque": {
+            "type": "object",
+            "properties": {
+                "alertaMinimo": {
+                    "type": "integer"
+                },
+                "ca": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "fabricante": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "protecao": {
+                    "$ref": "#/definitions/model.TipoProtecaoDto"
+                },
+                "validadeCa": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EpiInserir": {
+            "type": "object",
+            "required": [
+                "alerta_minimo",
+                "ca",
+                "data_validade_ca",
+                "fabricante",
+                "id_protecao",
+                "id_tamanho",
+                "nome"
+            ],
+            "properties": {
+                "alerta_minimo": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "ca": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "data_validade_ca": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "fabricante": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "id_protecao": {
+                    "type": "integer"
+                },
+                "id_tamanho": {
+                    "description": "Lista de tamanhos permitidos para este EPI",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EpiResponse": {
+            "type": "object",
+            "properties": {
+                "alerta_minimo": {
+                    "type": "integer"
+                },
+                "ca": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "fabricante": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "protecao": {
+                    "$ref": "#/definitions/model.TipoProtecaoDto"
+                },
+                "validade_ca": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.EpiSimples": {
+            "type": "object",
+            "properties": {
+                "ca": {
+                    "type": "string"
+                },
+                "fabricante": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FornecedorSimples": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "nome_fantasia": {
+                    "type": "string"
+                },
+                "razao_social": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Funcao": {
             "type": "object",
             "required": [
@@ -846,38 +2893,18 @@ const docTemplate = `{
                 }
             }
         },
-        "model.FuncionarioINserir": {
-            "type": "object",
-            "required": [
-                "id_departamento",
-                "id_funcao",
-                "matricula",
-                "nome"
-            ],
-            "properties": {
-                "id_departamento": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "id_funcao": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "matricula": {
-                    "type": "string",
-                    "maxLength": 7,
-                    "minLength": 7
-                },
-                "nome": {
-                    "type": "string",
-                    "maxLength": 150,
-                    "minLength": 3
-                }
-            }
-        },
-        "model.Funcionario_Dto": {
+        "model.FuncionarioCompletoDto": {
             "type": "object",
             "properties": {
+                "cpf": {
+                    "type": "string"
+                },
+                "entregas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.EntregaDoFuncionarioDto"
+                    }
+                },
                 "funcao": {
                     "$ref": "#/definitions/model.FuncaoDto"
                 },
@@ -892,20 +2919,319 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateFuncionarioRequest": {
+        "model.FuncionarioDashbord": {
             "type": "object",
             "properties": {
-                "id_departamento": {
-                    "description": "Ponteiro!",
+                "id": {
                     "type": "integer"
                 },
+                "matricula": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FuncionarioInserir": {
+            "type": "object",
+            "required": [
+                "cpf",
+                "id_departamento",
+                "id_funcao",
+                "nome"
+            ],
+            "properties": {
+                "cpf": {
+                    "type": "string"
+                },
+                "id_departamento": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "id_funcao": {
-                    "description": "Ponteiro!",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 3
+                }
+            }
+        },
+        "model.Funcionario_Dto": {
+            "type": "object",
+            "properties": {
+                "cpf": {
+                    "type": "string"
+                },
+                "funcao": {
+                    "$ref": "#/definitions/model.FuncaoDto"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "matricula": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ItemEntregueDto": {
+            "type": "object",
+            "properties": {
+                "epi": {
+                    "$ref": "#/definitions/model.EpiResponse"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "quantidade": {
+                    "type": "integer"
+                },
+                "tamanho": {
+                    "$ref": "#/definitions/model.TamanhoDto"
+                }
+            }
+        },
+        "model.ItemParaInserir": {
+            "type": "object",
+            "required": [
+                "id_epi",
+                "id_tamanho",
+                "quantidade"
+            ],
+            "properties": {
+                "id_entrada_item": {
+                    "description": "🔑 NOVO: Precisamos saber de qual lote saiu!",
+                    "type": "integer"
+                },
+                "id_epi": {
+                    "type": "integer"
+                },
+                "id_tamanho": {
+                    "type": "integer"
+                },
+                "quantidade": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ResumoDashboard": {
+            "type": "object",
+            "properties": {
+                "empresasAtivas": {
+                    "type": "integer"
+                },
+                "empresasBloqueadas": {
+                    "type": "integer"
+                },
+                "empresasEmTeste": {
+                    "type": "integer"
+                },
+                "receitaMensal": {
+                    "type": "number"
+                },
+                "totalEmpresas": {
+                    "type": "integer"
+                },
+                "totalEntregas": {
+                    "type": "integer"
+                },
+                "totalEpis": {
+                    "type": "integer"
+                },
+                "totalFuncionarios": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.TamanhoDto": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "tamanho": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.TamanhoSimples": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "tamanho": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.TipoProtecaoDto": {
+            "type": "object",
+            "properties": {
+                "id": {
                     "type": "integer"
                 },
                 "nome": {
-                    "description": "Ponteiro! Se for nil, não atualiza",
                     "type": "string"
+                }
+            }
+        },
+        "model.UpdateEpiInput": {
+            "type": "object",
+            "properties": {
+                "alerta_minimo": {
+                    "type": "integer"
+                },
+                "ca": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "fabricante": {
+                    "type": "string"
+                },
+                "id_protecao": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "tamanhos": {
+                    "description": "Se enviado, você deve resetar os tamanhos no banco",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "validade_ca": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UpdateFuncionarioRequest": {
+            "type": "object",
+            "properties": {
+                "cpf": {
+                    "type": "string"
+                },
+                "id_departamento": {
+                    "type": "integer"
+                },
+                "id_funcao": {
+                    "type": "integer"
+                },
+                "nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.DepartamentoPaginado": {
+            "type": "object",
+            "properties": {
+                "departamentos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DepartamentoDto"
+                    }
+                },
+                "pagina": {
+                    "type": "integer"
+                },
+                "paginaFinal": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.EntradaPaginada": {
+            "type": "object",
+            "properties": {
+                "entradas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.EntradaEpiDto"
+                    }
+                },
+                "pagina": {
+                    "type": "integer"
+                },
+                "pagina_final": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.EntregaPaginada": {
+            "type": "object",
+            "properties": {
+                "entregas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.EntregaDto"
+                    }
+                },
+                "pagina": {
+                    "type": "integer"
+                },
+                "pagina_final": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.EpiPaginado": {
+            "type": "object",
+            "properties": {
+                "epis": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.EpiDto"
+                    }
+                },
+                "pagina": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "paginaFinal": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "total": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+        },
+        "service.FuncionarioPaginado": {
+            "type": "object",
+            "properties": {
+                "funcionario": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Funcionario_Dto"
+                    }
+                },
+                "pagina": {
+                    "type": "integer"
+                },
+                "paginaFinal": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         }

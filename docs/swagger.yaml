@@ -23,6 +23,560 @@ definitions:
       id:
         type: integer
     type: object
+  model.DevolucaoInserir:
+    properties:
+      assinatura_digital:
+        description: Outros campos do Payload
+        type: string
+      data_devolucao:
+        type: string
+      houve_troca:
+        type: boolean
+      idEpi:
+        type: integer
+      idEpiNovo:
+        description: Campos de Troca (Podem ser nulos no JS)
+        type: integer
+      idFuncionario:
+        description: Campos Obrigatórios (binding:"required")
+        type: integer
+      idMotivo:
+        type: integer
+      idTamanho:
+        type: integer
+      idTamanhoNovo:
+        type: integer
+      observacao:
+        type: string
+      quantidadeADevolver:
+        type: integer
+      quantidadeNova:
+        type: integer
+    required:
+    - assinatura_digital
+    - data_devolucao
+    - idEpi
+    - idFuncionario
+    - idMotivo
+    - idTamanho
+    - quantidadeADevolver
+    type: object
+  model.DevolucaoResponse:
+    properties:
+      assinatura_digital:
+        description: Ponteiro pois pode estar pendente
+        type: string
+      data_devolucao:
+        description: Formato ISO ou DD/MM/YYYY
+        type: string
+      epiNome:
+        type: string
+      epiNovoNome:
+        description: Ponteiro pois pode ser null se não houver troca
+        type: string
+      funcionarioMatricula:
+        type: integer
+      funcionarioNome:
+        type: string
+      houveTroca:
+        type: boolean
+      id:
+        type: integer
+      idFuncionario:
+        type: integer
+      motivoNome:
+        type: string
+      observacao:
+        description: Ponteiro pois é opcional
+        type: string
+      quantidadeADevolver:
+        type: integer
+      quantidadeNova:
+        description: Ponteiro pois pode ser null
+        type: integer
+      tamanhoNome:
+        type: string
+      tamanhoNovoNome:
+        description: Ponteiro pois pode ser null
+        type: string
+      token_validacao:
+        description: Ponteiro pois pode estar pendente
+        type: string
+    type: object
+  model.EditarEmpresaRequest:
+    properties:
+      cnpj:
+        type: string
+      email:
+        type: string
+      nome:
+        type: string
+      observacoes:
+        type: string
+      planoId:
+        type: integer
+      responsavel:
+        type: string
+      status:
+        type: string
+      telefone:
+        type: string
+      vencimento:
+        type: string
+    required:
+    - email
+    - nome
+    - planoId
+    - responsavel
+    - status
+    type: object
+  model.Empresa:
+    properties:
+      cnpj:
+        type: string
+      email:
+        type: string
+      epis:
+        type: integer
+      funcionarios:
+        type: integer
+      id:
+        type: integer
+      mensalidade:
+        type: number
+      nome:
+        type: string
+      observacoes:
+        type: string
+      plano:
+        type: string
+      responsavel:
+        type: string
+      status:
+        type: string
+      telefone:
+        type: string
+      vencimento:
+        type: string
+    type: object
+  model.EmpresaInserir:
+    properties:
+      cnpj:
+        maxLength: 40
+        type: string
+      email:
+        maxLength: 40
+        type: string
+      nome_fantasia:
+        type: string
+      observacoes:
+        maxLength: 150
+        type: string
+      plano:
+        type: string
+      responsavel:
+        maxLength: 40
+        type: string
+      status:
+        type: string
+      telefone:
+        maxLength: 40
+        type: string
+      vencimento:
+        type: string
+    required:
+    - cnpj
+    - email
+    - nome_fantasia
+    - plano
+    - responsavel
+    - status
+    - vencimento
+    type: object
+  model.EmpresaRecente:
+    properties:
+      epis:
+        type: integer
+      funcionarios:
+        type: integer
+      id:
+        type: integer
+      mensalidade:
+        type: number
+      nome:
+        type: string
+      plano:
+        type: string
+      responsavel:
+        type: string
+      status:
+        type: string
+      subdominio:
+        type: string
+    type: object
+  model.EntradaDashbord:
+    properties:
+      dataEntrada:
+        description: Usa o helper para garantir o ponteiro da data formatada
+        type: string
+      id:
+        type: integer
+      idEpi:
+        type: integer
+      idTamanho:
+        type: integer
+      lote:
+        type: string
+      quantidade:
+        type: integer
+      quantidadeAtual:
+        type: integer
+      valorUnitario:
+        type: number
+    type: object
+  model.EntradaEpiDto:
+    properties:
+      data_entrada:
+        description: 2. Linha do tempo
+        type: string
+      epi:
+        allOf:
+        - $ref: '#/definitions/model.EpiSimples'
+        description: 4. Objetos completos (Relacionamentos)
+      fornecedor:
+        $ref: '#/definitions/model.FornecedorSimples'
+      id:
+        type: integer
+      id_epi:
+        type: integer
+      id_fornecedor:
+        type: integer
+      id_tamanho:
+        type: integer
+      lote:
+        type: string
+      nota_fiscal_numero:
+        type: string
+      nota_fiscal_serie:
+        type: string
+      quantidade:
+        description: 3. Valores e informações da operação
+        type: integer
+      quantidade_atual:
+        type: integer
+      tamanho:
+        $ref: '#/definitions/model.TamanhoSimples'
+      usuario:
+        type: string
+      valor_unitario:
+        type: number
+    type: object
+  model.EntradaEpiInserir:
+    properties:
+      data_emissao:
+        type: string
+      idfornecedor:
+        type: integer
+      itens:
+        description: '"dive" valida cada item da lista'
+        items:
+          $ref: '#/definitions/model.EntradaEpiItemInserir'
+        type: array
+      nota_fiscal_numero:
+        maxLength: 50
+        type: string
+      nota_fiscal_serie:
+        maxLength: 20
+        type: string
+    required:
+    - data_emissao
+    - idfornecedor
+    - itens
+    - nota_fiscal_numero
+    - nota_fiscal_serie
+    type: object
+  model.EntradaEpiItemInserir:
+    properties:
+      data_fabricacao:
+        type: string
+      data_validade:
+        type: string
+      id_epi:
+        type: integer
+      id_tamanho:
+        type: integer
+      lote:
+        maxLength: 50
+        type: string
+      quantidade:
+        type: integer
+      valor_unitario:
+        type: number
+    required:
+    - data_fabricacao
+    - data_validade
+    - id_epi
+    - id_tamanho
+    - lote
+    - quantidade
+    - valor_unitario
+    type: object
+  model.EntradaEstoqueDto:
+    properties:
+      data_entrada:
+        type: string
+      data_validade:
+        type: string
+      epi:
+        $ref: '#/definitions/model.EpiDtoEstoque'
+      id:
+        type: integer
+      lote:
+        type: string
+      quantidade_atual:
+        type: integer
+      quantidade_inicial:
+        type: integer
+      tamanho:
+        $ref: '#/definitions/model.TamanhoDto'
+      valor_unitario:
+        type: number
+    type: object
+  model.EntregaDashbord:
+    properties:
+      assinatura:
+        type: string
+      data_entrega:
+        type: string
+      id:
+        type: integer
+      id_funcionario:
+        type: integer
+      token_validacao:
+        type: string
+    type: object
+  model.EntregaDoFuncionarioDto:
+    properties:
+      assinatura_digital:
+        type: string
+      data_entrega:
+        type: string
+      id:
+        type: integer
+      itens:
+        description: <-- AQUI ELA!
+        items:
+          $ref: '#/definitions/model.ItemEntregueDto'
+        type: array
+    type: object
+  model.EntregaDto:
+    properties:
+      assinatura_digital:
+        type: string
+      data_entrega:
+        type: string
+      funcionario:
+        $ref: '#/definitions/model.Funcionario_Dto'
+      id:
+        type: integer
+      id_user:
+        type: integer
+      itens:
+        items:
+          $ref: '#/definitions/model.ItemEntregueDto'
+        type: array
+      token_validacao:
+        type: string
+    type: object
+  model.EntregaItensDashBord:
+    properties:
+      id:
+        type: integer
+      id_entrega_cabecalho:
+        type: integer
+      id_epi:
+        type: integer
+      id_tamanho:
+        type: integer
+      quantidade:
+        type: integer
+    type: object
+  model.EntregaParaInserir:
+    properties:
+      assinatura_digital:
+        type: string
+      data_entrega:
+        type: string
+      id_funcionario:
+        type: integer
+      id_troca:
+        description: Usei ponteiro para aceitar nulo
+        type: integer
+      id_user:
+        type: integer
+      itens:
+        items:
+          $ref: '#/definitions/model.ItemParaInserir'
+        minItems: 1
+        type: array
+    required:
+    - assinatura_digital
+    - data_entrega
+    - id_funcionario
+    - itens
+    type: object
+  model.EpiDashBord:
+    properties:
+      alerta_minimo:
+        type: integer
+      id:
+        type: integer
+      nome:
+        type: string
+    type: object
+  model.EpiDto:
+    properties:
+      alerta_minimo:
+        type: integer
+      ca:
+        type: string
+      descricao:
+        type: string
+      fabricante:
+        type: string
+      id:
+        type: integer
+      nome:
+        type: string
+      protecao:
+        $ref: '#/definitions/model.TipoProtecaoDto'
+      tamanhos:
+        description: Slive de objetos Tamanho (id e nome)
+        items:
+          $ref: '#/definitions/model.TamanhoDto'
+        type: array
+      validade_ca:
+        type: string
+    type: object
+  model.EpiDtoDevolucao:
+    properties:
+      alerta_minimo:
+        type: integer
+      ca:
+        type: string
+      descricao:
+        type: string
+      fabricante:
+        type: string
+      id:
+        type: integer
+      nome:
+        type: string
+      protecao:
+        $ref: '#/definitions/model.TipoProtecaoDto'
+      saldoAtual:
+        type: integer
+      tamanhos:
+        description: Slive de objetos Tamanho (id e nome)
+        items:
+          $ref: '#/definitions/model.TamanhoDto'
+        type: array
+      validade_ca:
+        type: string
+    type: object
+  model.EpiDtoEstoque:
+    properties:
+      alertaMinimo:
+        type: integer
+      ca:
+        type: string
+      descricao:
+        type: string
+      fabricante:
+        type: string
+      id:
+        type: integer
+      nome:
+        type: string
+      protecao:
+        $ref: '#/definitions/model.TipoProtecaoDto'
+      validadeCa:
+        type: string
+    type: object
+  model.EpiInserir:
+    properties:
+      alerta_minimo:
+        minimum: 0
+        type: integer
+      ca:
+        maxLength: 20
+        type: string
+      data_validade_ca:
+        type: string
+      descricao:
+        maxLength: 250
+        type: string
+      fabricante:
+        maxLength: 100
+        type: string
+      id_protecao:
+        type: integer
+      id_tamanho:
+        description: Lista de tamanhos permitidos para este EPI
+        items:
+          type: integer
+        minItems: 1
+        type: array
+      nome:
+        type: string
+    required:
+    - alerta_minimo
+    - ca
+    - data_validade_ca
+    - fabricante
+    - id_protecao
+    - id_tamanho
+    - nome
+    type: object
+  model.EpiResponse:
+    properties:
+      alerta_minimo:
+        type: integer
+      ca:
+        type: string
+      descricao:
+        type: string
+      fabricante:
+        type: string
+      id:
+        type: integer
+      nome:
+        type: string
+      protecao:
+        $ref: '#/definitions/model.TipoProtecaoDto'
+      validade_ca:
+        type: string
+    type: object
+  model.EpiSimples:
+    properties:
+      ca:
+        type: string
+      fabricante:
+        type: string
+      id:
+        type: integer
+      nome:
+        type: string
+    type: object
+  model.FornecedorSimples:
+    properties:
+      id:
+        type: integer
+      nome_fantasia:
+        type: string
+      razao_social:
+        type: string
+    type: object
   model.Funcao:
     properties:
       funcao:
@@ -46,6 +600,8 @@ definitions:
     type: object
   model.Funcionario_Dto:
     properties:
+      cpf:
+        type: string
       funcao:
         $ref: '#/definitions/model.FuncaoDto'
       id:
@@ -55,46 +611,226 @@ definitions:
       nome:
         type: string
     type: object
-  model.FuncionarioINserir:
+  model.FuncionarioCompletoDto:
     properties:
+      cpf:
+        type: string
+      entregas:
+        items:
+          $ref: '#/definitions/model.EntregaDoFuncionarioDto'
+        type: array
+      funcao:
+        $ref: '#/definitions/model.FuncaoDto'
+      id:
+        type: integer
+      matricula:
+        type: string
+      nome:
+        type: string
+    type: object
+  model.FuncionarioDashbord:
+    properties:
+      id:
+        type: integer
+      matricula:
+        type: string
+      nome:
+        type: string
+    type: object
+  model.FuncionarioInserir:
+    properties:
+      cpf:
+        type: string
       id_departamento:
         minimum: 1
         type: integer
       id_funcao:
         minimum: 1
         type: integer
-      matricula:
-        maxLength: 7
-        minLength: 7
-        type: string
       nome:
         maxLength: 150
         minLength: 3
         type: string
     required:
+    - cpf
     - id_departamento
     - id_funcao
-    - matricula
     - nome
+    type: object
+  model.ItemEntregueDto:
+    properties:
+      epi:
+        $ref: '#/definitions/model.EpiResponse'
+      id:
+        type: integer
+      quantidade:
+        type: integer
+      tamanho:
+        $ref: '#/definitions/model.TamanhoDto'
+    type: object
+  model.ItemParaInserir:
+    properties:
+      id_entrada_item:
+        description: "\U0001F511 NOVO: Precisamos saber de qual lote saiu!"
+        type: integer
+      id_epi:
+        type: integer
+      id_tamanho:
+        type: integer
+      quantidade:
+        type: integer
+    required:
+    - id_epi
+    - id_tamanho
+    - quantidade
+    type: object
+  model.ResumoDashboard:
+    properties:
+      empresasAtivas:
+        type: integer
+      empresasBloqueadas:
+        type: integer
+      empresasEmTeste:
+        type: integer
+      receitaMensal:
+        type: number
+      totalEmpresas:
+        type: integer
+      totalEntregas:
+        type: integer
+      totalEpis:
+        type: integer
+      totalFuncionarios:
+        type: integer
+    type: object
+  model.TamanhoDto:
+    properties:
+      id:
+        type: integer
+      tamanho:
+        type: string
+    type: object
+  model.TamanhoSimples:
+    properties:
+      id:
+        type: integer
+      tamanho:
+        type: string
+    type: object
+  model.TipoProtecaoDto:
+    properties:
+      id:
+        type: integer
+      nome:
+        type: string
+    type: object
+  model.UpdateEpiInput:
+    properties:
+      alerta_minimo:
+        type: integer
+      ca:
+        type: string
+      descricao:
+        type: string
+      fabricante:
+        type: string
+      id_protecao:
+        type: integer
+      nome:
+        type: string
+      tamanhos:
+        description: Se enviado, você deve resetar os tamanhos no banco
+        items:
+          type: integer
+        type: array
+      validade_ca:
+        type: string
     type: object
   model.UpdateFuncionarioRequest:
     properties:
+      cpf:
+        type: string
       id_departamento:
-        description: Ponteiro!
         type: integer
       id_funcao:
-        description: Ponteiro!
         type: integer
       nome:
-        description: Ponteiro! Se for nil, não atualiza
         type: string
+    type: object
+  service.DepartamentoPaginado:
+    properties:
+      departamentos:
+        items:
+          $ref: '#/definitions/model.DepartamentoDto'
+        type: array
+      pagina:
+        type: integer
+      paginaFinal:
+        type: integer
+      total:
+        type: integer
+    type: object
+  service.EntradaPaginada:
+    properties:
+      entradas:
+        items:
+          $ref: '#/definitions/model.EntradaEpiDto'
+        type: array
+      pagina:
+        type: integer
+      pagina_final:
+        type: integer
+      total:
+        type: integer
+    type: object
+  service.EntregaPaginada:
+    properties:
+      entregas:
+        items:
+          $ref: '#/definitions/model.EntregaDto'
+        type: array
+      pagina:
+        type: integer
+      pagina_final:
+        type: integer
+      total:
+        type: integer
+    type: object
+  service.EpiPaginado:
+    properties:
+      epis:
+        items:
+          $ref: '#/definitions/model.EpiDto'
+        type: array
+      pagina:
+        format: int32
+        type: integer
+      paginaFinal:
+        format: int32
+        type: integer
+      total:
+        format: int64
+        type: integer
+    type: object
+  service.FuncionarioPaginado:
+    properties:
+      funcionario:
+        items:
+          $ref: '#/definitions/model.Funcionario_Dto'
+        type: array
+      pagina:
+        type: integer
+      paginaFinal:
+        type: integer
+      total:
+        type: integer
     type: object
 host: localhost:8080
 info:
   contact:
     email: suporte@seusaas.com.br
     name: Suporte API
-    url: http://www.seusaas.com.br
+    url: http://www.radaptech.com.br
   description: API para gestão de EPIs.
   license:
     name: Apache 2.0
@@ -119,10 +855,9 @@ paths:
       - application/json
       responses:
         "201":
-          description: Created
+          description: Departamento criado
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
         "400":
           description: Dados inválidos
@@ -183,14 +918,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Cadastra um novo funcionario no sistema
+      description: Cadastra um novo funcionário no sistema
       parameters:
-      - description: Dados do funcionario
+      - description: Dados do funcionário
         in: body
         name: funcionario
         required: true
         schema:
-          $ref: '#/definitions/model.FuncionarioINserir'
+          $ref: '#/definitions/model.FuncionarioInserir'
       produces:
       - application/json
       responses:
@@ -205,7 +940,7 @@ paths:
           schema:
             $ref: '#/definitions/helper.HTTPError'
         "409":
-          description: Departamento já existe
+          description: Matrícula/Dados duplicados
           schema:
             $ref: '#/definitions/helper.HTTPError'
         "500":
@@ -214,12 +949,31 @@ paths:
             $ref: '#/definitions/helper.HTTPError'
       security:
       - BearerAuth: []
-      summary: Cadastrar novo funcionarios
+      summary: Cadastrar novo funcionário
       tags:
-      - funcionarios
+      - Funcionários
+  /dashboard:
+    get:
+      description: Retorna o resumo para o dashboard da empresa
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ResumoDashboard'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Dashboard
+      tags:
+      - Empresas
   /departamento/{id}:
     delete:
-      description: Remove (ou inativa) um departamento pelo ID
+      description: Remove um departamento pelo ID
       parameters:
       - description: ID do Departamento
         in: path
@@ -228,7 +982,7 @@ paths:
         type: integer
       responses:
         "204":
-          description: Sem Conteúdo (Sucesso)
+          description: Sem Conteúdo
         "400":
           description: ID inválido
           schema:
@@ -248,33 +1002,15 @@ paths:
       - Departamentos
   /departamentos:
     get:
-      description: Retorna uma lista com todos os departamentos
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.DepartamentoDto'
-            type: array
-        "500":
-          description: Erro interno
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-      security:
-      - BearerAuth: []
-      summary: Listar todos
-      tags:
-      - Departamentos
-  /departamentos/{id}:
-    get:
-      description: Retorna os detalhes de um único departamento
+      description: Retorna uma lista paginada de departamentos
       parameters:
-      - description: ID do Departamento
-        in: path
-        name: id
-        required: true
+      - description: Página da lista
+        in: query
+        name: pagina
+        type: integer
+      - description: Quantidade por página
+        in: query
+        name: quantidade
         type: integer
       produces:
       - application/json
@@ -282,13 +1018,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.DepartamentoDto'
+            $ref: '#/definitions/service.DepartamentoPaginado'
         "400":
-          description: ID inválido
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-        "404":
-          description: Não encontrado
+          description: Parâmetros inválidos
           schema:
             $ref: '#/definitions/helper.HTTPError'
         "500":
@@ -297,9 +1029,10 @@ paths:
             $ref: '#/definitions/helper.HTTPError'
       security:
       - BearerAuth: []
-      summary: Buscar por ID
+      summary: Listar departamentos
       tags:
       - Departamentos
+  /departamentos/{id}:
     put:
       consumes:
       - application/json
@@ -310,7 +1043,7 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Novo nome
+      - description: Dados do departamento
         in: body
         name: body
         required: true
@@ -326,7 +1059,7 @@ paths:
               type: string
             type: object
         "400":
-          description: Erro de validação (ID ou Nome curto)
+          description: Erro de validação
           schema:
             $ref: '#/definitions/helper.HTTPError'
         "404":
@@ -337,9 +1070,772 @@ paths:
           description: Erro interno
           schema:
             $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
       summary: Atualizar departamento
       tags:
       - Departamentos
+  /departamentos/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Faz upload de uma planilha .xlsx para cadastrar múltiplos departamentos
+      parameters:
+      - description: Arquivo de planilha (.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sucesso na importação
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Arquivo inválido ou vazio
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "401":
+          description: Sessão inválida
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Importar departamentos via XLSX
+      tags:
+      - Departamentos
+  /devolucao:
+    post:
+      consumes:
+      - application/json
+      description: Registra uma nova devolução de EPI com assinatura digital
+      parameters:
+      - description: Dados da devolução
+        in: body
+        name: devolucao
+        required: true
+        schema:
+          $ref: '#/definitions/model.DevolucaoInserir'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sucesso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Entidade não processável
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Adicionar devolução
+      tags:
+      - Devoluções
+  /devolucao/pdf/{id}:
+    get:
+      description: Gera e faz o download da ficha de devolução em formato PDF
+      parameters:
+      - description: ID da devolução
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Não encontrado
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Gerar ficha de devolução PDF
+      tags:
+      - Devoluções
+  /devolucoes:
+    get:
+      description: Retorna a lista de todas as devoluções registradas para o tenant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.DevolucaoResponse'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Listar devoluções
+      tags:
+      - Devoluções
+  /empresa:
+    post:
+      consumes:
+      - application/json
+      description: Cadastra uma nova empresa no sistema
+      parameters:
+      - description: Dados da empresa
+        in: body
+        name: empresa
+        required: true
+        schema:
+          $ref: '#/definitions/model.EmpresaInserir'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Empresa criada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Criar empresa
+      tags:
+      - Empresas
+  /empresa/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Atualiza os dados de uma empresa existente
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.EditarEmpresaRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Sem conteúdo (Sucesso)
+        "400":
+          description: ID ou dados inválidos
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAut: []
+      summary: Editar empresa
+      tags:
+      - Empresas
+  /empresas:
+    get:
+      description: Retorna uma lista com todas as empresas
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Empresa'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Listar empresas
+      tags:
+      - Empresas
+  /empresas/recentes:
+    get:
+      description: Lista as empresas adicionadas recentemente
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EmpresaRecente'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Empresas recentes
+      tags:
+      - Empresas
+  /entradas:
+    get:
+      description: Retorna uma lista paginada de entradas de EPIs
+      parameters:
+      - description: Página
+        in: query
+        name: pagina
+        type: integer
+      - description: Quantidade por página
+        in: query
+        name: quantidade
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.EntradaPaginada'
+        "400":
+          description: Parâmetros inválidos
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAut: []
+      summary: Listar entradas
+      tags:
+      - Entradas
+    post:
+      consumes:
+      - application/json
+      description: Registra a entrada de novos EPIs no estoque
+      parameters:
+      - description: Dados da entrada
+        in: body
+        name: entrada
+        required: true
+        schema:
+          $ref: '#/definitions/model.EntradaEpiInserir'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Entrada cadastrada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Erro de validação (Data, Conflito, Duplicidade)
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Adicionar entrada de EPI
+      tags:
+      - Entradas
+  /entradas/{id}:
+    delete:
+      description: Cancela uma entrada de EPI pelo ID
+      parameters:
+      - description: ID da entrada
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "404":
+          description: Entrada não encontrada
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Cancelar entrada
+      tags:
+      - Entradas
+  /entradas/dashboard:
+    get:
+      description: Retorna dados resumidos das entradas para o dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EntradaDashbord'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Resumo das entradas para dashboard
+      tags:
+      - Entradas
+  /entradas/estoque:
+    get:
+      description: Retorna entradas relevantes para consulta de estoque
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EntradaEstoqueDto'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Entradas para estoque
+      tags:
+      - Entradas
+  /entregas:
+    get:
+      description: Retorna uma lista paginada de entregas de EPIs
+      parameters:
+      - description: Página
+        in: query
+        name: pagina
+        type: integer
+      - description: Quantidade por página
+        in: query
+        name: quantidade
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.EntregaPaginada'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Listar entregas
+      tags:
+      - Entregas
+    post:
+      consumes:
+      - application/json
+      description: Registra uma nova entrega de EPI com assinatura digital e auditoria
+      parameters:
+      - description: Dados da entrega
+        in: body
+        name: entrega
+        required: true
+        schema:
+          $ref: '#/definitions/model.EntregaParaInserir'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Entrega cadastrada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Erro de validação (Estoque, Funcionário)
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Registrar entrega de EPI
+      tags:
+      - Entregas
+  /entregas/{id}:
+    delete:
+      description: Cancela uma entrega de EPI pelo ID
+      parameters:
+      - description: ID da entrega
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Sem conteúdo
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "404":
+          description: Entrega não encontrada
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAu: []
+      summary: Cancelar entrega
+      tags:
+      - Entregas
+  /entregas/dashboard:
+    get:
+      description: Retorna estatísticas de entregas para visualização em dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EntregaDashbord'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Resumo das entregas para dashboard
+      tags:
+      - Entregas
+  /entregas/itens/dashboard:
+    get:
+      description: Retorna estatísticas detalhadas por item para o dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EntregaItensDashBord'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Resumo dos itens entregues para dashboard
+      tags:
+      - Entregas
+  /entregas/pdf/{id}/{matricula}:
+    get:
+      description: Gera e faz o download da ficha de entrega em formato PDF
+      parameters:
+      - description: ID da entrega
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Matrícula do funcionário
+        in: path
+        name: matricula
+        required: true
+        type: string
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Dados não encontrados
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Gerar ficha de entrega PDF
+      tags:
+      - Entregas
+  /epis:
+    get:
+      description: Retorna uma lista paginada de EPIs
+      parameters:
+      - description: Página
+        in: query
+        name: pagina
+        type: integer
+      - description: Quantidade por página
+        in: query
+        name: quantidade
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.EpiPaginado'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Listar EPIs
+      tags:
+      - EPIs
+    post:
+      consumes:
+      - application/json
+      description: Adiciona um novo EPI ao estoque da empresa
+      parameters:
+      - description: Dados do EPI
+        in: body
+        name: epi
+        required: true
+        schema:
+          $ref: '#/definitions/model.EpiInserir'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: EPI cadastrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: CA já registrado
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Erro de validação (Data, Integridade)
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Cadastrar novo EPI
+      tags:
+      - EPIs
+  /epis/{id}:
+    delete:
+      description: Remove um EPI do cadastro
+      parameters:
+      - description: ID do EPI
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Sem conteúdo
+        "404":
+          description: EPI não encontrado
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Deletar EPI
+      tags:
+      - EPIs
+    get:
+      description: Retorna os detalhes de um EPI específico
+      parameters:
+      - description: ID do EPI
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.EpiDto'
+        "422":
+          description: EPI não encontrado
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAut: []
+      summary: Buscar EPI por ID
+      tags:
+      - EPIs
+    put:
+      consumes:
+      - application/json
+      description: Atualiza os dados de um EPI existente
+      parameters:
+      - description: ID do EPI
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados para atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateEpiInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sucesso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: CA já cadastrado
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "422":
+          description: Erro de validação
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Atualizar EPI
+      tags:
+      - EPIs
+  /epis/dashboard:
+    get:
+      description: Retorna dados resumidos para o dashboard de EPIs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EpiDashBord'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Dashboard de EPIs
+      tags:
+      - EPIs
+  /epis/funcionario/{id}:
+    get:
+      description: Retorna a lista de EPIs vinculados a um funcionário específico
+      parameters:
+      - description: ID do Funcionário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.EpiDtoDevolucao'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: EPIs por funcionário
+      tags:
+      - EPIs
   /funcao/{id}:
     delete:
       description: Remove (ou inativa) uma funcao pelo ID
@@ -367,38 +1863,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Deletar funcao
-      tags:
-      - funcao
-    get:
-      description: Retorna os detalhes de uma unica funcao
-      parameters:
-      - description: ID da funcao
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.FuncaoDto'
-        "400":
-          description: ID inválido
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-        "404":
-          description: Não encontrado
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-        "500":
-          description: Erro interno
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-      security:
-      - BearerAuth: []
-      summary: Buscar por ID
       tags:
       - funcao
     put:
@@ -443,16 +1907,16 @@ paths:
       - funcao
   /funcionario/{id}:
     delete:
-      description: Remove (ou inativa) um funcionario pelo ID
+      description: Remove um funcionário pelo ID
       parameters:
-      - description: ID do funcionario
+      - description: ID do funcionário
         in: path
         name: id
         required: true
         type: integer
       responses:
         "204":
-          description: Sem Conteúdo (Sucesso)
+          description: Sem Conteúdo
         "400":
           description: ID inválido
           schema:
@@ -467,20 +1931,20 @@ paths:
             $ref: '#/definitions/helper.HTTPError'
       security:
       - BearerAuth: []
-      summary: Deletar funcionario
+      summary: Deletar funcionário
       tags:
-      - funcionarios
+      - Funcionários
     patch:
       consumes:
       - application/json
-      description: Atualiza os dados de um funcionario existente
+      description: Atualiza os dados de um funcionário existente
       parameters:
-      - description: ID do funcionario
+      - description: ID do funcionário
         in: path
         name: id
         required: true
         type: integer
-      - description: funcionario novos dados
+      - description: Novos dados do funcionário
         in: body
         name: body
         required: true
@@ -496,38 +1960,7 @@ paths:
               type: string
             type: object
         "400":
-          description: Erro de validação (ID ou Nome curto)
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-        "404":
-          description: Não encontrado
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-        "500":
-          description: Erro interno
-          schema:
-            $ref: '#/definitions/helper.HTTPError'
-      summary: Atualizar funcionario
-      tags:
-      - funcionarios
-  /funcionario/{matricula}:
-    get:
-      description: Retorna os detalhes de um único funcionario
-      parameters:
-      - description: matricula do funcionario
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.Funcionario_Dto'
-        "400":
-          description: ID inválido
+          description: Dados inválidos
           schema:
             $ref: '#/definitions/helper.HTTPError'
         "404":
@@ -540,21 +1973,57 @@ paths:
             $ref: '#/definitions/helper.HTTPError'
       security:
       - BearerAuth: []
-      summary: Buscar por matricula
+      summary: Atualizar funcionário
       tags:
-      - funcionarios
-  /funcionarios:
+      - Funcionários
+  /funcionario/{matricula}:
     get:
-      description: Retorna uma lista com todos os funcionarios
+      description: Retorna os detalhes de um único funcionário
+      parameters:
+      - description: Matrícula do funcionário
+        in: path
+        name: matricula
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.Funcionario_Dto'
-            type: array
+            $ref: '#/definitions/model.Funcionario_Dto'
+        "404":
+          description: Não encontrado
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Buscar por matrícula
+      tags:
+      - Funcionários
+  /funcionarios:
+    get:
+      description: Retorna uma lista paginada de funcionários
+      parameters:
+      - description: Página
+        in: query
+        name: pagina
+        type: integer
+      - description: Quantidade por página
+        in: query
+        name: quantidade
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.FuncionarioPaginado'
         "500":
           description: Erro interno
           schema:
@@ -563,7 +2032,49 @@ paths:
       - BearerAuth: []
       summary: Listar todos
       tags:
-      - funcionarios
+      - Funcionários
+  /funcionarios/completo:
+    get:
+      description: Retorna uma lista detalhada de todos os funcionários
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.FuncionarioCompletoDto'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAut: []
+      summary: Listar funcionários completos
+      tags:
+      - Funcionários
+  /funcionarios/dashboard:
+    get:
+      description: Retorna resumo dos funcionários para o dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.FuncionarioDashbord'
+            type: array
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/helper.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Dashboard de funcionários
+      tags:
+      - Funcionários
   /funcoes:
     get:
       description: Retorna uma lista com todos os funcoes
