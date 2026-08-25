@@ -32,6 +32,11 @@ make migration nome-da-migracao
 
 # Gerar docs Swagger (anotações nos controllers + main.go)
 swag init
+
+# Backup do banco no Cloudflare R2 (pg_dump + upload). Precisa do pg_dump no PATH —
+# localmente ele só existe dentro da imagem de produção, ver docs/BACKUP.md
+make backup-banco    # = go run . backup-banco
+./main backup-banco  # binário compilado (é o que roda no cron do Railway)
 ```
 
 ### Subir o ambiente completo (Docker)
@@ -211,6 +216,28 @@ Gerada por **trigger no Postgres** (`trigger_gerar_matricula`, migração 000016
 se `matricula IS NULL`, calcula `MAX(matricula)+1` dentro do mesmo `tenant_id`. Não gere matrícula
 na aplicação.
 
+### Backup do banco (Cloudflare R2)
+
+`main.go` despacha um subcomando: `./main backup-banco` chama `ExecutarBackupBanco` (`cli_bancoBackup.go`)
+e **encerra sem subir a API**; sem argumento, sobe a API normalmente. O fluxo é
+`pg_dump --format=custom` → arquivo temporário → `helper.UploadArquivo` (`internal/helper/R2_backups.go`,
+`aws-sdk-go-v2` apontado pro endpoint do R2) na key `backups/YYYYMMDD-HHMMSS.dump`.
+
+`InitR2_cloudflare` lê as credenciais com `os.Getenv`, então **precisa rodar depois de
+`configs.NewVariaveisAmbiente()`** (que é quem chama o `godotenv.Load`) — invertendo a ordem, a chave
+vem vazia e o R2 devolve 401.
+
+O `pg_dump` vem do pacote `postgresql17-client` instalado no `Dockerfile` de produção; na máquina de
+dev ele normalmente não existe, então teste pela imagem:
+
+```bash
+docker build -t sgeepi-backup-test .
+docker run --rm --network sgeepi-infra_default --env-file .env sgeepi-backup-test ./main backup-banco
+```
+
+Nada no código agenda o backup — quem chama `./main backup-banco` é o cron do Railway. Retenção dos dumps
+é regra de lifecycle no bucket. Detalhes, verificação do upload e restauração: `docs/BACKUP.md`.
+
 ### Limites de plano
 
 `UsuarioService.Registrar` compara `TotalDeUsuario` com `planos.limite_usuarios` e retorna
@@ -344,6 +371,7 @@ Copie `.env-example` para `.env` (o `.env` está no `.gitignore`).
 | `RESEND_API_KEY` | Envio de e-mail de recuperação de senha (Resend) |
 | `URL_FRONTEND_FORMATO` | Template do link de redefinição, ex.: `http://%s:3000` (`%s` = subdomínio) |
 | `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` | Seed do super admin no boot |
+| `R2_IDCLOUDFLARE`, `R2_KEYID`, `R2_SECRETKEY`, `R2_BUCKET_NAME_BACKUPS` | Backup do banco no R2 — só usadas por `./main backup-banco` |
 
 ---
 
@@ -380,8 +408,10 @@ validadores entram no mesmo bloco.
 - **A migração 000001 usa o nome `000001_CreateTables.sql.up.sql`** (com `.sql` extra no meio) —
   siga o padrão limpo `NNNNNN_nome.up.sql` nas novas.
 - **Os targets `migrate-up`/`migrate-down` do `makefile` chamam `go run main.go Up|Down`**, mas o
-  `main.go` não lê argumentos de linha de comando — rodar isso sobe a aplicação inteira. Migrações
-  são aplicadas no boot; para reverter, use a CLI do `golang-migrate` diretamente.
+  único argumento que o `main.go` reconhece é `backup-banco` — qualquer outro sobe a aplicação inteira.
+  Migrações são aplicadas no boot; para reverter, use a CLI do `golang-migrate` diretamente.
+- **O `FROM golang:` dos Dockerfiles precisa acompanhar a linha `go` do `go.mod`.** Com `go 1.26.5`
+  no `go.mod` e uma imagem `1.26.1`, o `go mod download` falha no build (`GOTOOLCHAIN=local`).
 - **`golang-migrate` procura `file://database/migrate` relativo ao working dir.** Rodar o binário de
   outra pasta quebra o boot (por isso o `Dockerfile` copia `database/migrate` para junto dele).
 - **`repository.Queries` não tem `sqlc.embed` nem RLS**: repetir `tenant_id` em cada query é
