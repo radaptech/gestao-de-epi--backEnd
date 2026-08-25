@@ -35,6 +35,20 @@ func NewEpiController(service EpiService) *EpiController {
 	}
 }
 
+
+// AdicionarEpi godoc
+// @Summary      Cadastrar novo EPI
+// @Description  Adiciona um novo EPI ao estoque da empresa
+// @Tags         EPIs
+// @Accept       json
+// @Produce      json
+// @Param        epi body model.EpiInserir true "Dados do EPI"
+// @Success      200  {object}  map[string]string "EPI cadastrado"
+// @Failure      409  {object}  helper.HTTPError "CA já registrado"
+// @Failure      422  {object}  helper.HTTPError "Erro de validação (Data, Integridade)"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis [post]
+// @Security     BearerAuth
 func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -112,6 +126,17 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 	}
 }
 
+// ListarEpis godoc
+// @Summary      Listar EPIs
+// @Description  Retorna uma lista paginada de EPIs
+// @Tags         EPIs
+// @Produce      json
+// @Param        pagina     query    int     false  "Página"
+// @Param        quantidade query    int     false  "Quantidade por página"
+// @Success      200  {object}  service.EpiPaginado
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis [get]
+// @Security     BearerAuth
 func (e *EpiController) ListarEpis() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -152,6 +177,17 @@ func (e *EpiController) ListarEpis() gin.HandlerFunc {
 	}
 }
 
+// ListarEpiPorId godoc
+// @Summary      Buscar EPI por ID
+// @Description  Retorna os detalhes de um EPI específico
+// @Tags         EPIs
+// @Param        id   path      int  true  "ID do EPI"
+// @Produce      json
+// @Success      200  {object}  model.EpiDto
+// @Failure      422  {object}  helper.HTTPError "EPI não encontrado"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis/{id} [get]
+// @Security     BearerAut
 func (e *EpiController) ListarEpiPorId() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -195,6 +231,16 @@ func (e *EpiController) ListarEpiPorId() gin.HandlerFunc {
 	}
 }
 
+// DeletarEpi godoc
+// @Summary      Deletar EPI
+// @Description  Remove um EPI do cadastro
+// @Tags         EPIs
+// @Param        id   path      int  true  "ID do EPI"
+// @Success      204  "Sem conteúdo"
+// @Failure      404  {object}  helper.HTTPError "EPI não encontrado"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis/{id} [delete]
+// @Security     BearerAuth
 func (e *EpiController) DeletarEpi() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -238,6 +284,20 @@ func (e *EpiController) DeletarEpi() gin.HandlerFunc {
 	}
 }
 
+// AtualizaEpi godoc
+// @Summary      Atualizar EPI
+// @Description  Atualiza os dados de um EPI existente
+// @Tags         EPIs
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int                   true  "ID do EPI"
+// @Param        body body      model.UpdateEpiInput  true  "Dados para atualização"
+// @Success      200  {object}  map[string]string "Sucesso"
+// @Failure      409  {object}  helper.HTTPError "CA já cadastrado"
+// @Failure      422  {object}  helper.HTTPError "Erro de validação"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis/{id} [put]
+// @Security     BearerAuth
 func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -327,6 +387,15 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 	}
 }
 
+// ListarEpiDashborController godoc
+// @Summary      Dashboard de EPIs
+// @Description  Retorna dados resumidos para o dashboard de EPIs
+// @Tags         EPIs
+// @Produce      json
+// @Success      200  {array}   model.EpiDashBord
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis/dashboard [get]
+// @Security     BearerAuth
 func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -350,6 +419,16 @@ func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
 	}
 }
 
+// ListarEpiFuncionario godoc
+// @Summary      EPIs por funcionário
+// @Description  Retorna a lista de EPIs vinculados a um funcionário específico
+// @Tags         EPIs
+// @Param        id   path      int  true  "ID do Funcionário"
+// @Produce      json
+// @Success      200  {array}   model.EpiDtoDevolucao
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /epis/funcionario/{id} [get]
+// @Security     BearerAuth
 func (e *EpiController) ListarEpiFuncionario() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

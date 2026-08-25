@@ -33,6 +33,19 @@ func NewEntradaController(service EntradaService) *EntradaController {
 	}
 }
 
+// AdicionarEntrada godoc
+// @Summary      Adicionar entrada de EPI
+// @Description  Registra a entrada de novos EPIs no estoque
+// @Tags         Entradas
+// @Accept       json
+// @Produce      json
+// @Param        entrada body model.EntradaEpiInserir true "Dados da entrada"
+// @Success      200  {object}  map[string]string "Entrada cadastrada"
+// @Failure      400  {object}  helper.HTTPError "Dados inválidos"
+// @Failure      422  {object}  helper.HTTPError "Erro de validação (Data, Conflito, Duplicidade)"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entradas [post]
+// @Security     BearerAuth
 func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -124,6 +137,18 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 	}
 }
 
+// ListarEntradas godoc
+// @Summary      Listar entradas
+// @Description  Retorna uma lista paginada de entradas de EPIs
+// @Tags         Entradas
+// @Produce      json
+// @Param        pagina     query    int     false  "Página"
+// @Param        quantidade query    int     false  "Quantidade por página"
+// @Success      200  {object}  service.EntradaPaginada
+// @Failure      400  {object}  helper.HTTPError "Parâmetros inválidos"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entradas [get]
+// @Security     BearerAut
 func (e *EntradaController) ListarEntradas() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -171,6 +196,17 @@ func (e *EntradaController) ListarEntradas() gin.HandlerFunc {
 	}
 }
 
+// CancelarEntrada godoc
+// @Summary      Cancelar entrada
+// @Description  Cancela uma entrada de EPI pelo ID
+// @Tags         Entradas
+// @Param        id   path      int  true  "ID da entrada"
+// @Success      204  "Sem conteúdo"
+// @Failure      400  {object}  helper.HTTPError "ID inválido"
+// @Failure      404  {object}  helper.HTTPError "Entrada não encontrada"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entradas/{id} [delete]
+// @Security     BearerAuth
 func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -234,6 +270,15 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 	}
 }
 
+// BuscaEntradaDashbord godoc
+// @Summary      Resumo das entradas para dashboard
+// @Description  Retorna dados resumidos das entradas para o dashboard
+// @Tags         Entradas
+// @Produce      json
+// @Success      200  {array}   model.EntradaDashbord
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entradas/dashboard [get]
+// @Security     BearerAuth
 func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -258,6 +303,15 @@ func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 	}
 }
 
+// BuscaEntradaEstoque godoc
+// @Summary      Entradas para estoque
+// @Description  Retorna entradas relevantes para consulta de estoque
+// @Tags         Entradas
+// @Produce      json
+// @Success      200  {array}   model.EntradaEstoqueDto
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /entradas/estoque [get]
+// @Security     BearerAuth
 func (e *EntradaController) BuscaEntradaEstoque() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

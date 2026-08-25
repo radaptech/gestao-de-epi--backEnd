@@ -2,6 +2,7 @@ package routers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/controller"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"golang.org/x/time/rate"
 )
 
 type Container struct {
@@ -136,10 +138,12 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	api.Use(middleware.TenantMiddleware(queries))
 	{
 
-		api.POST("/login", c.Usuario.Login())
+		// Rate limit: 5 tentativas de imediato, depois 1 nova a cada 12s por IP
+		api.POST("/login", middleware.LimitarPorIP(rate.Every(12*time.Second), 5), c.Usuario.Login())
 
 		api.POST("/logout", c.Usuario.Logout())
-		api.POST("/esqueci-minha-senha", c.Usuario.SalvarToken())
+		// Rate limit: 3 tentativas de imediato, depois 1 nova por minuto por IP (evita spam de e-mail)
+		api.POST("/esqueci-minha-senha", middleware.LimitarPorIP(rate.Every(time.Minute), 3), c.Usuario.SalvarToken())
 		api.POST("/redefinir-senha", c.Usuario.RedefinirSenha())
 	}
 

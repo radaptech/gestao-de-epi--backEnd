@@ -31,6 +31,19 @@ func NewDepartamentoController(service DepartamentoService) *DepartamentoControl
 	return &DepartamentoController{service: service}
 }
 
+// ImportDepartamentoXLSX godoc
+// @Summary      Importar departamentos via XLSX
+// @Description  Faz upload de uma planilha .xlsx para cadastrar múltiplos departamentos
+// @Tags         Departamentos
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file formData file true "Arquivo de planilha (.xlsx)"
+// @Success      200  {object}  map[string]interface{} "Sucesso na importação"
+// @Failure      400  {object}  helper.HTTPError "Arquivo inválido ou vazio"
+// @Failure      401  {object}  helper.HTTPError "Sessão inválida"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /departamentos/import [post]
+// @Security     BearerAuth
 func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -156,7 +169,7 @@ func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
 // @Accept       json
 // @Produce      json
 // @Param        departamento body model.Departamento true "Dados do departamento"
-// @Success      201  {object}  map[string]string
+// @Success      201  {object}  map[string]interface{} "Departamento criado"
 // @Failure      400  {object}  helper.HTTPError "Dados inválidos"
 // @Failure      409  {object}  helper.HTTPError "Departamento já existe"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
@@ -212,11 +225,14 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 }
 
 // ListarDepartamentos godoc
-// @Summary      Listar todos
-// @Description  Retorna uma lista com todos os departamentos
+// @Summary      Listar departamentos
+// @Description  Retorna uma lista paginada de departamentos
 // @Tags         Departamentos
 // @Produce      json
-// @Success      200  {array}   model.DepartamentoDto
+// @Param        pagina     query    int     false  "Página da lista"
+// @Param        quantidade query    int     false  "Quantidade por página"
+// @Success      200  {object}  service.DepartamentoPaginado
+// @Failure      400  {object}  helper.HTTPError "Parâmetros inválidos"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
 // @Router       /departamentos [get]
 // @Security     BearerAuth
@@ -265,12 +281,13 @@ func (d *DepartamentoController) ListarDepartamentos() gin.HandlerFunc {
 	}
 }
 
+
 // DeletarDepartamento godoc
 // @Summary      Deletar departamento
-// @Description  Remove (ou inativa) um departamento pelo ID
+// @Description  Remove um departamento pelo ID
 // @Tags         Departamentos
 // @Param        id   path      int  true  "ID do Departamento"
-// @Success      204  "Sem Conteúdo (Sucesso)"
+// @Success      204  "Sem Conteúdo"
 // @Failure      400  {object}  helper.HTTPError "ID inválido"
 // @Failure      404  {object}  helper.HTTPError "Não encontrado"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
@@ -326,13 +343,14 @@ func (d *DepartamentoController) DeletarDepartamento() gin.HandlerFunc {
 // @Tags         Departamentos
 // @Accept       json
 // @Produce      json
-// @Param        id   path      int                      true  "ID do Departamento"
-// @Param        body body      model.Departamento true  "Novo nome"
-// @Success      200  {object}  map[string]string "Sucesso"
-// @Failure      400  {object}  helper.HTTPError "Erro de validação (ID ou Nome curto)"
-// @Failure      404  {object}  helper.HTTPError "Não encontrado"
-// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Param        id   path      int                true  "ID do Departamento"
+// @Param        body body      model.Departamento true  "Dados do departamento"
+// @Success      200  {object}  map[string]string  "Sucesso"
+// @Failure      400  {object}  helper.HTTPError   "Erro de validação"
+// @Failure      404  {object}  helper.HTTPError   "Não encontrado"
+// @Failure      500  {object}  helper.HTTPError   "Erro interno"
 // @Router       /departamentos/{id} [put]
+// @Security     BearerAuth
 func (d *DepartamentoController) AtualizarDepartamento() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

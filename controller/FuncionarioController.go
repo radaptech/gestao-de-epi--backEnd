@@ -34,16 +34,16 @@ func NewFuncionarioController(service FuncionarioService) *FuncionarioController
 	}
 }
 
-// RegistraDepartamento godoc
-// @Summary      Cadastrar novo funcionarios
-// @Description  Cadastra um novo funcionario no sistema
-// @Tags         funcionarios
+// Adicionar godoc
+// @Summary      Cadastrar novo funcionário
+// @Description  Cadastra um novo funcionário no sistema
+// @Tags         Funcionários
 // @Accept       json
 // @Produce      json
-// @Param        funcionario body model.FuncionarioINserir true "Dados do funcionario"
+// @Param        funcionario body model.FuncionarioInserir true "Dados do funcionário"
 // @Success      201  {object}  map[string]string
 // @Failure      400  {object}  helper.HTTPError "Dados inválidos"
-// @Failure      409  {object}  helper.HTTPError "Departamento já existe"
+// @Failure      409  {object}  helper.HTTPError "Matrícula/Dados duplicados"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
 // @Router       /cadastro-funcionario [post]
 // @Security     BearerAuth
@@ -120,10 +120,12 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 
 // ListarFuncionarios godoc
 // @Summary      Listar todos
-// @Description  Retorna uma lista com todos os funcionarios
-// @Tags         funcionarios
+// @Description  Retorna uma lista paginada de funcionários
+// @Tags         Funcionários
 // @Produce      json
-// @Success      200  {array}   model.Funcionario_Dto
+// @Param        pagina     query    int     false  "Página"
+// @Param        quantidade query    int     false  "Quantidade por página"
+// @Success      200  {object}  service.FuncionarioPaginado
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
 // @Router       /funcionarios [get]
 // @Security     BearerAuth
@@ -168,14 +170,14 @@ func (f *FuncionarioController) ListarFuncionarios() gin.HandlerFunc {
 	}
 }
 
+
 // ListarFuncionarioPorMatricula godoc
-// @Summary      Buscar por matricula
-// @Description  Retorna os detalhes de um único funcionario
-// @Tags         funcionarios
+// @Summary      Buscar por matrícula
+// @Description  Retorna os detalhes de um único funcionário
+// @Tags         Funcionários
 // @Produce      json
-// @Param        id   path      int  true  "matricula do funcionario"
+// @Param        matricula path string true  "Matrícula do funcionário"
 // @Success      200  {object}  model.Funcionario_Dto
-// @Failure      400  {object}  helper.HTTPError "ID inválido"
 // @Failure      404  {object}  helper.HTTPError "Não encontrado"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
 // @Router       /funcionario/{matricula} [get]
@@ -215,12 +217,12 @@ func (f *FuncionarioController) ListarFuncionarioPorMatricula() gin.HandlerFunc 
 	}
 }
 
-// DeletarFuncionaioI godoc
-// @Summary      Deletar funcionario
-// @Description  Remove (ou inativa) um funcionario pelo ID
-// @Tags         funcionarios
-// @Param        id   path      int  true  "ID do funcionario"
-// @Success      204  "Sem Conteúdo (Sucesso)"
+// DeletarFuncionaioId godoc
+// @Summary      Deletar funcionário
+// @Description  Remove um funcionário pelo ID
+// @Tags         Funcionários
+// @Param        id   path      int  true  "ID do funcionário"
+// @Success      204  "Sem Conteúdo"
 // @Failure      400  {object}  helper.HTTPError "ID inválido"
 // @Failure      404  {object}  helper.HTTPError "Não encontrado"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
@@ -272,18 +274,19 @@ func (f *FuncionarioController) DeletarFuncionaioId() gin.HandlerFunc {
 }
 
 // AtualizaFuncionario godoc
-// @Summary      Atualizar funcionario
-// @Description  Atualiza os dados de um funcionario existente
-// @Tags         funcionarios
+// @Summary      Atualizar funcionário
+// @Description  Atualiza os dados de um funcionário existente
+// @Tags         Funcionários
 // @Accept       json
 // @Produce      json
-// @Param        id   path      int                      true  "ID do funcionario"
-// @Param        body body      model.UpdateFuncionarioRequest true  "funcionario novos dados"
+// @Param        id   path      int                            true  "ID do funcionário"
+// @Param        body body      model.UpdateFuncionarioRequest true  "Novos dados do funcionário"
 // @Success      200  {object}  map[string]string "Sucesso"
-// @Failure      400  {object}  helper.HTTPError "Erro de validação (ID ou Nome curto)"
+// @Failure      400  {object}  helper.HTTPError "Dados inválidos"
 // @Failure      404  {object}  helper.HTTPError "Não encontrado"
 // @Failure      500  {object}  helper.HTTPError "Erro interno"
 // @Router       /funcionario/{id} [patch]
+// @Security     BearerAuth
 func (f *FuncionarioController) AtualizaFuncionario() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -358,6 +361,15 @@ func (f *FuncionarioController) AtualizaFuncionario() gin.HandlerFunc {
 	}
 }
 
+// BuscaFuncionarioDashbord godoc
+// @Summary      Dashboard de funcionários
+// @Description  Retorna resumo dos funcionários para o dashboard
+// @Tags         Funcionários
+// @Produce      json
+// @Success      200  {array}   model.FuncionarioDashbord
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /funcionarios/dashboard [get]
+// @Security     BearerAuth
 func (f *FuncionarioController) BuscaFuncionarioDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -384,6 +396,15 @@ func (f *FuncionarioController) BuscaFuncionarioDashbord() gin.HandlerFunc {
 	}
 }
 
+// FuncionarioCompleto godoc
+// @Summary      Listar funcionários completos
+// @Description  Retorna uma lista detalhada de todos os funcionários
+// @Tags         Funcionários
+// @Produce      json
+// @Success      200  {array}   model.FuncionarioCompletoDto
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /funcionarios/completo [get]
+// @Security     BearerAut
 func (f *FuncionarioController) FuncionarioCompleto() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

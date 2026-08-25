@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
@@ -32,11 +33,24 @@ import (
 // @name Authorization
 func main() {
 
+	if len(os.Args) > 1 && os.Args[1] == "backup-banco" {
+		ExecutarBackupBanco(os.Args[2:])
+		return
+	}
+
 	postgressConnection := configs.ConexaoDbPostgres{}
 
 	init := configs.Init{Conexao: &postgressConnection}
 
 	router := gin.Default()
+
+	// Só confia em requisições encaminhadas pela rede interna do proxy (Traefik).
+	// Sem isso, o Gin confia em QUALQUER X-Forwarded-For, permitindo que o
+	// cliente forje seu próprio IP e burle o rate limit por IP (ver middleware.LimitarPorIP).
+	// Ajuste o CIDR se a rede de produção do proxy reverso for diferente.
+	if err := router.SetTrustedProxies([]string{"172.16.0.0/12"}); err != nil {
+		log.Fatal(err)
+	}
 
 	router.Use(middleware.CorsConfig(), middleware.SecurityHeaders())
 

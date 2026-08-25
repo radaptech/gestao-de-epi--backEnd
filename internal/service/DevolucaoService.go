@@ -158,6 +158,12 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 
 	}
 
+	// Observacao é opcional (*string) - pode vir nil quando o campo é omitido do JSON
+	var observacao string
+	if modelDevolucao.Observacao != nil {
+		observacao = *modelDevolucao.Observacao
+	}
+
 	// Registra a devolução/troca na tabela principal
 	arg := repository.AddTrocaEpiParams{
 		TenantID:              tenantId,
@@ -174,7 +180,7 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 		IDUsuarioCancelamento: pgtype.Int4{Int32: int32(modelDevolucao.Iduser), Valid: true},
 		TokenValidacao:        pgtype.Text{String: token, Valid: true},
 		HouveTroca: pgtype.Bool{Bool: modelDevolucao.Troca, Valid: true},
-		Observacao: pgtype.Text{String: *modelDevolucao.Observacao, Valid: *modelDevolucao.Observacao == ""},
+		Observacao: pgtype.Text{String: observacao, Valid: observacao != ""},
 	}
 
 	idDevolucao, err := d.repo.AdicionarTroca(ctx, qtx, arg)

@@ -183,7 +183,7 @@ func (l *LoginController) Logout() gin.HandlerFunc {
 			"",
 			-1,
 			"/",
-			"localhost",
+			"",
 			false,
 			true,
 		)

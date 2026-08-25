@@ -30,6 +30,18 @@ func NewEmpresaController(serv EmpresaService) *EmpresaController {
 	}
 }
 
+// Salvar godoc
+// @Summary      Criar empresa
+// @Description  Cadastra uma nova empresa no sistema
+// @Tags         Empresas
+// @Accept       json
+// @Produce      json
+// @Param        empresa body model.EmpresaInserir true "Dados da empresa"
+// @Success      201  {object}  map[string]string "Empresa criada"
+// @Failure      400  {object}  helper.HTTPError "Dados inválidos"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /empresa [post]
+// @Security     BearerAuth
 func (e *EmpresaController) Salvar() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input model.EmpresaInserir
@@ -59,6 +71,16 @@ func (e *EmpresaController) Salvar() gin.HandlerFunc {
 	}
 }
 
+
+// ResumoDashboard godoc
+// @Summary      Dashboard
+// @Description  Retorna o resumo para o dashboard da empresa
+// @Tags         Empresas
+// @Produce      json
+// @Success      200  {object}  model.ResumoDashboard
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /dashboard [get]
+// @Security     BearerAuth
 func (e *EmpresaController) ResumoDashboard() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -78,6 +100,16 @@ func (e *EmpresaController) ResumoDashboard() gin.HandlerFunc {
 	}
 }
 
+
+// EmpresaRecentes godoc
+// @Summary      Empresas recentes
+// @Description  Lista as empresas adicionadas recentemente
+// @Tags         Empresas
+// @Produce      json
+// @Success      200  {array}   model.EmpresaRecente
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /empresas/recentes [get]
+// @Security     BearerAuth
 func (e *EmpresaController) EmpresaRecentes() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -98,6 +130,15 @@ func (e *EmpresaController) EmpresaRecentes() gin.HandlerFunc {
 	}
 }
 
+// DadosEmpresas godoc
+// @Summary      Listar empresas
+// @Description  Retorna uma lista com todas as empresas
+// @Tags         Empresas
+// @Produce      json
+// @Success      200  {array}   model.Empresa
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /empresas [get]
+// @Security     BearerAuth
 func (e *EmpresaController) DadosEmpresas() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
@@ -118,6 +159,19 @@ func (e *EmpresaController) DadosEmpresas() gin.HandlerFunc {
 	}
 }
 
+// EditarEmpresa godoc
+// @Summary      Editar empresa
+// @Description  Atualiza os dados de uma empresa existente
+// @Tags         Empresas
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int                    true  "ID da empresa"
+// @Param        body body      model.EditarEmpresaRequest true  "Dados para atualização"
+// @Success      204  "Sem conteúdo (Sucesso)"
+// @Failure      400  {object}  helper.HTTPError "ID ou dados inválidos"
+// @Failure      500  {object}  helper.HTTPError "Erro interno"
+// @Router       /empresa/{id} [put]
+// @Security     BearerAut
 func (e *EmpresaController) EditarEmpresa() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

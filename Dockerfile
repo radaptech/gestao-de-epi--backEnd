@@ -1,7 +1,7 @@
 # ==========================================
 # ESTÁGIO 1: O Construtor (Builder)
 # ==========================================
-FROM golang:1.26.1-alpine AS builder
+FROM golang:1.26.5-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ FROM alpine:latest
 WORKDIR /app
 
 # Instala certificados e configura fuso horário
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates postgresql17-client tzdata
 ENV TZ=America/Sao_Paulo
 
 # Desliga os logs coloridos de debug do GIN para ganhar performance
