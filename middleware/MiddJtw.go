@@ -32,16 +32,16 @@ func AutenticacaoJWT() gin.HandlerFunc {
 			header := ctx.GetHeader("Authorization")
 
 			if header != "" && strings.HasPrefix(header, portador) {
-				
+
 				TokenString = strings.TrimPrefix(header, portador)
 
 			}
 		}
 
 		if TokenString == "" {
-            ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acesso negado: Token ausente ou formato inválido"})
-            return 
-        }
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Acesso negado: Token ausente ou formato inválido"})
+			return
+		}
 
 		token, err := jwt.Parse(TokenString, func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
