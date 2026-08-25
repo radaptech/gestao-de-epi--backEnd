@@ -7,3 +7,5 @@ migrate-down:
 	@go run main.go Down
 
 
+backup-banco:
+	@go run . backup-banco

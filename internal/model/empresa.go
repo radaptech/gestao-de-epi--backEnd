@@ -9,13 +9,10 @@ type EmpresaInserir struct {
 	Cnpj         string `json:"cnpj" binding:"cnpj,required,max=40"`
 	Responsavel  string `json:"responsavel" binding:"required,max=40"`
 	Email        string `json:"email" binding:"required,max=40"`
-
 	Telefone string `json:"telefone" binding:"max=40"`
-
 	Plano      string         `json:"plano" binding:"required"`
 	Status     string         `json:"status" binding:"required"`
 	Vencimento configs.DataBr `json:"vencimento" binding:"required"`
-
 	Observacoes string `json:"observacoes" binding:"lte=150"`
 	Subdominio  string `json:"-"`
 }

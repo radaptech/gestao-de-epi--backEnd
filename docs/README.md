@@ -10,6 +10,7 @@ código, veja o `CLAUDE.md` na raiz do repositório.
 | [`ENDPOINTS.md`](./ENDPOINTS.md) | Todas as rotas da API por domínio: método, path, nível de autorização, request/response, erros notáveis |
 | [`MODELO_DE_DADOS.md`](./MODELO_DE_DADOS.md) | Schema final consolidado do Postgres (tabelas, colunas, FKs, triggers), diagrama de relações |
 | [`FLUXOS_DE_NEGOCIO.md`](./FLUXOS_DE_NEGOCIO.md) | Controle de estoque por lote (FEFO), entrega/devolução/troca, assinatura digital + token de auditoria, geração de PDF, importação via XLSX |
+| [`BACKUP.md`](./BACKUP.md) | Subcomando `./main backup-banco`: dump do Postgres enviado pro bucket Cloudflare R2, variáveis `R2_*`, como testar via Docker e como restaurar |
 
 ## Documentação gerada (não editar à mão)
 

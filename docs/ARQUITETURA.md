@@ -57,7 +57,9 @@ passam pelo repository.
 
 ## Boot da aplicação (`main.go`)
 
-Sequência executada uma única vez, na inicialização:
+Antes de qualquer coisa, `main()` olha `os.Args`: com o argumento `backup-banco` ele executa
+`ExecutarBackupBanco` (dump do banco → Cloudflare R2, ver [`BACKUP.md`](./BACKUP.md)) e encerra,
+**sem subir a API**. Sem argumento, segue a sequência normal abaixo:
 
 1. `router.SetTrustedProxies([]string{"172.16.0.0/12"})` — só confia em `X-Forwarded-For` vindo da
    rede interna do proxy reverso (Traefik). Sem isso, o rate limit por IP (`middleware.LimitarPorIP`)
@@ -160,6 +162,7 @@ Servida em `/swagger/*any` (rota pública, sem autenticação).
 | `RESEND_API_KEY` | Envio de e-mail de recuperação de senha |
 | `URL_FRONTEND_FORMATO` | Template do link de redefinição de senha, ex.: `http://%s:3000` |
 | `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` | Seed do super admin no boot |
+| `R2_IDCLOUDFLARE`, `R2_KEYID`, `R2_SECRETKEY`, `R2_BUCKET_NAME_BACKUPS` | Backup do banco no Cloudflare R2 — só usadas pelo subcomando `./main backup-banco` ([`BACKUP.md`](./BACKUP.md)) |
 
 ## Armadilhas conhecidas
 
@@ -170,5 +173,9 @@ Servida em `/swagger/*any` (rota pública, sem autenticação).
   o binário de outra pasta quebra o boot.
 - `repository.Queries` não tem RLS nem `sqlc.embed`: repetir `tenant_id` em cada query nova é
   responsabilidade de quem escreve a query.
-- Os targets `migrate-up`/`migrate-down` do `makefile` chamam `go run main.go Up|Down`, mas `main.go`
-  não lê argumentos de linha de comando — isso sobe a aplicação inteira, não reverte nada.
+- Os targets `migrate-up`/`migrate-down` do `makefile` chamam `go run main.go Up|Down`, mas o único
+  argumento que `main.go` reconhece é `backup-banco` — qualquer outro sobe a aplicação inteira, não
+  reverte nada. Para reverter, use a CLI do `golang-migrate` direto.
+- O `Dockerfile` do builder precisa acompanhar a versão do `go.mod`: com `go 1.26.5` no `go.mod` e
+  `golang:1.26.1-alpine` no `FROM`, o `go mod download` quebra o build. Vale para o
+  `Dockerfile.dev` também.
