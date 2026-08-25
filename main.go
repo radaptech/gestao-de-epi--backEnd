@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
@@ -31,6 +32,11 @@ import (
 // @in header
 // @name Authorization
 func main() {
+
+	if len(os.Args) > 1 && os.Args[1] == "backup-banco" {
+		ExecutarBackupBanco(os.Args[2:])
+		return
+	}
 
 	postgressConnection := configs.ConexaoDbPostgres{}
 
