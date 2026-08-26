@@ -404,7 +404,9 @@ validadores entram no mesmo bloco.
 
 - **O binário compilado `main` (~58 MB) já esteve versionado no Git.** Hoje está no `.gitignore` e
   removido do índice (`git rm --cached main`) — o arquivo continua no disco. Não o adicione de volta.
-- **Migração 000019 não tem `.down.sql`**, então `migrate down` quebra ao chegar nela.
+- **Todas as migrações têm `.down.sql` preenchido** (validado com `up` → `down -all` → `up`, schema idêntico ao
+  de um banco novo). As de 000012, 000017 e 000019 são **destrutivas nos dois sentidos**: o nome-texto do
+  fornecedor e os dados de `entrada_epi`/`epis_entregues` não voltam — o down só restaura o *schema*.
 - **A migração 000001 usa o nome `000001_CreateTables.sql.up.sql`** (com `.sql` extra no meio) —
   siga o padrão limpo `NNNNNN_nome.up.sql` nas novas.
 - **Os targets `migrate-up`/`migrate-down` do `makefile` chamam `go run main.go Up|Down`**, mas o
