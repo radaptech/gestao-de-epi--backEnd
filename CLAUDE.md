@@ -352,14 +352,19 @@ os metadados globais estão em `main.go`. Rode `swag init` após alterar rotas �
 - Os arquivos de setup **não** têm build tag: `go test ./...` já os compila. O `oque-fazer.txt`
   menciona `-tags=integration`, mas essa tag não existe mais no código.
 - CI (`.github/workflows/cicd.yml`): roda `go test -v ./... -p 1` nos pushes/PRs para
-  `main`, `dev` e `homologacao`. **A action fixa Go 1.25.1 enquanto o `go.mod` pede 1.26** — os
-  testes de integração falham nesse setup.
+  `main`, `dev` e `homologacao`, com `setup-go` em `go-version: '1.26'` — alinhado ao `go.mod`.
+  Ao subir a linha `go` do `go.mod`, atualize também essa chave e o `FROM golang:` dos Dockerfiles.
 
 ---
 
 ## Variáveis de ambiente
 
 Copie `.env-example` para `.env` (o `.env` está no `.gitignore`).
+
+> O `JWT_SECRET` vem **preenchido de propósito** no `.env-example`: é uma chave só de
+> desenvolvimento, para não ter que gerar outra a cada máquina. Produção usa um valor diferente,
+> configurado no Railway. Scanners de segredo (Gitleaks/Semgrep) marcam essa linha como
+> `generic-api-key` — é falso positivo conhecido, não rotacione achando que vazou algo de produção.
 
 | Variável | Uso |
 |---|---|
@@ -404,7 +409,9 @@ validadores entram no mesmo bloco.
 
 - **O binário compilado `main` (~58 MB) já esteve versionado no Git.** Hoje está no `.gitignore` e
   removido do índice (`git rm --cached main`) — o arquivo continua no disco. Não o adicione de volta.
-- **Migração 000019 não tem `.down.sql`**, então `migrate down` quebra ao chegar nela.
+- **Todas as migrações têm `.down.sql` preenchido** (validado com `up` → `down -all` → `up`, schema idêntico ao
+  de um banco novo). As de 000012, 000017 e 000019 são **destrutivas nos dois sentidos**: o nome-texto do
+  fornecedor e os dados de `entrada_epi`/`epis_entregues` não voltam — o down só restaura o *schema*.
 - **A migração 000001 usa o nome `000001_CreateTables.sql.up.sql`** (com `.sql` extra no meio) —
   siga o padrão limpo `NNNNNN_nome.up.sql` nas novas.
 - **Os targets `migrate-up`/`migrate-down` do `makefile` chamam `go run main.go Up|Down`**, mas o
