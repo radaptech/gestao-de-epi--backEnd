@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS devolucao;
+DROP TABLE IF EXISTS motivo_devolucao;
+DROP TABLE IF EXISTS epis_entregues;
+DROP TABLE IF EXISTS entrega_epi;
+DROP TABLE IF EXISTS entrada_epi;
+DROP TABLE IF EXISTS funcionario;
+DROP TABLE IF EXISTS tamanhos_epis;
+DROP TABLE IF EXISTS epi;
+DROP TABLE IF EXISTS tamanho;
+DROP TABLE IF EXISTS tipo_protecao;
+DROP TABLE IF EXISTS funcao;
+DROP TABLE IF EXISTS departamento;
+DROP TABLE IF EXISTS empresas;

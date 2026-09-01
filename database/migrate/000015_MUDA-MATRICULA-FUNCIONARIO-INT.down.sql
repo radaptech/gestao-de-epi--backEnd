@@ -1,0 +1,2 @@
+ALTER TABLE funcionario
+ALTER COLUMN matricula TYPE VARCHAR(20) USING matricula::VARCHAR;
