@@ -352,14 +352,19 @@ os metadados globais estão em `main.go`. Rode `swag init` após alterar rotas �
 - Os arquivos de setup **não** têm build tag: `go test ./...` já os compila. O `oque-fazer.txt`
   menciona `-tags=integration`, mas essa tag não existe mais no código.
 - CI (`.github/workflows/cicd.yml`): roda `go test -v ./... -p 1` nos pushes/PRs para
-  `main`, `dev` e `homologacao`. **A action fixa Go 1.25.1 enquanto o `go.mod` pede 1.26** — os
-  testes de integração falham nesse setup.
+  `main`, `dev` e `homologacao`, com `setup-go` em `go-version: '1.26'` — alinhado ao `go.mod`.
+  Ao subir a linha `go` do `go.mod`, atualize também essa chave e o `FROM golang:` dos Dockerfiles.
 
 ---
 
 ## Variáveis de ambiente
 
 Copie `.env-example` para `.env` (o `.env` está no `.gitignore`).
+
+> O `JWT_SECRET` vem **preenchido de propósito** no `.env-example`: é uma chave só de
+> desenvolvimento, para não ter que gerar outra a cada máquina. Produção usa um valor diferente,
+> configurado no Railway. Scanners de segredo (Gitleaks/Semgrep) marcam essa linha como
+> `generic-api-key` — é falso positivo conhecido, não rotacione achando que vazou algo de produção.
 
 | Variável | Uso |
 |---|---|
