@@ -2,23 +2,17 @@ package helper
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/configs"
 	"github.com/johnfercher/maroto/v2"
 	"github.com/johnfercher/maroto/v2/pkg/components/code"
 	"github.com/johnfercher/maroto/v2/pkg/components/col"
-	"github.com/johnfercher/maroto/v2/pkg/components/image"
-	"github.com/johnfercher/maroto/v2/pkg/components/line"
 	"github.com/johnfercher/maroto/v2/pkg/components/row"
 	"github.com/johnfercher/maroto/v2/pkg/components/text"
 	"github.com/johnfercher/maroto/v2/pkg/config"
 	"github.com/johnfercher/maroto/v2/pkg/consts/align"
 	"github.com/johnfercher/maroto/v2/pkg/consts/border"
-	"github.com/johnfercher/maroto/v2/pkg/consts/extension"
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/core"
 	"github.com/johnfercher/maroto/v2/pkg/props"
@@ -161,54 +155,14 @@ func CreatePdfDevolucao(dados DadosDevolucaoPdf, auditoria Auditoria, responsave
 		row.New(8).Add(text.NewCol(12, textoC, props.Text{Size: 8, Align: align.Left})),
 	)
 
-	m.AddRow(15, col.New(12)) // Respiro antes da assinatura
 
 	// ==========================================
 	// ASSINATURA DIGITAL
 	// ==========================================
-	var assinaturaBytes []byte
-	assinaturaValida := false
+	assinaturaBytes, formatoAssinatura, assinaturaValida := prepararImagemAssinatura(dados.Assinatura)
 
-	if dados.Assinatura != "" && strings.HasPrefix(dados.Assinatura, "https") {
-		res, err := http.Get(dados.Assinatura)
-		if err == nil && res.StatusCode == http.StatusOK {
-			defer res.Body.Close()
-
-			donwload, errResp := io.ReadAll(res.Body)
-			if errResp == nil && len(donwload) > 0 {
-				bytesRotacionados, errRot := rotacionar90Graus(donwload)
-				if errRot == nil {
-					assinaturaBytes = bytesRotacionados
-				} else {
-					assinaturaBytes = donwload
-				}
-				assinaturaValida = true
-			}
-		}
-	}
-
-	if !assinaturaValida {
-		m.AddRow(20,
-			col.New(4),
-			col.New(4).Add(line.New(props.Line{Thickness: 0.5})),
-			col.New(4),
-		)
-	} else {
-		m.AddRow(20,
-			col.New(4),
-			image.NewFromBytesCol(4, assinaturaBytes, extension.Png, props.Rect{Center: true, Percent: 100}),
-			col.New(4),
-		)
-	}
-
-	m.AddRows(
-		row.New(6).Add(
-			text.NewCol(12, "Assinatura do Funcionario", props.Text{Size: 9, Align: align.Center, Style: fontstyle.Bold}),
-		),
-		row.New(5).Add(
-			text.NewCol(12, dados.NomeFuncionario+" - Matricula: "+dados.Matricula, props.Text{Size: 9, Align: align.Center}),
-		),
-	)
+	adicionarComprovacaoRecebimento(m, assinaturaBytes, formatoAssinatura, assinaturaValida,
+		dados.NomeFuncionario, dados.Matricula)
 
 	m.AddRow(10, col.New(12))
 

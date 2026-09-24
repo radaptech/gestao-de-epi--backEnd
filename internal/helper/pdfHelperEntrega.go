@@ -54,20 +54,122 @@ type Auditoria struct {
 	Ip            string
 }
 
-func rotacionar90Graus(imgBytes []byte) ([]byte, error) {
-	// Decodifica os bytes para uma imagem
+// rotacionarSeEstiverEmPe gira a assinatura 90° só quando ela veio em pé.
+//
+// O canvas de assinatura acompanha o formato da tela: no celular em pé ele sai
+// alto, e sem girar a firma chega deitada na ficha. No desktop ele já sai
+// deitado — girar ali espremeria a assinatura numa tira de ~11mm de largura,
+// porque o bloco da ficha tem só 20mm de altura.
+func rotacionarSeEstiverEmPe(imgBytes []byte) ([]byte, error) {
 	img, _, err := i90.Decode(bytes.NewReader(imgBytes))
 	if err != nil {
 		return nil, err
 	}
 
-	// Rotaciona 90 graus no sentido horário
-	// Se continuar "errado", você pode tentar imaging.Rotate270 ou imaging.Rotate180
-	dstImage := imaging.Rotate90(img)
+	if limites := img.Bounds(); limites.Dy() <= limites.Dx() {
+		return imgBytes, nil
+	}
 
 	var buf bytes.Buffer
-	err = png.Encode(&buf, dstImage)
-	return buf.Bytes(), err
+	if err := png.Encode(&buf, imaging.Rotate90(img)); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+// prepararImagemAssinatura baixa a comprovação da entrega/devolução no bucket e
+// devolve os bytes prontos para o PDF, junto do formato real do arquivo.
+//
+// A assinatura é desenhada deitada na tela do celular, então o PNG do canvas
+// precisa girar 90°. A foto da câmera (.jpg) já vem na orientação certa —
+// girar ela deixaria o funcionário de lado na ficha.
+func prepararImagemAssinatura(url string) ([]byte, extension.Type, bool) {
+	if url == "" || !strings.HasPrefix(url, "https") {
+		return nil, "", false
+	}
+
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, "", false
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, "", false
+	}
+
+	imagem, errResp := io.ReadAll(res.Body)
+	if errResp != nil || len(imagem) == 0 {
+		return nil, "", false
+	}
+
+	// Só a assinatura (.png, desenhada no canvas) pode girar. A foto já vem na
+	// orientação em que foi tirada, e uma foto em pé girada deixa o funcionário
+	// deitado na ficha.
+	if !strings.HasSuffix(strings.ToLower(url), ".png") {
+		return imagem, extension.Jpg, true
+	}
+
+	rotacionada, errRot := rotacionarSeEstiverEmPe(imagem)
+	if errRot != nil {
+		// Sem conseguir girar, é melhor a ficha sair com a assinatura deitada
+		// do que sem assinatura nenhuma.
+		return imagem, extension.Png, true
+	}
+
+	return rotacionada, extension.Png, true
+}
+
+// adicionarComprovacaoRecebimento desenha o bloco que fecha a ficha: a foto da
+// câmera, a assinatura desenhada na tela, ou a linha em branco para assinar à
+// mão quando não veio nenhuma das duas.
+//
+// A foto ganha um bloco maior de propósito. No espaço da assinatura (4 de 12
+// colunas por 20mm) um retrato 4:3 encolhe para 27x20mm e não dá para
+// reconhecer ninguém — inútil como comprovação de entrega.
+func adicionarComprovacaoRecebimento(m core.Maroto, imagem []byte, formato extension.Type, temImagem bool, nome, matricula string) {
+	legenda := "Assinatura do Funcionario"
+
+	switch {
+	case !temImagem:
+		m.AddRow(15, col.New(12)) // respiro antes da linha de assinar
+		m.AddRow(20,
+			col.New(4),
+			col.New(4).Add(line.New(props.Line{Thickness: 0.5})),
+			col.New(4),
+		)
+
+	case formato == extension.Png:
+		m.AddRow(15, col.New(12))
+		m.AddRow(20,
+			col.New(4),
+			image.NewFromBytesCol(4, imagem, formato, props.Rect{Center: true, Percent: 100}),
+			col.New(4),
+		)
+
+	default:
+		// A foto precisa de mais altura que a assinatura para ser reconhecível,
+		// mas o respiro encolhe na mesma medida: 5+30 fecha os mesmos 35mm do
+		// bloco da assinatura (15+20). Assim a foto nunca empurra o rodapé com
+		// o QR code para uma segunda página. Medido: acima de 35mm ele vaza.
+		legenda = "Foto de confirmação do recebimento"
+		m.AddRow(5, col.New(12))
+		m.AddRow(30,
+			col.New(3),
+			image.NewFromBytesCol(6, imagem, formato, props.Rect{Center: true, Percent: 100}),
+			col.New(3),
+		)
+	}
+
+	m.AddRows(
+		row.New(6).Add(
+			text.NewCol(12, legenda, props.Text{Size: 9, Align: align.Center, Style: fontstyle.Bold}),
+		),
+		row.New(5).Add(
+			text.NewCol(12, nome+" - Matricula: "+matricula, props.Text{Size: 9, Align: align.Center}),
+		),
+	)
 }
 
 func truncarTexto(s string, maxLen int) string {
@@ -198,64 +300,16 @@ func CreatePdf(Dadosfuncionarios DadosPdf, auditoria Auditoria, responsavel stri
         row.New(8).Add(text.NewCol(12, textoC, props.Text{Size: 8, Align: align.Left})),
     )
 
-    m.AddRow(15, col.New(12)) // Respiro antes de assinar
 
     // 4. O Bloco da Assinatura Digital
     // 1. Decodifica a string Base64 que veio do banco/struct
     // 1. Tratamento do Base64
 
-    var assinaturaBytes []byte
-    assinaturaValida := false
-    //caso estiver uma urt com o prefixo "http"
-    if Dadosfuncionarios.Assinatura != "" && strings.HasPrefix(Dadosfuncionarios.Assinatura, "https") {
+    assinaturaBytes, formatoAssinatura, assinaturaValida := prepararImagemAssinatura(Dadosfuncionarios.Assinatura)
 
-        res, err := http.Get(Dadosfuncionarios.Assinatura) //baixa a imagem no supabase
-        if err == nil && res.StatusCode == http.StatusOK {
-
-            defer res.Body.Close()
-
-            //transforma em  bytes
-            donwload, errResp := io.ReadAll(res.Body)
-            if errResp == nil && len(donwload) > 0 {
-
-                bytesRotacionados, errRot := rotacionar90Graus(donwload)
-                if errRot == nil {
-                    assinaturaBytes = bytesRotacionados
-                } else {
-                    // Se der erro na rotação, usa a original como fallback
-                    assinaturaBytes = donwload
-                }
-                assinaturaValida = true
-            }
-        }
-    }
-
-    // 2. Linha da Assinatura (Dinâmica)
-    if !assinaturaValida {
-        // Caso não tenha assinatura: Desenha apenas a linha sólida para assinar à mão
-        m.AddRow(20,
-            col.New(4),
-            col.New(4).Add(line.New(props.Line{Thickness: 0.5})),
-            col.New(4),
-        )
-    } else {
-        // Caso tenha assinatura: Desenha a imagem centralizada
-        m.AddRow(20,
-            col.New(4),
-            image.NewFromBytesCol(4, assinaturaBytes, extension.Png, props.Rect{Center: true, Percent: 100}),
-            col.New(4),
-        )
-    }
-
-    // 3. Textos da Assinatura (Sempre aparecem, independente de ter imagem ou não)
-    m.AddRows(
-        row.New(6).Add(
-            text.NewCol(12, "Assinatura do Funcionario", props.Text{Size: 9, Align: align.Center, Style: fontstyle.Bold}),
-        ),
-        row.New(5).Add(
-            text.NewCol(12, Dadosfuncionarios.NomeFuncionario+" - Matricula: "+Dadosfuncionarios.Matricula, props.Text{Size: 9, Align: align.Center}),
-        ),
-    )
+    // 2. Bloco de comprovação: foto, assinatura ou linha em branco
+    adicionarComprovacaoRecebimento(m, assinaturaBytes, formatoAssinatura, assinaturaValida,
+        Dadosfuncionarios.NomeFuncionario, Dadosfuncionarios.Matricula)
 
     m.AddRow(6, col.New(8))
 

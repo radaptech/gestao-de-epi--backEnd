@@ -8,8 +8,8 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type TipoProtecaoService interface {
@@ -50,7 +50,8 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 			Nome: input.Nome,
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
@@ -59,7 +60,7 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 			return
 		}
 
-		tp,err := t.service.SalvarProtecao(ctx, protec, tenantId)
+		tp, err := t.service.SalvarProtecao(ctx, protec, tenantId)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -81,7 +82,7 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 
 			"mensagem": "proteção cadastrada",
-			"protecao":tp,
+			"protecao": tp,
 		})
 	}
 }
@@ -90,7 +91,8 @@ func (t *TipoProtecaoController) ListarProtecoes() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 
 			ctx.JSON(500, gin.H{"error": "erro interno de tenant"})
@@ -121,7 +123,8 @@ func (t *TipoProtecaoController) ListarProtecaoPorId() gin.HandlerFunc {
 			})
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -162,7 +165,8 @@ func (t *TipoProtecaoController) DeletarProtecao() gin.HandlerFunc {
 			})
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
