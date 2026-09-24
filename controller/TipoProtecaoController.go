@@ -50,7 +50,7 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 			Nome: input.Nome,
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -91,7 +91,7 @@ func (t *TipoProtecaoController) ListarProtecoes() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 
@@ -123,7 +123,7 @@ func (t *TipoProtecaoController) ListarProtecaoPorId() gin.HandlerFunc {
 			})
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -165,7 +165,7 @@ func (t *TipoProtecaoController) DeletarProtecao() gin.HandlerFunc {
 			})
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})

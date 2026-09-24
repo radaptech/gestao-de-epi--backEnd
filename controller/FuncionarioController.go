@@ -67,7 +67,7 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			ID_funcao:       input.ID_funcao,
 			Cpf:             input.Cpf,
 		}
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -135,7 +135,7 @@ func (f *FuncionarioController) ListarFuncionarios() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		var filtro service.FiltroFuncionario
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -189,7 +189,7 @@ func (f *FuncionarioController) ListarFuncionarioPorMatricula() gin.HandlerFunc 
 
 		matricula := ctx.Param("matricula")
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -245,7 +245,7 @@ func (f *FuncionarioController) DeletarFuncionaioId() gin.HandlerFunc {
 			return
 		}
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -304,7 +304,7 @@ func (f *FuncionarioController) AtualizaFuncionario() gin.HandlerFunc {
 			return
 		}
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -378,7 +378,7 @@ func (f *FuncionarioController) BuscaFuncionarioDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -414,7 +414,7 @@ func (f *FuncionarioController) FuncionarioCompleto() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})

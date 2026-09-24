@@ -63,7 +63,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno de tenant"})
@@ -148,7 +148,7 @@ func (e *EntregaController) ListarEntregas() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -202,7 +202,7 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -273,7 +273,7 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 		if matricula == "" {
 			matricula = "0"
 		}
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -333,7 +333,7 @@ func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -370,7 +370,7 @@ func (e *EntregaController) BuscarEntregaItenDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{

@@ -42,7 +42,7 @@ func (m *MotivoController) Salvar() gin.HandlerFunc {
 			return
 		}
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -76,7 +76,7 @@ func (m *MotivoController) ListarMotivo() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 

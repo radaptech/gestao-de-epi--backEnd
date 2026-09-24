@@ -64,7 +64,7 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 		// 1. Remove espaços extras no começo/fim
 		// 2. Transforma tudo em MAIÚSCULO para padronizar
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -166,7 +166,7 @@ func (e *EntradaController) ListarEntradas() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -222,7 +222,7 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -277,7 +277,7 @@ func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -311,7 +311,7 @@ func (e *EntradaController) BuscaEntradaEstoque() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})

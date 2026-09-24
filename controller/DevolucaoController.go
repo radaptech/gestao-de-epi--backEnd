@@ -58,7 +58,7 @@ func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno de tenant"})
@@ -120,7 +120,7 @@ func (d *DevolucaoController) Listar() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -167,7 +167,7 @@ func (d *DevolucaoController) GerarFichaPDF() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{

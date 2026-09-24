@@ -38,7 +38,7 @@ func (e *EstoqueController) MostrarQuantidades() gin.HandlerFunc {
 			})
 			return
 		}
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 
@@ -82,7 +82,7 @@ func (e *EstoqueController) MostrarSaldo() gin.HandlerFunc {
 			})
 			return
 		}
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 

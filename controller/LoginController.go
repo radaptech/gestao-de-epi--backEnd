@@ -114,6 +114,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 			return
 		}
 
+		// Único endpoint em que o tenant vem do header: ainda não existe token.
 		tenantID64, ok := ginmw.TenantIDFromHeader(c)
 		tenantID := int32(tenantID64)
 		if !ok {
@@ -207,7 +208,7 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 
 			return
 		}
-		tenantID64, ok := ginmw.TenantIDFromHeader(c)
+		tenantID64, ok := ginmw.TenantID(c)
 		tenantID := int32(tenantID64)
 		if !ok {
 			c.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -235,7 +236,7 @@ func (l *LoginController) ListarUsuario() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -273,6 +274,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 			return
 		}
 
+		// Rota pública, sem sessão: tenant vem do header, como no Login.
 		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
@@ -311,6 +313,7 @@ func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
 			return
 		}
 
+		// Rota pública, sem sessão: tenant vem do header, como no Login.
 		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {

@@ -50,7 +50,7 @@ func (t *TamanhoController) Adicionar() gin.HandlerFunc {
 			Tamanho: input.Tamanho,
 		}
 
-		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
 		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -86,7 +86,7 @@ func (t *TamanhoController) ListarTodosTamanhos() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 
@@ -119,7 +119,7 @@ func (t *TamanhoController) ListarTamanhoPorId() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -163,7 +163,7 @@ func (t *TamanhoController) DeletarTamanho() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
@@ -209,7 +209,7 @@ func (t *TamanhoController) ListarTamanhoPorIdEpi() gin.HandlerFunc {
 			return
 		}
 
-		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
 		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
