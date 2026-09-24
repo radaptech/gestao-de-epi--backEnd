@@ -10,8 +10,8 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type EpiService interface {
@@ -34,7 +34,6 @@ func NewEpiController(service EpiService) *EpiController {
 		service: service,
 	}
 }
-
 
 // AdicionarEpi godoc
 // @Summary      Cadastrar novo EPI
@@ -75,7 +74,8 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 			AlertaMinimo:   input.AlertaMinimo,
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -141,7 +141,8 @@ func (e *EpiController) ListarEpis() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 
 			ctx.JSON(500, gin.H{"error": "erro interno de tenant"})
@@ -200,7 +201,8 @@ func (e *EpiController) ListarEpiPorId() gin.HandlerFunc {
 			})
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -253,7 +255,8 @@ func (e *EpiController) DeletarEpi() gin.HandlerFunc {
 			})
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -313,7 +316,8 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -400,7 +404,8 @@ func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -441,7 +446,8 @@ func (e *EpiController) ListarEpiFuncionario() gin.HandlerFunc {
 			})
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -458,7 +464,5 @@ func (e *EpiController) ListarEpiFuncionario() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, epis)
 	}
-
-	
 
 }

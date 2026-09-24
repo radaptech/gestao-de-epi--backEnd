@@ -10,8 +10,8 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type EntradaService interface {
@@ -64,7 +64,8 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 		// 1. Remove espaços extras no começo/fim
 		// 2. Transforma tudo em MAIÚSCULO para padronizar
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",
@@ -72,7 +73,7 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 			return
 		}
 
-		userId, ok := middleware.GetUserID(ctx)
+		userId, ok := ginmw.UserID(ctx)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"erro": "erro au setar usuario",
@@ -80,7 +81,7 @@ func (e *EntradaController) AdicionarEntrada() gin.HandlerFunc {
 			return
 		}
 
-		input.Id_user = userId
+		input.Id_user = int32(userId)
 
 		err := e.service.Adicionar(ctx, input, tenantId)
 		if err != nil {
@@ -165,7 +166,8 @@ func (e *EntradaController) ListarEntradas() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro ao receber tenantId",
@@ -220,13 +222,14 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
 
-		idUser, existe := ctx.Get("userId")
+		idUser, existe := ginmw.UserID(ctx)
 		if !existe {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
 
@@ -236,16 +239,7 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 			return
 		}
 
-		idUserInt32, ok := idUser.(int32)
-		if !ok {
-			// Se por acaso um dia o token vier diferente, o servidor não cai, apenas retorna erro 500 limpo
-			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"error": "Erro interno: formato do ID do usuário inválido no token",
-			})
-			return
-		}
-
-		err = e.service.CancelarEntrada(ctx, id, int(idUserInt32), int(tenantId))
+		err = e.service.CancelarEntrada(ctx, id, int(idUser), int(tenantId))
 		if err != nil {
 
 			if errors.Is(err, helper.ErrNaoEncontrado) {
@@ -283,7 +277,8 @@ func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -316,7 +311,8 @@ func (e *EntradaController) BuscaEntradaEstoque() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
