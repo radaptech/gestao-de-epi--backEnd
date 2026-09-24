@@ -11,9 +11,9 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
+	"github.com/radaptech/ginmw"
 )
 
 type FornecedorService interface {
@@ -79,7 +79,8 @@ func (f *FornecedorController) ImportFornecedor() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, exists := middleware.GetTenantID(ctx)
+		tenantID64, exists := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !exists {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sessão inválida ou expirada."})
 			return
@@ -162,7 +163,8 @@ func (f *FornecedorController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",
@@ -211,7 +213,8 @@ func (f *FornecedorController) ListarFornecedores() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro ao receber tenantId",
@@ -253,7 +256,8 @@ func (f *FornecedorController) CancelarFornecedor() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -297,7 +301,8 @@ func (f *FornecedorController) AtualizaFornecedor() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return

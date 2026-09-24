@@ -10,9 +10,9 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
+	"github.com/radaptech/ginmw"
 )
 
 type DepartamentoService interface {
@@ -127,7 +127,8 @@ func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, exists := middleware.GetTenantID(ctx)
+		tenantID64, exists := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !exists {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sessão inválida ou expirada."})
 			return
@@ -142,16 +143,16 @@ func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
 			if err != nil {
 
 				if errors.Is(err, helper.ErrDadoDuplicado) {
-				ctx.JSON(http.StatusConflict, gin.H{
+					ctx.JSON(http.StatusConflict, gin.H{
 
-					"error":    "departamento ja existe no sistema",
-					"detalhes": err.Error(),
-				})
-				return 
+						"error":    "departamento ja existe no sistema",
+						"detalhes": err.Error(),
+					})
+					return
 				}
 				ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Erro ao registrar os departamentos no banco de dados."})
 				return
-				
+
 			}
 		}
 
@@ -192,7 +193,8 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 		novoDep := model.Departamento{
 			Departamento: input.Departamento,
 		}
-		tenantID, ok := middleware.GetTenantID(c)
+		tenantID64, ok := ginmw.TenantIDFromHeader(c)
+		tenantID := int32(tenantID64)
 		if !ok {
 			c.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -251,7 +253,8 @@ func (d *DepartamentoController) ListarDepartamentos() gin.HandlerFunc {
 			})
 			return
 		}
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -281,7 +284,6 @@ func (d *DepartamentoController) ListarDepartamentos() gin.HandlerFunc {
 	}
 }
 
-
 // DeletarDepartamento godoc
 // @Summary      Deletar departamento
 // @Description  Remove um departamento pelo ID
@@ -308,7 +310,8 @@ func (d *DepartamentoController) DeletarDepartamento() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -365,7 +368,8 @@ func (d *DepartamentoController) AtualizarDepartamento() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	
 	"context"
 
 	"errors"
@@ -14,10 +13,9 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
-
-)	
+	"github.com/radaptech/ginmw"
+)
 
 type EntregasService interface {
 	Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32, token string) error
@@ -39,8 +37,6 @@ func NewEntregaController(service EntregasService) *EntregaController {
 		Service: service,
 	}
 }
-
-
 
 // Adicionar godoc
 // @Summary      Registrar entrega de EPI
@@ -67,13 +63,14 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno de tenant"})
 			return
 		}
 
-		userId, ok := middleware.GetUserID(ctx)
+		userId, ok := ginmw.UserID(ctx)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"erro": "erro ao setar usuario",
@@ -100,7 +97,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 
 		// 3. Atualiza o input com a URL do bucket antes de mandar para o Service
 		input.Assinatura_Digital = urlAssinatura
-		input.Id_user = userId
+		input.Id_user = int32(userId)
 
 		// 4. Salva no Banco de Dados (Transação)
 		err := e.Service.Salvar(ctx, input, tenantId, token)
@@ -120,7 +117,6 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"mensagem": "entrega cadastrada com sucesso",
-			
 		})
 	}
 }
@@ -152,7 +148,8 @@ func (e *EntregaController) ListarEntregas() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro ao receber tenantId",
@@ -205,13 +202,14 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
 
-		idUser, existe := ctx.Get("userId")
+		idUser, existe := ginmw.UserID(ctx)
 		if !existe {
 			ctx.JSON(http.StatusUnauthorized, gin.H{
 
@@ -221,7 +219,7 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 			return
 		}
 
-		err = e.Service.CancelarEntrega(ctx, int(tenantId), id, int(idUser.(uint)))
+		err = e.Service.CancelarEntrega(ctx, int(tenantId), id, int(idUser))
 		if err != nil {
 
 			if errors.Is(err, helper.ErrNaoEncontrado) {
@@ -275,7 +273,8 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 		if matricula == "" {
 			matricula = "0"
 		}
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",
@@ -292,7 +291,7 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 
 		fmt.Printf("DEBUG: Matricula do Param: '%s' | Tenant do Middleware: %d\n", matricula, tenantId)
 		fmt.Printf("🚨 DEBUG PDF -> Matrícula buscada: '%s' | TenantID: %v\n", matricula, tenantId)
-		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula,int32(idEntrega) ,tenantId)
+		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula, int32(idEntrega), tenantId)
 		if err != nil {
 
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -334,7 +333,8 @@ func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",
@@ -370,7 +370,8 @@ func (e *EntregaController) BuscarEntregaItenDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",

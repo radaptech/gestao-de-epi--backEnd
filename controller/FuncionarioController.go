@@ -9,8 +9,8 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type FuncionarioService interface {
@@ -65,9 +65,10 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 			Nome:            input.Nome,
 			ID_departamento: input.ID_departamento,
 			ID_funcao:       input.ID_funcao,
-			Cpf: input.Cpf,
+			Cpf:             input.Cpf,
 		}
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -84,14 +85,14 @@ func (f *FuncionarioController) Adicionar() gin.HandlerFunc {
 				return
 			}
 
-			if errors.Is(err, helper.ErrLimiteExcedido){
+			if errors.Is(err, helper.ErrLimiteExcedido) {
 
 				ctx.JSON(http.StatusForbidden, gin.H{
 
-					"error":"Limite de funcionarios atingido",
+					"error":    "Limite de funcionarios atingido",
 					"detalhes": err.Error(),
 				})
-				return 
+				return
 			}
 
 			if errors.Is(err, helper.ErrConflitoIntegridade) {
@@ -134,7 +135,8 @@ func (f *FuncionarioController) ListarFuncionarios() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		var filtro service.FiltroFuncionario
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -170,7 +172,6 @@ func (f *FuncionarioController) ListarFuncionarios() gin.HandlerFunc {
 	}
 }
 
-
 // ListarFuncionarioPorMatricula godoc
 // @Summary      Buscar por matrícula
 // @Description  Retorna os detalhes de um único funcionário
@@ -188,7 +189,8 @@ func (f *FuncionarioController) ListarFuncionarioPorMatricula() gin.HandlerFunc 
 
 		matricula := ctx.Param("matricula")
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -243,7 +245,8 @@ func (f *FuncionarioController) DeletarFuncionaioId() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -301,7 +304,8 @@ func (f *FuncionarioController) AtualizaFuncionario() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -374,7 +378,8 @@ func (f *FuncionarioController) BuscaFuncionarioDashbord() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -409,7 +414,8 @@ func (f *FuncionarioController) FuncionarioCompleto() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return

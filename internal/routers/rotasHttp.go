@@ -1,7 +1,9 @@
 package routers
 
 import (
+	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/controller"
@@ -10,10 +12,12 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
+	"github.com/radaptech/ginmw"
 )
 
 type Container struct {
@@ -90,6 +94,22 @@ func NewContainer(db *pgxpool.Pool) *Container {
 func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 	queries := repository.New(db)
+
+	// Montados uma vez só, reaproveitados em todo Use() abaixo.
+	// WithRoleClaim("role"): claim de perfil no token do SGE se chama
+	// "role", não "perfil" (default da lib, usado pelo sistema-OS).
+	// WithExtraClaim("nome", "user_nome"): claim que os controllers já
+	// liam direto do contexto (ctx.GetString("user_nome")) pra gravar
+	// quem processou uma entrega/devolução -- mantém a mesma chave.
+	authJWT := ginmw.JWT([]byte(os.Getenv("JWT_SECRET")),
+		ginmw.WithRoleClaim("role"),
+		ginmw.WithExtraClaim("nome", "user_nome"),
+	)
+	tenant := ginmw.Tenant(func(ctx context.Context, subdominio string) (int64, error) {
+		empresa, err := queries.GetTenantBySubdomain(ctx, subdominio)
+		return int64(empresa.ID), err
+	}, pgx.ErrNoRows)
+
 	// --- GRUPO 1: Rotas Públicas (Aberta) ---
 	// Qualquer um acessa sem token
 
@@ -109,7 +129,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	})
 	api := r.Group("/api")
 	painel := r.Group("/api/painel")
-	painel.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	painel.Use(authJWT, ginmw.Require("super_admin"))
 	{
 
 		//empresas
@@ -117,7 +137,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 	}
 
 	master := r.Group("/api/master")
-	master.Use(middleware.AutenticacaoJWT(), middleware.VerificaSuperAdmin())
+	master.Use(authJWT, ginmw.Require("super_admin"))
 	{
 		master.GET("/dashboard/resumo", c.Empresas.ResumoDashboard())
 		master.GET("/dashboard/empresas-recentes", c.Empresas.EmpresaRecentes())
@@ -135,21 +155,21 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 	// --- GRUPO 2: Rotas que precisam do tenentId (SaaS) ---
 	// Precisa do tenant Id para passar
-	api.Use(middleware.TenantMiddleware(queries))
+	api.Use(tenant)
 	{
 
 		// Rate limit: 5 tentativas de imediato, depois 1 nova a cada 12s por IP
-		api.POST("/login", middleware.LimitarPorIP(rate.Every(12*time.Second), 5), c.Usuario.Login())
+		api.POST("/login", ginmw.RateLimit(rate.Every(12*time.Second), 5), c.Usuario.Login())
 
 		api.POST("/logout", c.Usuario.Logout())
 		// Rate limit: 3 tentativas de imediato, depois 1 nova por minuto por IP (evita spam de e-mail)
-		api.POST("/esqueci-minha-senha", middleware.LimitarPorIP(rate.Every(time.Minute), 3), c.Usuario.SalvarToken())
+		api.POST("/esqueci-minha-senha", ginmw.RateLimit(rate.Every(time.Minute), 3), c.Usuario.SalvarToken())
 		api.POST("/redefinir-senha", c.Usuario.RedefinirSenha())
 	}
 
 	// --- GRUPO 3: Rotas Protegidas (SaaS) ---
 	// Precisa do Token JWT para passar
-	api.Use(middleware.AutenticacaoJWT(), middleware.LoggerComUsuario())
+	api.Use(authJWT, middleware.LoggerComUsuario())
 	{
 
 		//colaborador e adm tem acesso a essas rotas
@@ -211,14 +231,14 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 		//rotas que apenas o "admin" tem acesso
 		rotasAdm := api.Group("/gerencial")
-		rotasAdm.Use(middleware.VerificaRole("admin"))
+		rotasAdm.Use(ginmw.Require("admin"))
 		{
 
 			//departamentos
 			rotasAdm.DELETE("/departamento/:id", c.Departamento.DeletarDepartamento())
 			rotasAdm.PUT("/departamento/:id", c.Departamento.AtualizarDepartamento())
 			rotasAdm.POST("/cadastro-departamento", c.Departamento.RegistraDepartamento())
-			rotasAdm.POST("/importar-departamentos",c.Departamento.ImportDepartamentoXLSX())
+			rotasAdm.POST("/importar-departamentos", c.Departamento.ImportDepartamentoXLSX())
 
 			//funçoes
 			rotasAdm.DELETE("/funcao/:id", c.Funcao.DeletarFuncao())

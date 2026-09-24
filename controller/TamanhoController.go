@@ -8,8 +8,8 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type TamanhoService interface {
@@ -50,7 +50,8 @@ func (t *TamanhoController) Adicionar() gin.HandlerFunc {
 			Tamanho: input.Tamanho,
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -85,7 +86,8 @@ func (t *TamanhoController) ListarTodosTamanhos() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 
 			ctx.JSON(500, gin.H{"error": "erro interno de tenant"})
@@ -114,10 +116,11 @@ func (t *TamanhoController) ListarTamanhoPorId() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": "id deve ser um numero",
 			})
-			return 
+			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -157,10 +160,11 @@ func (t *TamanhoController) DeletarTamanho() gin.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": "id deve ser um numero",
 			})
-			return 
+			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -169,33 +173,32 @@ func (t *TamanhoController) DeletarTamanho() gin.HandlerFunc {
 		err = t.service.CancelarTamanho(ctx, id, tenantId)
 		if err != nil {
 
-			if errors.Is(err, helper.ErrNaoEncontrado){
+			if errors.Is(err, helper.ErrNaoEncontrado) {
 
 				ctx.JSON(http.StatusNotFound, gin.H{
-					
-					"error":" tamanho nao encontrado",
+
+					"error": " tamanho nao encontrado",
 				})
 
-				return 
+				return
 			}
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
-			}) 
+			})
 
-			return 
+			return
 		}
-
 
 		ctx.Status(http.StatusNoContent)
 	}
 
 }
 
-func (t *TamanhoController) ListarTamanhoPorIdEpi() gin.HandlerFunc{
+func (t *TamanhoController) ListarTamanhoPorIdEpi() gin.HandlerFunc {
 
-	return  func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
 
 		idString := ctx.Param("id")
 		id, err := strconv.Atoi(idString)
@@ -203,10 +206,11 @@ func (t *TamanhoController) ListarTamanhoPorIdEpi() gin.HandlerFunc{
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": "id deve ser um numero",
 			})
-			return 
+			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -219,7 +223,7 @@ func (t *TamanhoController) ListarTamanhoPorIdEpi() gin.HandlerFunc{
 
 				ctx.JSON(http.StatusNotFound, gin.H{
 
-					"error": "tamanho nao encontrado",
+					"error":    "tamanho nao encontrado",
 					"detalhes": err.Error(),
 				})
 

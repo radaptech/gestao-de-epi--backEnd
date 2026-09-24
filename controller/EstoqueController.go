@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type EstoqueService interface {
@@ -38,7 +38,8 @@ func (e *EstoqueController) MostrarQuantidades() gin.HandlerFunc {
 			})
 			return
 		}
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 
 			ctx.JSON(500, gin.H{"error": "erro interno de tenant"})
@@ -52,7 +53,7 @@ func (e *EstoqueController) MostrarQuantidades() gin.HandlerFunc {
 			filtro.Quantidade = 4 // Padrão de 4 itens se não informar
 		}
 
-		quantidades, err := e.service.MostrarQuantidadeTotais(ctx, filtro,tenantId)
+		quantidades, err := e.service.MostrarQuantidadeTotais(ctx, filtro, tenantId)
 		if err != nil {
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -81,7 +82,8 @@ func (e *EstoqueController) MostrarSaldo() gin.HandlerFunc {
 			})
 			return
 		}
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 
 			ctx.JSON(500, gin.H{"error": "erro interno de tenant"})

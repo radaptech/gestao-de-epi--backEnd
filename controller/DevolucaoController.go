@@ -9,8 +9,8 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type DevolucaoService interface {
@@ -58,13 +58,14 @@ func (d *DevolucaoController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno de tenant"})
 			return
 		}
 
-		userId, ok := middleware.GetUserID(ctx)
+		userId, ok := ginmw.UserID(ctx)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"erro": "erro ao setar usuario",
@@ -119,7 +120,8 @@ func (d *DevolucaoController) Listar() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro ao receber tenantId",
@@ -165,7 +167,8 @@ func (d *DevolucaoController) GerarFichaPDF() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",
