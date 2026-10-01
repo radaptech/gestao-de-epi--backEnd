@@ -11,14 +11,14 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/johnfercher/maroto/v2 v2.3.3
 	github.com/joho/godotenv v1.5.1
-	github.com/radaptech/ginmw v0.1.0
+	github.com/radaptech/ginmw v0.1.1
 	github.com/resend/resend-go/v2 v2.28.0
 	github.com/supabase-community/storage-go v0.8.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/sync v0.22.0
-	golang.org/x/time v0.15.0
+	golang.org/x/time v0.16.0
 )
 
 require (
@@ -55,7 +55,7 @@ require (
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/f-amaral/go-async v0.3.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/gin-contrib/cors v1.7.7 // indirect
+	github.com/gin-contrib/cors v1.7.9 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
