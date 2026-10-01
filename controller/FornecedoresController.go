@@ -11,8 +11,8 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -49,6 +49,7 @@ func (f *FornecedorController) ImportFornecedor() gin.HandlerFunc {
 
 		file, err := fileHearder.Open()
 		if err != nil {
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"erro":     "erro ao ler a planilha",
@@ -79,7 +80,8 @@ func (f *FornecedorController) ImportFornecedor() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, exists := middleware.GetTenantID(ctx)
+		tenantID64, exists := ginmw.TenantID(ctx)
+		tenantID := int32(tenantID64)
 		if !exists {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sessão inválida ou expirada."})
 			return
@@ -129,6 +131,7 @@ func (f *FornecedorController) ImportFornecedor() gin.HandlerFunc {
 					continue
 				}
 
+				ctx.Error(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{
 					"message":  fmt.Sprintf("Erro ao salvar o fornecedor '%s'.", razaoSocial),
 					"detalhes": err.Error(),
@@ -162,7 +165,8 @@ func (f *FornecedorController) Adicionar() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro interno de tenant",
@@ -181,6 +185,7 @@ func (f *FornecedorController) Adicionar() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"detalhes": err.Error(),
@@ -211,7 +216,8 @@ func (f *FornecedorController) ListarFornecedores() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "erro ao receber tenantId",
@@ -229,6 +235,7 @@ func (f *FornecedorController) ListarFornecedores() gin.HandlerFunc {
 		fornecedores, err := f.service.ListarFornecedor(ctx, filtro, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":    "erro ao realizar busca em fornecedores",
 				"detalhes": err.Error(),
@@ -253,7 +260,8 @@ func (f *FornecedorController) CancelarFornecedor() gin.HandlerFunc {
 			return
 		}
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -272,6 +280,7 @@ func (f *FornecedorController) CancelarFornecedor() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -297,7 +306,8 @@ func (f *FornecedorController) AtualizaFornecedor() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -328,6 +338,7 @@ func (f *FornecedorController) AtualizaFornecedor() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro interno no servidor",

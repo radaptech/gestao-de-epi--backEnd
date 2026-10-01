@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"time"
@@ -17,7 +17,8 @@ func ExecutarBackupBanco(args []string) {
 
 	bucket := os.Getenv("R2_BUCKET_NAME_BACKUPS")
 	if bucket == "" {
-		log.Fatal("R2_BUCKET_NAME_BACKUPS não configurado")
+		slog.Error("backup: R2_BUCKET_NAME_BACKUPS não configurado")
+		os.Exit(1)
 	}
 
 	ctx := context.Background()
@@ -30,7 +31,7 @@ func ExecutarBackupBanco(args []string) {
 	// coisa mais importante pra resolver que isso aqui.
 	tmp, err := os.CreateTemp("", "backup-*.dump")
 	if err != nil {
-		log.Fatalf("erro ao criar arquivo temporário: %v", err)
+		fatal("backup: criar arquivo temporário", err)
 	}
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
@@ -52,17 +53,17 @@ func ExecutarBackupBanco(args []string) {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		log.Fatalf("pg_dump falhou: %v", err)
+		fatal("backup: pg_dump", err)
 	}
 
 	if _, err := tmp.Seek(0, 0); err != nil {
-		log.Fatalf("erro ao rebobinar o dump: %v", err)
+		fatal("backup: rebobinar o dump", err)
 	}
 
 	key := fmt.Sprintf("backups/%s.dump", time.Now().UTC().Format("20060102-150405"))
 	if err := helper.UploadArquivo(ctx, bucket, key, tmp, "application/octet-stream"); err != nil {
-		log.Fatalf("erro ao subir backup pro R2: %v", err)
+		fatal("backup: subir pro R2", err)
 	}
 
-	fmt.Printf("backup salvo em %s/%s\n", bucket, key)
+	slog.Info("backup salvo", "bucket", bucket, "key", key)
 }

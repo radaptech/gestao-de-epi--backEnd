@@ -144,7 +144,7 @@ O `userId` logado sai do JWT e é lido com `middleware.GetUserID(c)` (usado para
 /api/painel   → AutenticacaoJWT + VerificaSuperAdmin       // cadastro de empresas
 /api/master   → AutenticacaoJWT + VerificaSuperAdmin       // dashboard global, planos, usuários
 /api          → TenantMiddleware                            // login, logout, recuperação de senha
-/api          → + AutenticacaoJWT + LoggerComUsuario        // operação do dia a dia
+/api          → + AutenticacaoJWT                           // operação do dia a dia
 /api/gerencial→ + VerificaRole("admin")                     // escrita/cadastros
 ```
 
@@ -423,8 +423,13 @@ validadores entram no mesmo bloco.
   outra pasta quebra o boot (por isso o `Dockerfile` copia `database/migrate` para junto dele).
 - **`repository.Queries` não tem `sqlc.embed` nem RLS**: repetir `tenant_id` em cada query é
   responsabilidade sua.
-- **Muito `fmt.Printf` de debug com emoji** nos services de Entrega/Devolução/EPI. É o estilo atual do
-  projeto; se for limpar, faça em commit separado.
+- **Logs são `log/slog` em JSON** (`middleware/logs.go`). `middleware.LogRequest` escreve uma linha por
+  request e devolve o `X-Request-ID`; qualquer `slog.XxxContext(ctx, ...)` com o ctx do request sai com o
+  mesmo `request_id`. O `router.ContextWithFallback = true` do `main.go` é o que faz isso funcionar quando o
+  controller passa o `*gin.Context` direto pro service — não remova. Não use `fmt.Printf`/`log.Printf`.
+  No **controller**, todo 500 com erro chama `ctx.Error(err)` antes do `ctx.JSON` — o `LogRequest` põe a
+  causa no campo `erros` da linha do request. No **service**, erro de infra com contexto útil (lote, entrega)
+  vira `slog.ErrorContext` com campos nomeados (`"tenant", tenantId, "err", err`).
 - **CORS** (`middleware/cors.go`) libera `localhost`, `*.localhost` e `*.radaptech.com.br`, com
   `AllowCredentials: true` (necessário para o cookie HttpOnly). Um domínio novo precisa entrar no
   `AllowOriginFunc`.

@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"log"
 	"strconv"
 
 	"net/http"
@@ -11,8 +10,8 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type LoginService interface {
@@ -26,7 +25,6 @@ type LoginService interface {
 	MostrarUsuariosPainel(ctx context.Context) ([]model.UsuarioResponsePainel, error)
 	EditarUsuario(ctx context.Context, id int32, model model.EditarUsuarioRequest) error
 	EditarStatusUsuario(ctx context.Context, id int32, model model.AlterarStatusRequest) error
-	
 }
 
 type LoginController struct {
@@ -79,11 +77,12 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 			if errors.Is(err, helper.ErrLimiteExcedido) {
 				ctx.JSON(http.StatusForbidden, gin.H{
 
-					"error":"limite de usuarios excedidos",
-					"detalhes":err.Error(),
+					"error":    "limite de usuarios excedidos",
+					"detalhes": err.Error(),
 				})
-				return 
+				return
 			}
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -99,7 +98,7 @@ func (l *LoginController) Registrar() gin.HandlerFunc {
 	}
 }
 
-//utilizando HTTP only
+// utilizando HTTP only
 func (l *LoginController) Login() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
@@ -115,15 +114,15 @@ func (l *LoginController) Login() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(c)
+		// Único endpoint em que o tenant vem do header: ainda não existe token.
+		tenantID64, ok := ginmw.TenantIDFromHeader(c)
+		tenantID := int32(tenantID64)
 		if !ok {
 			c.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
 		token, user, err := l.service.FazerLogin(c, input.Email, input.Senha, tenantID)
 		if err != nil {
-
-			log.Printf("erro ao realizar login: %v", err)
 			if err.Error() == "email ou senha inválidos" {
 
 				c.JSON(http.StatusUnauthorized, gin.H{
@@ -133,6 +132,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 				return
 			}
 
+			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": "Erro interno ao realizar login",
@@ -143,6 +143,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 		err = l.service.UltimoAcesso(c, user.ID, tenantID)
 		if err != nil {
 
+			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "Erro interno ao realizar login",
@@ -176,7 +177,7 @@ func (l *LoginController) Login() gin.HandlerFunc {
 
 func (l *LoginController) Logout() gin.HandlerFunc {
 
-	return  func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
 
 		ctx.SetCookie(
 			"token",
@@ -189,8 +190,8 @@ func (l *LoginController) Logout() gin.HandlerFunc {
 		)
 
 		ctx.JSON(http.StatusOK, gin.H{
-            "message": "Logout realizado com sucesso",
-        })
+			"message": "Logout realizado com sucesso",
+		})
 	}
 }
 
@@ -198,7 +199,7 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
-		id, existe := c.Get("userId")
+		id, existe := ginmw.UserID(c)
 		if !existe {
 			c.JSON(http.StatusUnauthorized, gin.H{
 
@@ -207,13 +208,14 @@ func (l *LoginController) VerPerfil() gin.HandlerFunc {
 
 			return
 		}
-		tenantID, ok := middleware.GetTenantID(c)
+		tenantID64, ok := ginmw.TenantID(c)
+		tenantID := int32(tenantID64)
 		if !ok {
 			c.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
 
-		idConvertid:=uint(id.(int32)) 
+		idConvertid := uint(id)
 		usuario, err := l.service.BuscarPorId(c, idConvertid, tenantID)
 		if err != nil {
 
@@ -234,7 +236,8 @@ func (l *LoginController) ListarUsuario() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -243,6 +246,7 @@ func (l *LoginController) ListarUsuario() gin.HandlerFunc {
 		users, err := l.service.ListarUsuario(ctx, tenantID)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro interno do servidor",
@@ -263,15 +267,15 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 		var input model.RecuperaLogin
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
-
-			log.Printf("erro: %v", err)
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": "Não foi possível processar a solicitação no momento. Tente novamente mais tarde.",
 			})
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		// Rota pública, sem sessão: tenant vem do header, como no Login.
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -282,7 +286,7 @@ func (l *LoginController) SalvarToken() gin.HandlerFunc {
 		err := l.service.RecuperacaoSenha(ctx, input)
 		if err != nil {
 
-			log.Println("erro ao enviar email de recuperaçao: %w", err)
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": "erro interno do servidor",
@@ -308,7 +312,9 @@ func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		// Rota pública, sem sessão: tenant vem do header, como no Login.
+		tenantID64, ok := ginmw.TenantIDFromHeader(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
@@ -323,6 +329,7 @@ func (l *LoginController) RedefinirSenha() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Erro interno ao redefinir senha."})
 			return
 		}
@@ -340,6 +347,7 @@ func (l *LoginController) MostrarUsuariosPainel() gin.HandlerFunc {
 		users, err := l.service.MostrarUsuariosPainel(ctx)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro interno do servidor",
@@ -365,7 +373,6 @@ func (l *LoginController) EditarUsuario() gin.HandlerFunc {
 			})
 			return
 		}
-		log.Printf("[DEBUG] ID recebido para edição: %d", idUsuario)
 		var input model.EditarUsuarioRequest
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -379,6 +386,7 @@ func (l *LoginController) EditarUsuario() gin.HandlerFunc {
 		err = l.service.EditarUsuario(ctx, int32(idUsuario), input)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao atualizar usuario",
@@ -403,7 +411,7 @@ func (l *LoginController) EditarStatusUsuario() gin.HandlerFunc {
 			})
 			return
 		}
-		
+
 		var input model.AlterarStatusRequest
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -417,12 +425,13 @@ func (l *LoginController) EditarStatusUsuario() gin.HandlerFunc {
 		err = l.service.EditarStatusUsuario(ctx, int32(idUsuario), input)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao atualizar usuario",
 				"detalhes": err.Error(),
 			})
-			return 
+			return
 		}
 
 		ctx.Status(http.StatusNoContent)

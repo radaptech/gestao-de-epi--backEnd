@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 
 	"time"
@@ -45,16 +45,15 @@ func NewDevolucaoService(d DevolucaoRepository, db *pgxpool.Pool, repoEntregaEpi
 
 func (d *DevolucaoService) TokenDevolucao(ctx context.Context, tenantId, Idfuncionario int32) (string, error) {
 
-	fmt.Printf("🔍 [TOKEN] Buscando Funcionario %d | Tenant %d\n", Idfuncionario, tenantId)
 	funcionario, err := d.queries.BuscaFuncionarioPorId(ctx, repository.BuscaFuncionarioPorIdParams{
 		ID:       int32(Idfuncionario),
 		TenantID: tenantId,
 	})
 	if err != nil {
-		fmt.Printf("❌ [TOKEN] Erro na query: %v\n", err)
 		if err == pgx.ErrNoRows {
 			return "", helper.ErrNaoEncontrado
 		}
+		slog.ErrorContext(ctx, "buscar funcionário para token de devolução", "funcionario", Idfuncionario, "tenant", tenantId, "err", err)
 		return "", err
 	}
 
@@ -89,8 +88,6 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 	}
 
 	if int32(modelDevolucao.QuantidadeADevolver) > saldoAtual {
-
-		log.Printf("erro: %v", err)
 		return fmt.Errorf("operação bloqueada: o funcionário possui apenas %d unidade(s) deste EPI em mãos, mas tentou devolver %d", saldoAtual, modelDevolucao.QuantidadeADevolver)
 	}
 	// Prepara variáveis para caso de troca (EPI novo)
@@ -124,7 +121,7 @@ func (d *DevolucaoService) SalvarDevolucao(ctx context.Context, modelDevolucao m
 			IDTamanho: int32(modelDevolucao.IdTamanho),
 		})
 		if err != nil {
-			log.Printf("erro ao buscar lotes para repor: %v", err)
+			slog.ErrorContext(ctx, "buscar lotes para repor", "epi", modelDevolucao.IdEpi, "tamanho", modelDevolucao.IdTamanho, "tenant", tenantId, "err", err)
 			return fmt.Errorf("erro ao buscar lotes para reposição")
 		}
 

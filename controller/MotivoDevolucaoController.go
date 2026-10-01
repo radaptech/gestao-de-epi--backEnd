@@ -7,8 +7,8 @@ import (
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/helper"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/radaptech/ginmw"
 )
 
 type MotivoService interface {
@@ -42,13 +42,14 @@ func (m *MotivoController) Salvar() gin.HandlerFunc {
 			return
 		}
 
-		tenantID, ok := middleware.GetTenantID(ctx)
+		tenantID64, ok := ginmw.TenantID(ctx)
+		tenantID := int32(tenantID64)
 		if !ok {
 			ctx.JSON(500, gin.H{"error": "Erro interno de tenant"})
 			return
 		}
 
-		motivos, err:= m.service.Salvar(ctx, input, tenantID)
+		motivos, err := m.service.Salvar(ctx, input, tenantID)
 		if err != nil {
 
 			if errors.Is(err, helper.ErrDadoDuplicado) {
@@ -60,6 +61,7 @@ func (m *MotivoController) Salvar() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -75,7 +77,8 @@ func (m *MotivoController) ListarMotivo() gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {
 
-		tenantId, ok := middleware.GetTenantID(ctx)
+		tenantId64, ok := ginmw.TenantID(ctx)
+		tenantId := int32(tenantId64)
 		if !ok {
 
 			ctx.JSON(500, gin.H{"error": "erro interno de tenant"})
@@ -85,13 +88,13 @@ func (m *MotivoController) ListarMotivo() gin.HandlerFunc {
 		motivos, err := m.service.ListarMotivos(ctx, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error":"erro ao mostrar os motivos da devolucao",
+				"error":    "erro ao mostrar os motivos da devolucao",
 				"detalhes": err.Error(),
 			})
 			return
 		}
-
 
 		ctx.JSON(http.StatusOK, motivos)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"log"
 	"net/http"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -58,6 +57,7 @@ func (e *EmpresaController) Salvar() gin.HandlerFunc {
 		err := e.service.Salvar(ctx, input)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":    "Erro ao salvar empresa no banco de dados.",
 				"detalhes": err.Error(),
@@ -87,7 +87,7 @@ func (e *EmpresaController) ResumoDashboard() gin.HandlerFunc {
 
 		resumo, err := e.service.EmpresaDashboard(ctx)
 		if err != nil {
-			log.Printf("erro dashbord: %v", err)
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados do Dashbord",
@@ -116,7 +116,7 @@ func (e *EmpresaController) EmpresaRecentes() gin.HandlerFunc {
 
 		empresa, err := e.service.EmpresaRecentes(ctx)
 		if err != nil {
-			log.Printf("erro dashbord: %v", err)
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados das empresas",
@@ -145,7 +145,7 @@ func (e *EmpresaController) DadosEmpresas() gin.HandlerFunc {
 
 		empresa, err := e.service.DadosEmpresas(ctx)
 		if err != nil {
-			log.Printf("erro em pegar os dados das empresas: %v", err)
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados das empresas",
@@ -186,6 +186,7 @@ func (e *EmpresaController) EditarEmpresa() gin.HandlerFunc {
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"erro": err.Error(),
@@ -196,6 +197,7 @@ func (e *EmpresaController) EditarEmpresa() gin.HandlerFunc {
 		err = e.service.EditarEmpresa(ctx, int32(id), input)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao editar empresa",
