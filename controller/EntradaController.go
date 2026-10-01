@@ -3,7 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -184,8 +184,7 @@ func (e *EntradaController) ListarEntradas() gin.HandlerFunc {
 
 		entradas, err := e.service.ListarEntradas(ctx, filtro, tenantId)
 		if err != nil {
-
-			fmt.Printf("Erro ao listar entradas: %v\n", err)
+			slog.ErrorContext(ctx.Request.Context(), "listar entradas", "tenant", tenantId, "err", err)
 
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 

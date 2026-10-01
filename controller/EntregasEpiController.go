@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -289,8 +288,6 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 			Ip:            ctx.ClientIP(),
 		}
 
-		fmt.Printf("DEBUG: Matricula do Param: '%s' | Tenant do Middleware: %d\n", matricula, tenantId)
-		fmt.Printf("🚨 DEBUG PDF -> Matrícula buscada: '%s' | TenantID: %v\n", matricula, tenantId)
 		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula, int32(idEntrega), tenantId)
 		if err != nil {
 

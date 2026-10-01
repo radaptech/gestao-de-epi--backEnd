@@ -2,9 +2,9 @@ package controller
 
 import (
 	"context"
+	"log/slog"
 	"strconv"
 
-	"log"
 	"net/http"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -87,7 +87,7 @@ func (e *EmpresaController) ResumoDashboard() gin.HandlerFunc {
 
 		resumo, err := e.service.EmpresaDashboard(ctx)
 		if err != nil {
-			log.Printf("erro dashbord: %v", err)
+			slog.ErrorContext(ctx.Request.Context(), "resumo do dashboard", "err", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados do Dashbord",
@@ -116,7 +116,7 @@ func (e *EmpresaController) EmpresaRecentes() gin.HandlerFunc {
 
 		empresa, err := e.service.EmpresaRecentes(ctx)
 		if err != nil {
-			log.Printf("erro dashbord: %v", err)
+			slog.ErrorContext(ctx.Request.Context(), "empresas recentes", "err", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados das empresas",
@@ -145,7 +145,7 @@ func (e *EmpresaController) DadosEmpresas() gin.HandlerFunc {
 
 		empresa, err := e.service.DadosEmpresas(ctx)
 		if err != nil {
-			log.Printf("erro em pegar os dados das empresas: %v", err)
+			slog.ErrorContext(ctx.Request.Context(), "listar empresas", "err", err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos dados das empresas",

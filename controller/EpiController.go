@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -335,7 +334,6 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("INPUT RECEBIDO: %+v\n", input)
 		err = e.service.AtualizaEpi(ctx, input, int32(id), tenantID)
 		if err != nil {
 

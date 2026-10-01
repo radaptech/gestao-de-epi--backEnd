@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"time"
@@ -196,7 +197,7 @@ func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenant
 
 	tx, err := e.db.Begin(ctx)
 	if err != nil {
-		fmt.Printf("❌ [TX] Falha ao iniciar transação: %v\n", err)
+		slog.ErrorContext(ctx, "iniciar transação de cancelamento de entrada", "entrada", id, "tenant", tenantId, "err", err)
 		return err
 	}
 	defer tx.Rollback(ctx)
@@ -237,9 +238,9 @@ func (e *EntradaService) CancelarEntrada(ctx context.Context, id, idUser, tenant
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-        fmt.Printf("❌ [TX] Falha ao realizar o commit: %v\n", err)
-        return err
-    }
+		slog.ErrorContext(ctx, "commit do cancelamento de entrada", "entrada", id, "tenant", tenantId, "err", err)
+		return err
+	}
 	return nil
 }
 

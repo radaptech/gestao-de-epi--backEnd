@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -120,7 +119,6 @@ func (p *PlanosController) AtualizaStatus() gin.HandlerFunc{
 		idparam:= ctx.Param("id")
 		id, err:= strconv.Atoi(idparam)
 		if err != nil {
-			log.Printf("erro: %v", err)
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 
 				
