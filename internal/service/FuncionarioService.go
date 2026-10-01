@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"strconv"
 	"strings"
@@ -58,7 +58,7 @@ func (f *FuncionarioService) SalvarFuncionario(ctx context.Context, model model.
 
 	tx, err := f.db.Begin(ctx)
 	if err != nil {
-		log.Println("erro ao iniciar transação em funcionarios para adicionar")
+		slog.ErrorContext(ctx, "iniciar transação de cadastro de funcionário", "tenant", tenantId, "err", err)
 		return err
 	}
 

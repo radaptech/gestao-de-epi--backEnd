@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/auth"
@@ -14,7 +14,6 @@ import (
 
 func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 	ctx := context.Background()
-	log.Println("Verificando Empresa Matriz e Super Admin...")
 
 	var empresaID int64
 	var planoid int64
@@ -26,7 +25,7 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 	
 	if errPlano != nil {
 		if errors.Is(errPlano, pgx.ErrNoRows) {
-			log.Println("Plano Matriz não encontrado. Criando...")
+			slog.Info("seed: criando plano matriz")
 
 			
 			
@@ -42,8 +41,6 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 		} else {
 			return fmt.Errorf("erro ao verificar plano no banco: %v", errPlano)
 		}
-	} else {
-		log.Println("Plano Matriz já existe. Pulando criação.")
 	}
 
 	// ==========================================
@@ -53,7 +50,7 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 	
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			log.Println("Empresa Matriz não encontrada. Criando...")
+			slog.Info("seed: criando empresa matriz")
 
 			
 			err = db.QueryRow(ctx, `
@@ -72,8 +69,6 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 		} else {
 			return fmt.Errorf("erro ao verificar empresa no banco: %v", err)
 		}
-	} else {
-		log.Println("Empresa Matriz já existe. Pulando criação.")
 	}
 
 	// ==========================================
@@ -89,7 +84,7 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			log.Println("Super Admin não encontrado. Criando...")
+			slog.Info("seed: criando super admin", "email", emailAdmin)
 
 			senhaPadrao := os.Getenv("SUPER_ADMIN_PASSWORD")
 			if senhaPadrao == "" {
@@ -110,12 +105,9 @@ func SeedEmpresaMatriz(db *pgxpool.Pool) error {
 				return fmt.Errorf("falha ao criar super admin: %v", err)
 			}
 
-			log.Println("Super Admin criado com sucesso!")
 		} else {
 			return fmt.Errorf("erro ao verificar usuario admin no banco: %v", err)
 		}
-	} else {
-		log.Println("Super Admin já existe. Pulando criação.")
 	}
 
 	return nil

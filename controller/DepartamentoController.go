@@ -63,6 +63,7 @@ func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
 		filer, err := fileHearder.Open()
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"erro":     "erro ao ler a planilha",
 				"detalhes": err.Error(),
@@ -150,6 +151,7 @@ func (d *DepartamentoController) ImportDepartamentoXLSX() gin.HandlerFunc {
 					})
 					return
 				}
+				ctx.Error(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Erro ao registrar os departamentos no banco de dados."})
 				return
 
@@ -211,6 +213,7 @@ func (d *DepartamentoController) RegistraDepartamento() gin.HandlerFunc {
 				})
 				return
 			}
+			c.Error(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -270,6 +273,7 @@ func (d *DepartamentoController) ListarDepartamentos() gin.HandlerFunc {
 		deps, err := d.service.ListarTodosDepartamentos(ctx, filtro, tenantID)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    "erro ao realizar buscar dos departamentos",
@@ -329,6 +333,7 @@ func (d *DepartamentoController) DeletarDepartamento() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -405,6 +410,7 @@ func (d *DepartamentoController) AtualizarDepartamento() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"erro": err.Error(),

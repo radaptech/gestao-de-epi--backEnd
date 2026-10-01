@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -361,7 +360,6 @@ func (e *EpiService) AtualizaEpi(ctx context.Context, model model.UpdateEpiInput
 		alertaMin = *model.AlertaMinimo
 	}
 
-	fmt.Printf("DATA PARA O BANCO: Valid=%v, Valor=%v\n", validadeCa.Valid, validadeCa.Time)
 	u := repository.UpdateEpiCampoParams{
 		ID:             id,
 		Nome:           toPgText(model.Nome),

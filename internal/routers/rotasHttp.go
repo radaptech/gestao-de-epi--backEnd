@@ -10,14 +10,13 @@ import (
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	_ "github.com/davi-fernandesx/sistema-de-gestao-de-epi/docs"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/service"
-	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/radaptech/ginmw"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/time/rate"
-	"github.com/radaptech/ginmw"
 )
 
 type Container struct {
@@ -169,7 +168,7 @@ func ConfigurarRotas(r *gin.Engine, c *Container, db *pgxpool.Pool) {
 
 	// --- GRUPO 3: Rotas Protegidas (SaaS) ---
 	// Precisa do Token JWT para passar
-	api.Use(authJWT, middleware.LoggerComUsuario())
+	api.Use(authJWT)
 	{
 
 		//colaborador e adm tem acesso a essas rotas

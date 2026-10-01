@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"strconv"
 	"time"
@@ -51,32 +52,29 @@ func NewEntregaService(r EntregaRepository, pool *pgxpool.Pool) *EntregaService 
 func (e *EntregaService) Salvar(ctx context.Context, model model.EntregaParaInserir, tenantid int32, token string) error {
 	tx, err := e.db.Begin(ctx)
 	if err != nil {
-		fmt.Printf("❌ [TX] Falha ao iniciar transação: %v\n", err)
+		slog.ErrorContext(ctx, "iniciar transação de entrega", "tenant", tenantid, "err", err)
 		return err
 	}
 	defer tx.Rollback(ctx)
 
 	qtx := e.queries.WithTx(tx)
 	if err := e.RegistrarEntrega(ctx, qtx, model, tenantid, token); err != nil {
-		fmt.Printf("⚠️ [SALVAR] RegistrarEntrega falhou: %v\n", err)
 		return err
 	}
 
-	fmt.Println("🚀 [SALVAR] Commit realizado com sucesso!")
 	return tx.Commit(ctx)
 }
 
 func (e *EntregaService) TokenEntrega(ctx context.Context, tenantId, idFuncionario int32) (string, error) {
-	fmt.Printf("🔍 [TOKEN] Buscando Funcionario %d | Tenant %d\n", idFuncionario, tenantId)
 	funcionario, err := e.queries.BuscaFuncionarioPorId(ctx, repository.BuscaFuncionarioPorIdParams{
 		ID:       int32(idFuncionario),
 		TenantID: tenantId,
 	})
 	if err != nil {
-		fmt.Printf("❌ [TOKEN] Erro na query: %v\n", err)
 		if err == pgx.ErrNoRows {
 			return "", helper.ErrNaoEncontrado
 		}
+		slog.ErrorContext(ctx, "buscar funcionário para token de entrega", "funcionario", idFuncionario, "tenant", tenantId, "err", err)
 		return "", err
 	}
 
@@ -88,12 +86,9 @@ func (e *EntregaService) TokenEntrega(ctx context.Context, tenantId, idFuncionar
 
 // RegistrarEntrega: Lógica de negócio principal (Token, Lotes e Abate de Estoque)
 func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Queries, model model.EntregaParaInserir, tenantId int32, token string) error {
-	fmt.Printf("\n--- 📝 [ENTREGA] Iniciando Processo ---\n")
-
 	var idTrocaParaBanco pgtype.Int4
 	if model.IdTroca != nil {
 		idTrocaParaBanco = pgtype.Int4{Int32: int32(*model.IdTroca), Valid: true}
-		fmt.Printf("🔄 [TROCA] Vinculando à troca ID: %d\n", *model.IdTroca)
 	}
 
 	// 1. Salva Cabeçalho
@@ -107,14 +102,12 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 		TenantID:         tenantId,
 	})
 	if err != nil {
-		fmt.Printf("❌ [PG] Erro no Cabeçalho: %v\n", err)
+		slog.ErrorContext(ctx, "inserir cabeçalho da entrega", "funcionario", model.ID_funcionario, "tenant", tenantId, "err", err)
 		return err
 	}
-	fmt.Printf("✅ [PG] Cabeçalho ID %d salvo\n", identrega)
 
 	// 2. Loop de Itens
-	for i, item := range model.Itens {
-		fmt.Printf("📦 [ITEM %d] EPI %d | Tam %d | Qtd %d\n", i, item.ID_epi, item.ID_tamanho, item.Quantidade)
+	for _, item := range model.Itens {
 
 		quantidadeNecessaria := item.Quantidade
 
@@ -124,12 +117,11 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 			TenantID:  tenantId,
 		})
 		if err != nil {
-			fmt.Printf("❌ [ESTOQUE] Erro ao buscar lotes: %v\n", err)
+			slog.ErrorContext(ctx, "buscar lotes para consumo", "entrega", identrega, "epi", item.ID_epi, "tamanho", item.ID_tamanho, "tenant", tenantId, "err", err)
 			return err
 		}
 
 		if len(lotes) == 0 {
-			fmt.Printf("⚠️ [ESTOQUE] Saldo zerado, inativo ou vencido para EPI %d\n", item.ID_epi)
 			// Essa é a mensagem que vai viajar até o React:
 			return fmt.Errorf("Não foi possível entregar. O estoque deste item está zerado ou com a validade vencida.")
 		}	
@@ -151,21 +143,20 @@ func (e *EntregaService) RegistrarEntrega(ctx context.Context, qtx *repository.Q
 				TenantID:           tenantId,
 			})
 			if err != nil {
-				fmt.Printf("❌ [PG] Erro ao inserir item vinculado ao Lote %d: %v\n", lote.ID, err)
+				slog.ErrorContext(ctx, "inserir item da entrega", "entrega", identrega, "lote", lote.ID, "tenant", tenantId, "err", err)
 				return err
 			}
 
 			// Abate
-			afetados, err := e.repo.AbaterEstoqueEntrada(ctx, qtx, repository.AbaterEstoqueLoteParams{
+			_, err = e.repo.AbaterEstoqueEntrada(ctx, qtx, repository.AbaterEstoqueLoteParams{
 				QuantidadeAtual: qtdAbater,
 				ID:              lote.ID,
 				TenantID:        tenantId,
 			})
 			if err != nil {
-				fmt.Printf("❌ [PG] Erro no abate do lote %d: %v\n", lote.ID, err)
+				slog.ErrorContext(ctx, "abater estoque do lote", "entrega", identrega, "lote", lote.ID, "quantidade", qtdAbater, "tenant", tenantId, "err", err)
 				return err
 			}
-			fmt.Printf("📉 [ESTOQUE] Abatidas %d un do Lote %d (Linhas afetadas: %d)\n", qtdAbater, lote.ID, afetados)
 
 			quantidadeNecessaria -= qtdAbater
 		}
@@ -278,7 +269,6 @@ func (e *EntregaService) ListaEntregas(ctx context.Context, f FiltroEntregas, te
 }
 
 func (e *EntregaService) CancelarEntrega(ctx context.Context, tenantId, id, iduser int) error {
-	fmt.Printf("⚠️ [CANCELAR] Iniciando cancelamento da Entrega %d\n", id)
 	tx, err := e.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -287,11 +277,9 @@ func (e *EntregaService) CancelarEntrega(ctx context.Context, tenantId, id, idus
 
 	qtx := e.queries.WithTx(tx)
 	if err := e.RegistrarCancelamento(ctx, qtx, tenantId, id, iduser); err != nil {
-		fmt.Printf("❌ [CANCELAR] Falha: %v\n", err)
 		return err
 	}
 
-	fmt.Println("✅ [CANCELAR] Concluído com sucesso")
 	return tx.Commit(ctx)
 }
 
@@ -313,7 +301,7 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 		TenantID:           arg.TenantID,
 	})
 	if err != nil {
-		fmt.Printf("❌ [PG] Erro ao marcar itens como cancelados: %v\n", err)
+		slog.ErrorContext(ctx, "marcar itens da entrega como cancelados", "entrega", identrega, "tenant", arg.TenantID, "err", err)
 		return err
 	}
 
@@ -321,18 +309,21 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 		IDEntregaCabecalho: identrega,
 		TenantID:           arg.TenantID,
 	})
+	if err != nil {
+		slog.ErrorContext(ctx, "listar itens cancelados para repor estoque", "entrega", identrega, "tenant", arg.TenantID, "err", err)
+		return err
+	}
 
 	for _, c := range cancelados {
-		afetados, err := e.repo.ReporEstoqueEntrada(ctx, qtx, repository.ReporEstoqueLoteParams{
+		_, err := e.repo.ReporEstoqueEntrada(ctx, qtx, repository.ReporEstoqueLoteParams{
 			QuantidadeAtual: c.Quantidade,
 			ID:              c.IDEntradaItem,
 			TenantID:        arg.TenantID,
 		})
 		if err != nil {
-			fmt.Printf("❌ [ESTOQUE] Falha ao repor Lote %d: %v\n", c.IDEntradaItem, err)
+			slog.ErrorContext(ctx, "repor estoque do lote", "entrega", identrega, "lote", c.IDEntradaItem, "quantidade", c.Quantidade, "tenant", arg.TenantID, "err", err)
 			return err
 		}
-		fmt.Printf("📈 [ESTOQUE] Repostas %d un no Lote %d (Afetados: %d)\n", c.Quantidade, c.IDEntradaItem, afetados)
 	}
 	return nil
 }

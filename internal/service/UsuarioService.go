@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -232,7 +232,7 @@ func (u *UsuarioService) RedefinirSenha(ctx context.Context, rs model.RedefinirS
 
 	senhaByte, err := auth.HashPassword(rs.NovaSenha)
 	if err != nil {
-		log.Printf("erro ao gerar hars da senha: %v", err)
+		slog.ErrorContext(ctx, "gerar hash da senha", "tenant", rs.TenantId, "err", err)
 		return fmt.Errorf("erro ao gerar hash da senha")
 	}
 

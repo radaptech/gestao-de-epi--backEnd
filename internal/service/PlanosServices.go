@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/database/repository"
 	"github.com/davi-fernandesx/sistema-de-gestao-de-epi/internal/model"
@@ -149,7 +149,7 @@ func (p *PlanosService) AtualizarPlano(ctx context.Context, input model.Atualiza
 			params.Mensalidade = numericMensalidade
 		} else {
 			// erro se a conversão falhar por algum motivo bizarro
-			log.Printf("Erro ao converter mensalidade: %v", err)
+			slog.ErrorContext(ctx, "converter mensalidade do plano", "mensalidade", input.Mensalidade.String(), "err", err)
 		}
 	}
 	err := p.repo.AtualizarPlanos(ctx, params)

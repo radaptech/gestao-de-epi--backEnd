@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -112,6 +111,7 @@ func (e *EpiController) AdicionarEpi() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -168,6 +168,7 @@ func (e *EpiController) ListarEpis() gin.HandlerFunc {
 
 		epis, err := e.service.ListarEpis(ctx, filtro, tenantId)
 		if err != nil {
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
@@ -222,6 +223,7 @@ func (e *EpiController) ListarEpiPorId() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -275,6 +277,7 @@ func (e *EpiController) DeletarEpi() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -335,7 +338,6 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("INPUT RECEBIDO: %+v\n", input)
 		err = e.service.AtualizaEpi(ctx, input, int32(id), tenantID)
 		if err != nil {
 
@@ -379,6 +381,7 @@ func (e *EpiController) AtualizaEpi() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    err.Error(),
@@ -413,6 +416,7 @@ func (e *EpiController) ListarEpiDashborController() gin.HandlerFunc {
 
 		epis, err := e.service.ListarEpiDashbord(ctx, tenantId)
 		if err != nil {
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
@@ -456,6 +460,7 @@ func (e *EpiController) ListarEpiFuncionario() gin.HandlerFunc {
 		epis, err := e.service.BuscarEpiDoFuncionario(ctx, tenantId, int32(IdFuncionario))
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})

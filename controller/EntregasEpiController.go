@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -81,6 +80,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 		// 1. Gera o Token de Auditoria
 		token, errToken := e.Service.TokenEntrega(ctx, tenantId, input.ID_funcionario)
 		if errToken != nil {
+			ctx.Error(errToken)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao gerar token de auditoria"})
 			return
 		}
@@ -88,6 +88,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 		// 2. Faz o Upload da Assinatura para o Bucket
 		urlAssinatura, errA := helper.UploadAssinaturaSupabase(input.Assinatura_Digital, token, "entregas")
 		if errA != nil {
+			ctx.Error(errA)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":    "falha ao salvar assinatura digital",
 				"detalhes": errA.Error(),
@@ -111,6 +112,7 @@ func (e *EntregaController) Adicionar() gin.HandlerFunc {
 				ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 				return
 			}
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao salvar entrega", "detalhes": err.Error()})
 			return
 		}
@@ -167,6 +169,7 @@ func (e *EntregaController) ListarEntregas() gin.HandlerFunc {
 		entregas, err := e.Service.ListaEntregas(ctx.Request.Context(), filtro, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": "erro ao realizar buscar das entregas de epi",
@@ -232,6 +235,7 @@ func (e *EntregaController) CancelarEntrega() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -289,8 +293,6 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 			Ip:            ctx.ClientIP(),
 		}
 
-		fmt.Printf("DEBUG: Matricula do Param: '%s' | Tenant do Middleware: %d\n", matricula, tenantId)
-		fmt.Printf("🚨 DEBUG PDF -> Matrícula buscada: '%s' | TenantID: %v\n", matricula, tenantId)
 		entregaDadosPdf, err := e.Service.GerarDadosPdfService(ctx.Request.Context(), matricula, int32(idEntrega), tenantId)
 		if err != nil {
 
@@ -305,6 +307,7 @@ func (e *EntregaController) GerarFichaEpiPDF() gin.HandlerFunc {
 		documento, err := helper.CreatePdf(entregaDadosPdf, auditoria, responsavel)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    err.Error(),
@@ -345,6 +348,7 @@ func (e *EntregaController) BuscarEntregaDashbord() gin.HandlerFunc {
 		entregas, err := e.Service.BuscaEntregaDash(ctx, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -382,6 +386,7 @@ func (e *EntregaController) BuscarEntregaItenDashbord() gin.HandlerFunc {
 		itens, err := e.Service.BuscaItemDash(ctx, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),

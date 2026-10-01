@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -185,8 +184,7 @@ func (e *EntradaController) ListarEntradas() gin.HandlerFunc {
 		entradas, err := e.service.ListarEntradas(ctx, filtro, tenantId)
 		if err != nil {
 
-			fmt.Printf("Erro ao listar entradas: %v\n", err)
-
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": "erro ao realizar buscar das entradas de epi",
@@ -252,6 +250,7 @@ func (e *EntradaController) CancelarEntrada() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error":    err.Error(),
@@ -287,6 +286,7 @@ func (e *EntradaController) BuscaEntradaDashbord() gin.HandlerFunc {
 		entradas, err := e.service.EntradaDashbordBusca(ctx, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -321,6 +321,7 @@ func (e *EntradaController) BuscaEntradaEstoque() gin.HandlerFunc {
 		entradas, err := e.service.BuscaEntradaEstoque(ctx, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
