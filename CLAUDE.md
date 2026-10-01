@@ -426,8 +426,10 @@ validadores entram no mesmo bloco.
 - **Logs são `log/slog` em JSON** (`middleware/logs.go`). `middleware.LogRequest` escreve uma linha por
   request e devolve o `X-Request-ID`; qualquer `slog.XxxContext(ctx, ...)` com o ctx do request sai com o
   mesmo `request_id`. O `router.ContextWithFallback = true` do `main.go` é o que faz isso funcionar quando o
-  controller passa o `*gin.Context` direto pro service — não remova. Não use `fmt.Printf`/`log.Printf`;
-  erro de infra vira `slog.ErrorContext` com campos nomeados (`"tenant", tenantId, "err", err`).
+  controller passa o `*gin.Context` direto pro service — não remova. Não use `fmt.Printf`/`log.Printf`.
+  No **controller**, todo 500 com erro chama `ctx.Error(err)` antes do `ctx.JSON` — o `LogRequest` põe a
+  causa no campo `erros` da linha do request. No **service**, erro de infra com contexto útil (lote, entrega)
+  vira `slog.ErrorContext` com campos nomeados (`"tenant", tenantId, "err", err`).
 - **CORS** (`middleware/cors.go`) libera `localhost`, `*.localhost` e `*.radaptech.com.br`, com
   `AllowCredentials: true` (necessário para o cookie HttpOnly). Um domínio novo precisa entrar no
   `AllowOriginFunc`.

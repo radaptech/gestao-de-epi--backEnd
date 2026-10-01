@@ -72,6 +72,7 @@ func (t *TipoProtecaoController) AdicionarProtecao() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -101,6 +102,7 @@ func (t *TipoProtecaoController) ListarProtecoes() gin.HandlerFunc {
 
 		protecs, err := t.service.ListarProtecoes(ctx, tenantId)
 		if err != nil {
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -142,6 +144,7 @@ func (t *TipoProtecaoController) ListarProtecaoPorId() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -185,6 +188,7 @@ func (t *TipoProtecaoController) DeletarProtecao() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),

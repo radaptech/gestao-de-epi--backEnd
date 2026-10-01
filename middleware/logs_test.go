@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,7 @@ func TestLogRequestPropagaRequestID(t *testing.T) {
 	r.GET("/x", func(c *gin.Context) {
 		// services recebem o *gin.Context direto; o request_id tem que chegar mesmo assim
 		slog.ErrorContext(c, "falhou")
+		c.Error(errors.New("banco caiu")) // é assim que os controllers registram a causa do 500
 		c.Status(500)
 	})
 	w := httptest.NewRecorder()
@@ -53,5 +55,8 @@ func TestLogRequestPropagaRequestID(t *testing.T) {
 	}
 	if !strings.Contains(linhas[1], `"level":"ERROR"`) || !strings.Contains(linhas[1], `"status":500`) {
 		t.Fatalf("linha do request deveria ser ERROR com status 500: %s", linhas[1])
+	}
+	if !strings.Contains(linhas[1], "banco caiu") {
+		t.Fatalf("linha do request deveria trazer o erro do ctx.Error: %s", linhas[1])
 	}
 }

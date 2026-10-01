@@ -61,6 +61,7 @@ func (m *MotivoController) Salvar() gin.HandlerFunc {
 				return
 			}
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -87,6 +88,7 @@ func (m *MotivoController) ListarMotivo() gin.HandlerFunc {
 		motivos, err := m.service.ListarMotivos(ctx, tenantId)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":    "erro ao mostrar os motivos da devolucao",
 				"detalhes": err.Error(),

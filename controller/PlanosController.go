@@ -46,6 +46,7 @@ func (p *PlanosController) SalvarPlano() gin.HandlerFunc {
 		idPlano, err := p.service.SalvarPlanos(ctx, input)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"error": err.Error(),
@@ -64,6 +65,7 @@ func (p *PlanosController) MostrarPlanos() gin.HandlerFunc {
 		planos, err := p.service.MostrarPlanos(ctx)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Erro interno ao listar funcoes",
 			})
@@ -96,6 +98,7 @@ func (p *PlanosController) Atualizar() gin.HandlerFunc {
 		err = p.service.AtualizarPlano(ctx, input)
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 
 				"erro":     "erro ao atualizar o plano",
@@ -119,6 +122,7 @@ func (p *PlanosController) AtualizaStatus() gin.HandlerFunc{
 		idparam:= ctx.Param("id")
 		id, err:= strconv.Atoi(idparam)
 		if err != nil {
+			ctx.Error(err)
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 
 				
@@ -145,6 +149,7 @@ func (p *PlanosController) AtualizaStatus() gin.HandlerFunc{
 		err = p.service.AtualizaStatus(ctx,input.Status, int32(id))
 		if err != nil {
 
+			ctx.Error(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error":"erro ao atualizar o status do banco",
 				"detalhes": err.Error(),
