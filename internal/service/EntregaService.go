@@ -309,6 +309,10 @@ func (e *EntregaService) RegistrarCancelamento(ctx context.Context, qtx *reposit
 		IDEntregaCabecalho: identrega,
 		TenantID:           arg.TenantID,
 	})
+	if err != nil {
+		slog.ErrorContext(ctx, "listar itens cancelados para repor estoque", "entrega", identrega, "tenant", arg.TenantID, "err", err)
+		return err
+	}
 
 	for _, c := range cancelados {
 		_, err := e.repo.ReporEstoqueEntrada(ctx, qtx, repository.ReporEstoqueLoteParams{
